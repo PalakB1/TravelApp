@@ -117,7 +117,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                 <label className="field"><span className="lbl">New trip name</span><input name="name" placeholder={`${trip.name} (copy)`} /></label>
                 <button className="primary sm" type="submit" style={{ marginTop: 4 }}>Duplicate trip</button>
                 <p className="small muted" style={{ margin: "10px 0 0" }}>
-                  Copies the {trip.itinerary.length} nights, hotels, {trip.cars.length} cars and pricing, shifting every date. Hotels &amp; cars reset to “not booked”; bookings stay on this trip.
+                  Copies the {trip.itinerary.length} itinerary stops and your pricing, shifting every date to the new departure. Hotels, cars and bookings are <b>not</b> copied — add them fresh for the new trip.
                 </p>
               </form>
             </div>

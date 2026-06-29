@@ -76,7 +76,7 @@ export default async function Dashboard() {
   const packageMix = [...pkgMap.entries()].map(([k, v]) => ({ name: PKG[k]?.name || k, value: v, color: PKG[k]?.color || "#9094ac" }));
 
   const revByTrip = perTrip
-    .map(({ trip, f }) => ({ label: trip.name, value: f.revenue, sub: `profit ${formatINRShort(f.profit)} · ${Math.round(f.margin * 100)}% margin`, color: "var(--accent-grad)", href: `/trips/${trip.id}` }))
+    .map(({ trip, f }) => ({ label: trip.name, value: f.revenue, sub: `${f.pax} travellers${f.hiredDrivers > 0 ? ` + ${f.hiredDrivers} driver${f.hiredDrivers > 1 ? "s" : ""}` : ""} · profit ${formatINRShort(f.profit)} · ${Math.round(f.margin * 100)}%`, color: "var(--accent-grad)", href: `/trips/${trip.id}` }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
 

@@ -167,45 +167,14 @@ export async function duplicateTrip(formData: FormData) {
           date: shift(n.date),
           location: n.location,
           notes: n.notes,
-          // keep the planned hotels, but reset each to "unbooked" for the new departure
-          hotels: {
-            create: n.hotels.map((h) => ({
-              hotelName: h.hotelName,
-              rooms: h.rooms,
-              cost: h.cost,
-              status: "unbooked",
-              holdUntil: null,
-              source: null,
-              confirmationNo: null,
-            })),
-          },
-        })),
-      },
-      cars: {
-        create: src.cars.map((c) => ({
-          label: c.label,
-          carType: c.carType,
-          seats: c.seats,
-          vendor: c.vendor,
-          startDate: shift(c.startDate),
-          endDate: shift(c.endDate),
-          rentalCost: c.rentalCost,
-          driverMode: c.driverMode,
-          driverCost: c.driverCost,
-          driverNeedsStay: c.driverNeedsStay,
-          status: "hold",
-          holdUntil: null,
-          source: null,
-          confirmationNo: null,
+          // Itinerary stops only — hotels are NOT copied; book them fresh for the new dates.
         })),
       },
       variants: { create: src.variants.map((v) => ({ name: v.name, sellPrice: v.sellPrice, occupancy: v.occupancy })) },
       inclusions: {
         create: src.inclusions.map((i) => ({ name: i.name, category: i.category, sellContribution: i.sellContribution, cost: i.cost, perPax: i.perPax })),
       },
-      vendorBookings: {
-        create: src.vendorBookings.map((vb) => ({ type: vb.type, vendorName: vb.vendorName, detail: vb.detail, cost: vb.cost, status: "pending", confirmationNo: null })),
-      },
+      // Cars and vendor extras are NOT copied — add them for the new departure.
     },
   });
 
