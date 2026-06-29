@@ -53,9 +53,10 @@ export function bookingTcs(b: BookingLite): number {
 export function bookingTotal(b: BookingLite): number {
   return bookingTaxable(b) + bookingGst(b) + bookingTcs(b) + (b.nonTaxable || 0);
 }
-// Revenue counted toward profit excludes GST/TCS (those pass through to govt).
+// Revenue counted toward profit = your sale value (taxable) plus any non-taxable
+// amount you bill (e.g. a visa fee). Only GST/TCS are excluded — those pass through to govt.
 export function bookingRevenue(b: BookingLite): number {
-  return bookingTaxable(b);
+  return bookingTaxable(b) + (b.nonTaxable || 0);
 }
 // Total tax collected on a booking that must be remitted to the government.
 export function bookingTax(b: BookingLite): number {
