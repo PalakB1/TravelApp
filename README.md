@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Trip Desk — travel company dashboard
 
-## Getting Started
+A private dashboard to manage trips, prices, inclusions (and your own costs),
+bookings, discounts, payments, and supplier bookings (hotels, cars) — with a
+**chat box** that files everything for you in plain English.
 
-First, run the development server:
+## Run it
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3007
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Login:** `admin@travel.local` / `travel123`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## What's inside
 
-## Learn More
+Built for **self-drive group trips** (10–14 people, a new hotel most nights).
 
-To learn more about Next.js, take a look at the following resources:
+- **Dashboard** — revenue, your cost, profit + margin, outstanding from
+  customers, and a "needs attention" count. An alerts panel lists unbooked
+  nights and holds about to expire, across all trips.
+- **Trips** — each trip is a **night-by-night itinerary**. Every night has a
+  date, a location, and its hotel (name, rooms, cost) with a status:
+  **not booked / on hold / confirmed**. On-hold bookings record *held until
+  when* and *on which app* (Booking.com, Agoda…). Nights with no hotel are
+  flagged red. A **car fleet** sits alongside — each car is client-driven (no
+  extra cost) or has a hired driver (added cost), with its own hold/confirmed
+  status.
+- **Itinerary by Excel** — upload a spreadsheet and it builds the nights. See
+  "Importing an itinerary" below.
+- **Bookings** — each party (any size) with discount, total, paid, and balance.
+- **Payments** — who still owes you, and the full payment history.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Importing an itinerary
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+On a trip page, click **Choose Excel file** → **Import itinerary**, or
+**Download template** to see the format. Columns (any order, flexible names):
 
-## Deploy on Vercel
+| Date | Location | Hotel | Rooms | Cost |
+| ---- | -------- | ----- | ----- | ---- |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Only **Location** (where the group sleeps that night) is required. Rows with no
+hotel become unbooked nights you can fill in later. Importing replaces the
+trip's current itinerary.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## The chat box
+
+Type things like:
+
+- `add trip Goa Getaway to Goa, 4 nights, 20 seats`
+- `add Riya to Bali deluxe, 2 pax, 5000 festive discount`
+- `Riya paid 40k by upi`
+
+Right now the chat uses built-in rules (no AI key needed). The language
+understanding lives in **one file**: `src/lib/chat.ts` (the `parseCommand`
+function). To upgrade to full natural-language understanding later, paste your
+Anthropic API key into `.env` (`ANTHROPIC_API_KEY=...`) and swap the body of
+`parseCommand` to call Claude — everything else keeps working unchanged.
+
+## Money
+
+All amounts are whole rupees (₹). Profit math lives in `src/lib/calc.ts`:
+
+- **Revenue** = per-party price (a total, or per-person × pax) − discount
+- **Your cost** = hotels (each night) + car rentals + hired drivers + extras
+- **Profit** = revenue − cost
+- **Outstanding** = total − payments received
+- **Needs attention** = unbooked nights + holds expiring within 3 days
+
+## Tech
+
+- Next.js 16 (App Router) + React 19
+- Prisma 6 + SQLite (the database is the file `prisma/dev.db`)
+- Login via a signed cookie (`src/lib/auth.ts`, `src/proxy.ts`)
+
+### Reset the sample data
+
+The database ships with one sample trip (Bali Escape). To start empty, delete
+the trip from its page, or re-seed with `npm run db:seed`.
+
+## Before sharing it online (deploying)
+
+This runs on your computer today. To put it online so both of you can log in
+from anywhere, two things change: move `AUTH_SECRET` in `.env` to a long random
+value, and switch the database from SQLite to a hosted one (e.g. Postgres).
+Ask Claude to "deploy Trip Desk" when you're ready and it'll walk through it.

@@ -1,0 +1,205 @@
+// Travel company dashboard — data model
+// Money is stored as whole rupees (Int). Currency symbol handled in the UI.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// Login accounts (you + your husband)
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+// A trip = a packaged departure you sell
+model Trip {
+  id            String          @id @default(cuid())
+  name          String
+  destination   String
+  nights        Int             @default(0)
+  days          Int             @default(0)
+  departureDate DateTime?
+  endDate       DateTime?
+  capacity      Int             @default(0) // total seats
+  maxPerRoom    Int             @default(2) // guests per room (double sharing), for the rooms-coverage check
+  notes         String?
+  createdAt     DateTime        @default(now())
+
+  variants      Variant[]
+  inclusions    Inclusion[]
+  bookings      Booking[]
+  vendorBookings VendorBooking[]
+  itinerary     Night[]
+  cars          Car[]
+}
+
+// One night/stop of a self-drive itinerary: a date + where the group sleeps.
+// A night can hold several hotel bookings (e.g. the group split across 3 hotels).
+// A night with no held/confirmed hotel is a gap the board flags red.
+model Night {
+  id        String         @id @default(cuid())
+  tripId    String
+  trip      Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  order     Int            @default(0) // sequence within the trip
+  date      DateTime?
+  location  String // e.g. "Selfoss"
+  notes     String?
+  createdAt DateTime       @default(now())
+  hotels    HotelBooking[]
+}
+
+// One hotel reserved for a night — rooms + cost + booking status.
+model HotelBooking {
+  id             String    @id @default(cuid())
+  nightId        String
+  night          Night     @relation(fields: [nightId], references: [id], onDelete: Cascade)
+  hotelName      String
+  rooms          Int       @default(0)
+  cost           Int       @default(0) // total ₹ for this hotel for this night
+  status         String    @default("hold") // unbooked | hold | final
+  holdUntil      DateTime?
+  source         String? // platform the hold/booking is on, e.g. "Booking.com"
+  confirmationNo String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+}
+
+// A car in the trip's self-drive fleet.
+model Car {
+  id             String    @id @default(cuid())
+  tripId         String
+  trip           Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  label          String    @default("Car") // "Car 1"
+  carType        String? // "Dacia Duster"
+  seats          Int       @default(0) // total people it holds, including the driver
+  vendor         String?
+  startDate      DateTime?
+  endDate        DateTime?
+  rentalCost     Int       @default(0) // ₹
+  driverMode     String    @default("self") // self (client drives) | hired
+  driverCost     Int       @default(0) // ₹, only when driverMode = hired
+  driverNeedsStay Boolean  @default(false) // hired driver needs a room each night
+  status         String    @default("hold") // hold | final
+  holdUntil      DateTime?
+  source         String?
+  confirmationNo String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+}
+
+// Price options for a trip (Deluxe, Standard, single/twin, with/without flights...)
+model Variant {
+  id        String    @id @default(cuid())
+  tripId    String
+  trip      Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  name      String
+  sellPrice Int       @default(0) // per person price you charge
+  occupancy String? // e.g. "twin share", "single"
+  bookings  Booking[]
+}
+
+// What's in the package — each carries what it adds to price AND what it costs you
+model Inclusion {
+  id              String @id @default(cuid())
+  tripId          String
+  trip            Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  name            String
+  category        String @default("other") // hotel | flight | transfer | meal | tour | car | guide | other
+  sellContribution Int   @default(0)
+  cost            Int    @default(0) // your actual cost
+  perPax          Boolean @default(true) // cost is per traveller vs flat for the trip
+}
+
+// A person who books — reused across trips so you can see their full history.
+model Customer {
+  id        String    @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  notes     String?
+  createdAt DateTime  @default(now())
+  bookings  Booking[]
+}
+
+// A customer booking on a trip
+model Booking {
+  id             String    @id @default(cuid())
+  tripId         String
+  trip           Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  variantId      String?
+  variant        Variant?  @relation(fields: [variantId], references: [id])
+  customerId     String?
+  customer       Customer? @relation(fields: [customerId], references: [id])
+  customerName   String // kept in sync with customer.name for quick display/search
+  customerPhone  String?
+  pax            Int       @default(1)
+
+  // Package + invoice. Taxable subtotal = land + visa + flights − discount.
+  // Invoice = taxable + GST + TCS + nonTaxable. GST/TCS pass through to govt.
+  packageType    String    @default("land") // land | lva | full
+  landAmount     Int       @default(0)
+  visaAmount     Int       @default(0) // visa assistance service charge
+  flightAmount   Int       @default(0)
+  nonTaxable     Int       @default(0) // amount billed WITHOUT GST/TCS (e.g. embassy fee)
+  gstRate        Int       @default(5) // percent
+  tcsRate        Int       @default(2) // percent
+
+  discount       Int       @default(0)
+  discountReason String?
+  notes          String? // free-text remarks (e.g. "1 night less", "Perlan paid extra")
+
+  // GST + TCS remittance to the government
+  taxRemitted    Boolean   @default(false)
+  taxRemittedOn  DateTime?
+  taxRemittedNote String? // challan / filing reference
+
+  status         String    @default("confirmed") // enquiry | confirmed | travelled | cancelled
+  createdAt      DateTime  @default(now())
+  payments       Payment[]
+  travellers     Traveller[]
+}
+
+// An individual person on a booking (a family member / party member).
+model Traveller {
+  id        String   @id @default(cuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  name      String
+  age       Int?
+  createdAt DateTime @default(now())
+}
+
+// Money received against a booking (advance, installments, balance)
+model Payment {
+  id        String   @id @default(cuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  amount    Int
+  date      DateTime @default(now())
+  mode      String   @default("upi") // upi | card | cash | bank | other
+  note      String?
+}
+
+// Operational bookings YOU make for a trip — hotels, cars, flights — and what they cost
+model VendorBooking {
+  id             String    @id @default(cuid())
+  tripId         String
+  trip           Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  type           String    @default("activity") // activity | guide | permit | fuel | parking | flight | other
+  vendorName     String
+  detail         String?
+  cost           Int       @default(0) // planned cost (your pre-trip estimate)
+  actualCost     Int? // actual cost filled in after the trip; overrides planned in totals
+  status         String    @default("pending") // pending | confirmed | paid
+  confirmationNo String?
+  date           DateTime?
+  createdAt      DateTime  @default(now())
+}
