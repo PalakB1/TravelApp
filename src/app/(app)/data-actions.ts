@@ -458,6 +458,8 @@ export async function addHotelStay(formData: FormData) {
   const dated = nightsList.filter((n) => n.date).map((n) => startOfDay(new Date(n.date!)).getTime());
   const minDate = dated.length ? Math.min(...dated) : null;
   const maxDate = dated.length ? Math.max(...dated) : null;
+  // Original itinerary nights, earliest first — used to borrow the location of the nearest day.
+  const byDate = nightsList.filter((n) => n.date).sort((a, b) => startOfDay(new Date(a.date!)).getTime() - startOfDay(new Date(b.date!)).getTime());
   const orders = nightsList.map((n) => n.order);
   const minOrder = orders.length ? Math.min(...orders) : 0;
   const maxOrder = orders.length ? Math.max(...orders) : 0;
@@ -470,13 +472,20 @@ export async function addHotelStay(formData: FormData) {
       let location = "Extra night";
       let order = maxOrder + 1;
       if (minDate != null && d.getTime() < minDate) {
+        // Before the trip: same place as the first day, slotted ahead of it.
         const k = Math.round((minDate - d.getTime()) / DAY);
-        location = `Day X−${k}`;
+        location = byDate[0]?.location || location;
         order = minOrder - k;
       } else if (maxDate != null && d.getTime() > maxDate) {
+        // After the trip: same place as the last day, slotted after it.
         const k = Math.round((d.getTime() - maxDate) / DAY);
-        location = `Day Y+${k}`;
+        location = byDate[byDate.length - 1]?.location || location;
         order = maxOrder + k;
+      } else {
+        // A gap inside the trip: take the previous day's location.
+        const prev = byDate.filter((n) => startOfDay(new Date(n.date!)).getTime() < d.getTime()).pop();
+        location = prev?.location || byDate[0]?.location || location;
+        order = (prev?.order ?? minOrder) + 1;
       }
       night = await prisma.night.create({ data: { tripId, date: d, location, order } });
       nightsList.push(night);

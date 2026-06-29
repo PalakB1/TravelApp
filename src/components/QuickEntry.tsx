@@ -107,7 +107,7 @@ export default function QuickEntry({ payable, trips, customerNames, sources }: P
           </div>
           <button className="primary" type="submit">Add hotel stay</button>
           <p className="small muted" style={{ margin: "10px 0 0" }}>
-            One row per night between check-in and check-out, cost split evenly. Dates outside the itinerary are added as extra nights (Day&nbsp;X−1 before, Day&nbsp;Y+1 after).
+            One row per night between check-in and check-out, cost split evenly. Dates outside the itinerary become new days (renumbered automatically), taking the location of the nearest day.
           </p>
         </form>
       )}
