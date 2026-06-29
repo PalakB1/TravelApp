@@ -236,20 +236,10 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
               // intact and read as "Day 1-1/-2" (before) or "Day N+1/+2" (after).
               const itin = trip.itinerary;
               const coreIdx = itin.map((n, i) => (n.extra ? -1 : i)).filter((i) => i >= 0);
-              const firstCore = coreIdx[0];
-              const lastCore = coreIdx[coreIdx.length - 1];
-              const coreCount = coreIdx.length;
               const coreDay = new Map<number, number>();
               coreIdx.forEach((idx, k) => coreDay.set(idx, k + 1));
-              const dayLabel = (i: number): string => {
-                if (!itin[i].extra) return `Day ${coreDay.get(i)}`;
-                if (firstCore === undefined) return `Day ${-(i + 1)}`;
-                if (i < firstCore) return `Day ${-(firstCore - i)}`;   // before the trip: -1, -2 …
-                if (i > lastCore) return `Day ${coreCount + (i - lastCore)}`; // after: N+1, N+2 …
-                let prev = 1;
-                for (let j = i - 1; j >= 0; j--) if (!itin[j].extra) { prev = coreDay.get(j)!; break; }
-                return `Day ${prev}+`;
-              };
+              // Core itinerary nights are Day 1..N; add-on nights get no day number.
+              const dayLabel = (i: number): string => (itin[i].extra ? "" : `Day ${coreDay.get(i)}`);
               const rows = trip.itinerary.map((n, i) => {
                 const isExtra = n.extra;
                 const booked = nightBookedRooms(n);
