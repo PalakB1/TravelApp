@@ -487,7 +487,7 @@ export async function addHotelStay(formData: FormData) {
         location = prev?.location || byDate[0]?.location || location;
         order = (prev?.order ?? minOrder) + 1;
       }
-      night = await prisma.night.create({ data: { tripId, date: d, location, order } });
+      night = await prisma.night.create({ data: { tripId, date: d, location, order, extra: true } });
       nightsList.push(night);
     }
     await prisma.hotelBooking.create({

@@ -230,24 +230,29 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
             {(() => {
               let totReq = 0, totBooked = 0, totLeft = 0;
               const rows = trip.itinerary.map((n, i) => {
-                const req = f.roomsNeeded;
+                const isExtra = n.extra;
+                const req = isExtra ? 0 : f.roomsNeeded;
                 const booked = nightBookedRooms(n);
-                const left = Math.max(0, req - booked);
-                totReq += req; totBooked += booked; totLeft += left;
+                const left = isExtra ? 0 : Math.max(0, req - booked);
+                if (!isExtra) { totReq += req; totLeft += left; }
+                totBooked += booked;
                 return (
                   <details className="rpn-day" key={n.id}>
                     <summary>
                       <span className="rpn-chev">▶</span>
                       <span className="small muted">Day {i + 1}</span>
                       <span className="small muted">{fmtDate(n.date)}</span>
-                      <span style={{ fontWeight: 500, color: left > 0 ? "var(--danger)" : "var(--text)" }}>{n.location}</span>
-                      <span className="rpn-num" style={{ fontWeight: 500 }}>{req}</span>
+                      <span style={{ fontWeight: 500, color: !isExtra && left > 0 ? "var(--danger)" : "var(--text)" }}>{n.location}{isExtra ? <span className="badge gray" style={{ marginLeft: 6 }}>add-on</span> : null}</span>
+                      <span className="rpn-num" style={{ fontWeight: 500 }}>{isExtra ? "—" : req}</span>
                       <span className="rpn-num">{booked}</span>
-                      <span className="rpn-num">{left > 0 ? <span className="badge red">{left} more</span> : <span className="badge green">✓</span>}</span>
+                      <span className="rpn-num">{isExtra ? <span className="muted small">extra</span> : left > 0 ? <span className="badge red">{left} more</span> : <span className="badge green">✓</span>}</span>
                     </summary>
                     <div className="rpn-detail">
-                      {n.hotels.length === 0 ? (
+                      {!isExtra && n.hotels.length === 0 ? (
                         <div className="small" style={{ color: "var(--danger)", marginBottom: 8 }}>No hotel booked — need {req} room{req > 1 ? "s" : ""} this night. Add one below.</div>
+                      ) : null}
+                      {isExtra ? (
+                        <div className="small muted" style={{ marginBottom: 8 }}>Add-on night (outside the core itinerary) — book as the customer needs; no room requirement.</div>
                       ) : null}
                       {n.hotels.map((h) => {
                         const expiring = holdExpiringSoon(h.status, h.holdUntil);

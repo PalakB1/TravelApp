@@ -52,6 +52,7 @@ model Night {
   date      DateTime?
   location  String // e.g. "Selfoss"
   notes     String?
+  extra     Boolean        @default(false) // an add-on night outside the core itinerary (booked per customer need; no room requirement)
   createdAt DateTime       @default(now())
   hotels    HotelBooking[]
 }

@@ -19,7 +19,7 @@ type BookingLite = {
   payments?: PaymentLite[];
 };
 type HotelBookingLite = { cost: number; rooms: number; status: string; holdUntil?: Date | null };
-type NightLite = { hotels: HotelBookingLite[] };
+type NightLite = { hotels: HotelBookingLite[]; extra?: boolean };
 type CarLite = { rentalCost: number; driverMode: string; driverCost: number; status: string; holdUntil?: Date | null; driverNeedsStay?: boolean; seats?: number };
 
 // Seats available to travellers in a car (a hired driver takes one seat).
@@ -140,7 +140,10 @@ export function tripFinancials(args: {
   const profit = revenue - cost;
   const margin = revenue > 0 ? profit / revenue : 0;
 
-  const unbookedNights = nights.filter(isNightGap).length;
+  // Extra add-on nights are booked per customer need — they don't count as gaps
+  // or toward room-coverage requirements.
+  const coreNights = nights.filter((n) => !n.extra);
+  const unbookedNights = coreNights.filter(isNightGap).length;
   const expiringHolds =
     allHotels.filter((h) => holdExpiringSoon(h.status, h.holdUntil)).length +
     cars.filter((c) => holdExpiringSoon(c.status, c.holdUntil)).length;
@@ -160,7 +163,7 @@ export function tripFinancials(args: {
   const seatsSet = cars.some((c) => (c.seats ?? 0) > 0);
   const seatsShort = seatsSet ? Math.max(0, pax - carSeats) : 0;
   const shortRoomNights = needRooms > 0
-    ? nights.filter((n) => !isNightGap(n) && nightBookedRooms(n) < needRooms).length
+    ? coreNights.filter((n) => !isNightGap(n) && nightBookedRooms(n) < needRooms).length
     : 0;
 
   return {
