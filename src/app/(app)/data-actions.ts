@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { parseAmount } from "@/lib/money";
+import { parseAmount, formatINR } from "@/lib/money";
 
 async function guard() {
   const s = await getSession();
@@ -13,6 +13,15 @@ async function guard() {
 
 function refresh() {
   revalidatePath("/", "layout");
+}
+
+// Best-effort activity logging — never let a logging failure break a real action.
+async function logActivity(category: string, action: string, summary: string, href?: string | null) {
+  try {
+    await prisma.activityLog.create({ data: { category, action, summary, href: href || null } });
+  } catch {
+    /* table may not exist yet (pre-migration) — ignore */
+  }
 }
 
 // Match an existing customer by name (case-insensitive) or create one.
@@ -72,6 +81,7 @@ export async function createCustomer(formData: FormData) {
     redirect(`/customers/${existing.id}`);
   }
   const c = await prisma.customer.create({ data: { name, phone, email } });
+  await logActivity("customer", "added", `Added customer ${c.name}${phone ? ` · ${phone}` : ""}`, `/customers/${c.id}`);
   refresh();
   redirect(`/customers/${c.id}`);
 }
@@ -79,9 +89,11 @@ export async function createCustomer(formData: FormData) {
 export async function deleteCustomer(formData: FormData) {
   await guard();
   const id = String(formData.get("id"));
+  const cust = await prisma.customer.findUnique({ where: { id }, select: { name: true } });
   // Unlink any bookings (keep their history + denormalised name), then remove the customer.
   await prisma.booking.updateMany({ where: { customerId: id }, data: { customerId: null } });
   await prisma.customer.delete({ where: { id } });
+  await logActivity("customer", "deleted", `Deleted customer ${cust?.name ?? ""}`.trim());
   refresh();
   redirect("/customers");
 }
@@ -107,6 +119,7 @@ export async function createTrip(formData: FormData) {
       notes: String(formData.get("notes") || "") || null,
     },
   });
+  await logActivity("trip", "added", `Created trip “${trip.name}”`, `/trips/${trip.id}`);
   refresh();
   redirect(`/trips/${trip.id}`);
 }
@@ -114,7 +127,9 @@ export async function createTrip(formData: FormData) {
 export async function deleteTrip(formData: FormData) {
   await guard();
   const id = String(formData.get("id"));
+  const trip = await prisma.trip.findUnique({ where: { id }, select: { name: true } });
   await prisma.trip.delete({ where: { id } });
+  await logActivity("trip", "deleted", `Deleted trip “${trip?.name ?? "trip"}”`);
   refresh();
   redirect("/trips");
 }
@@ -178,6 +193,7 @@ export async function duplicateTrip(formData: FormData) {
     },
   });
 
+  await logActivity("trip", "added", `Copied “${src.name}” → “${created.name}”`, `/trips/${created.id}`);
   refresh();
   redirect(`/trips/${created.id}`);
 }
@@ -284,7 +300,8 @@ export async function addBooking(formData: FormData) {
   const variantId = String(formData.get("variantId") || "") || null;
   const phone = String(formData.get("customerPhone") || "") || null;
   const customer = await findOrCreateCustomer(customerName, phone);
-  await prisma.booking.create({
+  const booking = await prisma.booking.create({
+    include: { trip: { select: { name: true } } },
     data: {
       tripId,
       variantId,
@@ -305,6 +322,7 @@ export async function addBooking(formData: FormData) {
       status: String(formData.get("status") || "confirmed"),
     },
   });
+  await logActivity("booking", "added", `New booking — ${booking.customerName} · ${booking.pax} pax · ${booking.trip.name}`, `/bookings/${booking.id}`);
   refresh();
 }
 
@@ -343,16 +361,19 @@ export async function updateBookingInvoice(formData: FormData) {
 
 export async function setBookingStatus(formData: FormData) {
   await guard();
-  await prisma.booking.update({
-    where: { id: String(formData.get("id")) },
-    data: { status: String(formData.get("status")) },
-  });
+  const id = String(formData.get("id"));
+  const status = String(formData.get("status"));
+  const b = await prisma.booking.update({ where: { id }, data: { status } });
+  await logActivity("booking", "status", `${b.customerName} → ${status}`, `/bookings/${id}`);
   refresh();
 }
 
 export async function deleteBooking(formData: FormData) {
   await guard();
-  await prisma.booking.delete({ where: { id: String(formData.get("id")) } });
+  const id = String(formData.get("id"));
+  const b = await prisma.booking.findUnique({ where: { id }, select: { customerName: true } });
+  await prisma.booking.delete({ where: { id } });
+  await logActivity("booking", "deleted", `Deleted booking — ${b?.customerName ?? ""}`.trim());
   refresh();
 }
 
@@ -410,12 +431,14 @@ export async function addHotelBooking(formData: FormData) {
   const nightId = String(formData.get("nightId"));
   const hotelName = String(formData.get("hotelName") || "").trim();
   if (!nightId || !hotelName) return;
+  const rooms = Number(formData.get("rooms")) || 0;
+  const cost = parseAmount(String(formData.get("cost")));
   await prisma.hotelBooking.create({
     data: {
       nightId,
       hotelName,
-      rooms: Number(formData.get("rooms")) || 0,
-      cost: parseAmount(String(formData.get("cost"))),
+      rooms,
+      cost,
       status: String(formData.get("status") || "hold"),
       holdUntil: toDate(formData.get("holdUntil")),
       source: String(formData.get("source") || "") || null,
@@ -423,6 +446,8 @@ export async function addHotelBooking(formData: FormData) {
       notes: String(formData.get("notes") || "") || null,
     },
   });
+  const night = await prisma.night.findUnique({ where: { id: nightId }, include: { trip: { select: { id: true, name: true } } } });
+  await logActivity("hotel", "added", `Added “${hotelName}” · ${rooms} room${rooms === 1 ? "" : "s"} · ${formatINR(cost)}${night ? ` — ${night.location} (${night.trip.name})` : ""}`, night ? `/trips/${night.trip.id}` : null);
   refresh();
 }
 
@@ -494,13 +519,15 @@ export async function addHotelStay(formData: FormData) {
       data: { nightId: night.id, hotelName, rooms, cost: perNight + (i === 0 ? remainder : 0), status, holdUntil, source },
     });
   }
+  await logActivity("hotel", "added", `Booked “${hotelName}” for ${nights} night${nights === 1 ? "" : "s"} · ${formatINR(totalCost)} — ${trip.name}`, `/trips/${tripId}`);
   refresh();
 }
 
 export async function updateHotelBooking(formData: FormData) {
   await guard();
-  await prisma.hotelBooking.update({
+  const updated = await prisma.hotelBooking.update({
     where: { id: String(formData.get("id")) },
+    include: { night: { include: { trip: { select: { id: true } } } } },
     data: {
       hotelName: String(formData.get("hotelName") || "").trim() || undefined,
       rooms: Number(formData.get("rooms")) || 0,
@@ -512,12 +539,16 @@ export async function updateHotelBooking(formData: FormData) {
       notes: String(formData.get("notes") || "") || null,
     },
   });
+  await logActivity("hotel", "updated", `Updated “${updated.hotelName}” · ${updated.rooms} rooms · ${formatINR(updated.cost)} · ${updated.status}`, `/trips/${updated.night.trip.id}`);
   refresh();
 }
 
 export async function deleteHotelBooking(formData: FormData) {
   await guard();
-  await prisma.hotelBooking.delete({ where: { id: String(formData.get("id")) } });
+  const id = String(formData.get("id"));
+  const h = await prisma.hotelBooking.findUnique({ where: { id }, include: { night: { select: { location: true } } } });
+  await prisma.hotelBooking.delete({ where: { id } });
+  await logActivity("hotel", "deleted", `Deleted “${h?.hotelName ?? "hotel"}”${h?.night ? ` — ${h.night.location}` : ""}`);
   refresh();
 }
 
@@ -527,7 +558,8 @@ export async function addCar(formData: FormData) {
   const tripId = String(formData.get("tripId"));
   if (!tripId) return;
   const count = await prisma.car.count({ where: { tripId } });
-  await prisma.car.create({
+  const car = await prisma.car.create({
+    include: { trip: { select: { name: true } } },
     data: {
       tripId,
       label: String(formData.get("label") || "") || `Car ${count + 1}`,
@@ -568,12 +600,16 @@ export async function updateCar(formData: FormData) {
       confirmationNo: String(formData.get("confirmationNo") || "") || null,
     },
   });
+  await logActivity("car", "added", `Added ${car.label}${car.carType ? ` · ${car.carType}` : ""} — ${car.trip.name}`, `/trips/${tripId}`);
   refresh();
 }
 
 export async function deleteCar(formData: FormData) {
   await guard();
-  await prisma.car.delete({ where: { id: String(formData.get("id")) } });
+  const id = String(formData.get("id"));
+  const car = await prisma.car.findUnique({ where: { id }, select: { label: true, tripId: true } });
+  await prisma.car.delete({ where: { id } });
+  await logActivity("car", "deleted", `Removed ${car?.label ?? "car"}`, car ? `/trips/${car.tripId}` : null);
   refresh();
 }
 
@@ -649,20 +685,26 @@ export async function addPayment(formData: FormData) {
   const amount = parseAmount(String(formData.get("amount")));
   if (!bookingId || amount <= 0) return;
   const dateStr = String(formData.get("date") || "");
-  await prisma.payment.create({
+  const mode = String(formData.get("mode") || "upi");
+  const payment = await prisma.payment.create({
+    include: { booking: { select: { customerName: true, id: true } } },
     data: {
       bookingId,
       amount,
-      mode: String(formData.get("mode") || "upi"),
+      mode,
       note: String(formData.get("note") || "") || null,
       date: dateStr ? new Date(dateStr) : new Date(),
     },
   });
+  await logActivity("payment", "added", `${payment.booking.customerName} paid ${formatINR(amount)} (${mode})`, `/bookings/${payment.booking.id}`);
   refresh();
 }
 
 export async function deletePayment(formData: FormData) {
   await guard();
-  await prisma.payment.delete({ where: { id: String(formData.get("id")) } });
+  const id = String(formData.get("id"));
+  const p = await prisma.payment.findUnique({ where: { id }, include: { booking: { select: { customerName: true } } } });
+  await prisma.payment.delete({ where: { id } });
+  await logActivity("payment", "deleted", p ? `Removed ${formatINR(p.amount)} payment — ${p.booking.customerName}` : "Removed a payment");
   refresh();
 }

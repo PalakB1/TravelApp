@@ -10,6 +10,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Activity log — a running history of what was added / changed / deleted,
+// grouped by category so each menu (Hotels, Bookings, …) can show its own feed.
+model ActivityLog {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  category  String // hotel | booking | customer | payment | trip | car
+  action    String // added | updated | deleted | status
+  summary   String // human-readable line
+  href      String? // optional link target (e.g. /trips/abc)
+
+  @@index([category, createdAt])
+}
+
 // Login accounts (you + your husband)
 model User {
   id           String   @id @default(cuid())

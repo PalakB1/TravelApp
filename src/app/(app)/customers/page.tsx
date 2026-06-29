@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { bookingTotal, bookingPaid, bookingBalance, isActive } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import TableSearch from "@/components/TableSearch";
+import ActivityLog from "@/components/ActivityLog";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,8 @@ export default async function CustomersPage() {
           </TableSearch>
         </div>
       )}
+
+      <ActivityLog category="customer" title="Customer activity — added & deleted" />
     </>
   );
 }

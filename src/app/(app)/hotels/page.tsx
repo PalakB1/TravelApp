@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { pricePerRoom } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import TableSearch from "@/components/TableSearch";
+import ActivityLog from "@/components/ActivityLog";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +76,8 @@ export default async function HotelsPage() {
           </TableSearch>
         )}
       </div>
+
+      <ActivityLog category="hotel" title="Hotel activity — added, edited, deleted" />
     </>
   );
 }

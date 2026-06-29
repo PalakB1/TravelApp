@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { tripFinancials } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import { duplicateTrip } from "../data-actions";
+import ActivityLog from "@/components/ActivityLog";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +72,8 @@ export default async function TripsPage() {
           </table>
         </div>
       )}
+
+      <ActivityLog category={["trip", "car"]} title="Trip & car activity" />
     </>
   );
 }

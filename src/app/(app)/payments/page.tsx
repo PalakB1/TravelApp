@@ -4,6 +4,7 @@ import { bookingTotal, bookingPaid, bookingBalance, isActive } from "@/lib/calc"
 import { formatINR, formatINRShort } from "@/lib/money";
 import TableSearch from "@/components/TableSearch";
 import Combobox from "@/components/Combobox";
+import ActivityLog from "@/components/ActivityLog";
 import { addPayment } from "../data-actions";
 
 export const dynamic = "force-dynamic";
@@ -126,6 +127,8 @@ export default async function PaymentsPage() {
           </TableSearch>
         )}
       </div>
+
+      <ActivityLog category="payment" title="Payment activity — recorded & removed" />
     </>
   );
 }
