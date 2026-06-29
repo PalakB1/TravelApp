@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { bookingTotal, bookingPaid, bookingBalance, isActive } from "@/lib/calc";
 import { formatINR, formatINRShort } from "@/lib/money";
 import TableSearch from "@/components/TableSearch";
+import Combobox from "@/components/Combobox";
 import { addPayment } from "../data-actions";
 
 export const dynamic = "force-dynamic";
@@ -45,21 +46,23 @@ export default async function PaymentsPage() {
       </div>
 
       <div className="card">
-        <div className="card-title">Record a payment <span className="small muted">choose an existing customer — no typing names</span></div>
+        <div className="card-title">Record a payment <span className="small muted">type a name to find an existing customer</span></div>
         {payable.length === 0 ? (
           <div className="empty">No bookings yet. Add a booking on a trip first, then you can record payments here.</div>
         ) : (
           <form action={addPayment}>
             <div className="row-3">
               <label className="field"><span className="lbl">Customer · group</span>
-                <select name="bookingId" required defaultValue="">
-                  <option value="" disabled>Select a customer…</option>
-                  {payable.map(({ b, bal }) => (
-                    <option key={b.id} value={b.id}>
-                      {b.customerName} — {b.trip.name}{bal > 0 ? ` · ${formatINRShort(bal)} due` : " · fully paid"}
-                    </option>
-                  ))}
-                </select>
+                <Combobox
+                  name="bookingId"
+                  placeholder="Type a name…"
+                  emptyHint="No match. New customers are added from a trip booking."
+                  options={payable.map(({ b, bal }) => ({
+                    id: b.id,
+                    label: b.customerName,
+                    sub: `${b.trip.name}${bal > 0 ? ` · ${formatINRShort(bal)} due` : " · fully paid"}`,
+                  }))}
+                />
               </label>
               <label className="field"><span className="lbl">Amount</span><input name="amount" placeholder="40000 or 40k" required /></label>
               <label className="field"><span className="lbl">Date</span><input name="date" type="date" /></label>
