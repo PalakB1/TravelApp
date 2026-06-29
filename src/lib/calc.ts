@@ -15,6 +15,11 @@ type BookingLite = {
   nonTaxable?: number;
   gstRate?: number;
   tcsRate?: number;
+  // Per-person inclusion sums (multiplied by pax). cost = your cost; tax/nonTax
+  // = customer charge that is / isn't subject to GST + TCS.
+  inclCostPP?: number;
+  inclTaxPP?: number;
+  inclNonTaxPP?: number;
   variant?: VariantLite;
   payments?: PaymentLite[];
 };
@@ -38,9 +43,23 @@ export function bookingBase(b: BookingLite): number {
   if (items > 0) return items;
   return (b.variant?.sellPrice ?? 0) * b.pax;
 }
-// Taxable subtotal after discount — this is the company's sale value.
+// Inclusion charges billed to the customer (× pax). Taxable ones join the GST/TCS
+// base; non-taxable ones are billed plain. Cost is your spend on selected inclusions.
+export function bookingInclTaxCharge(b: BookingLite): number {
+  return (b.inclTaxPP || 0) * b.pax;
+}
+export function bookingInclNonTaxCharge(b: BookingLite): number {
+  return (b.inclNonTaxPP || 0) * b.pax;
+}
+export function bookingInclusionCost(b: BookingLite): number {
+  return (b.inclCostPP || 0) * b.pax;
+}
+function bookingNonTaxTotal(b: BookingLite): number {
+  return (b.nonTaxable || 0) + bookingInclNonTaxCharge(b);
+}
+// Taxable subtotal after discount + taxable inclusion charges — the company's sale value.
 export function bookingTaxable(b: BookingLite): number {
-  return Math.max(0, bookingBase(b) - (b.discount || 0));
+  return Math.max(0, bookingBase(b) - (b.discount || 0)) + bookingInclTaxCharge(b);
 }
 export function bookingGst(b: BookingLite): number {
   return Math.round((bookingTaxable(b) * (b.gstRate ?? 5)) / 100);
@@ -51,12 +70,11 @@ export function bookingTcs(b: BookingLite): number {
 }
 // What the client actually pays: taxable + GST + TCS + any non-taxable amount.
 export function bookingTotal(b: BookingLite): number {
-  return bookingTaxable(b) + bookingGst(b) + bookingTcs(b) + (b.nonTaxable || 0);
+  return bookingTaxable(b) + bookingGst(b) + bookingTcs(b) + bookingNonTaxTotal(b);
 }
-// Revenue counted toward profit = your sale value (taxable) plus any non-taxable
-// amount you bill (e.g. a visa fee). Only GST/TCS are excluded — those pass through to govt.
+// Revenue counted toward profit = sale value (taxable) plus any non-taxable billed amount.
 export function bookingRevenue(b: BookingLite): number {
-  return bookingTaxable(b) + (b.nonTaxable || 0);
+  return bookingTaxable(b) + bookingNonTaxTotal(b);
 }
 // Total tax collected on a booking that must be remitted to the government.
 export function bookingTax(b: BookingLite): number {
@@ -135,7 +153,8 @@ export function tripFinancials(args: {
   const extrasCost = vendor.reduce((s, v) => s + vendorCost(v), 0);
   const extrasPlanned = vendor.reduce((s, v) => s + v.cost, 0);
   const extrasActual = vendor.reduce((s, v) => s + (v.actualCost ?? 0), 0);
-  const cost = hotelCost + carRental + driverCost + extrasCost;
+  const inclusionsCost = active.reduce((s, b) => s + bookingInclusionCost(b), 0);
+  const cost = hotelCost + carRental + driverCost + extrasCost + inclusionsCost;
 
   const profit = revenue - cost;
   const margin = revenue > 0 ? profit / revenue : 0;
@@ -180,6 +199,7 @@ export function tripFinancials(args: {
     extrasCost,
     extrasPlanned,
     extrasActual,
+    inclusionsCost,
     cost,
     profit,
     margin,

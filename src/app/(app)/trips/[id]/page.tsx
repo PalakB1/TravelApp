@@ -10,6 +10,7 @@ import {
   addNight, updateNight, deleteNight,
   addHotelBooking, updateHotelBooking, deleteHotelBooking,
   addCar, updateCar, deleteCar,
+  addInclusion, updateInclusion, deleteInclusion,
   duplicateTrip, updateTripRooms,
 } from "../../data-actions";
 import ImportItinerary from "@/components/ImportItinerary";
@@ -55,6 +56,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
       vendorBookings: { orderBy: { createdAt: "asc" } },
       itinerary: { orderBy: { order: "asc" }, include: { hotels: { orderBy: { createdAt: "asc" } } } },
       cars: { orderBy: { createdAt: "asc" } },
+      inclusions: { orderBy: { createdAt: "asc" } },
       bookings: { include: { variant: true, payments: true, travellers: true }, orderBy: { createdAt: "desc" } },
     },
   });
@@ -157,7 +159,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
 
       <div className="metrics">
         <div className="metric c-emerald"><div className="label">Revenue</div><div className="value">{formatINR(f.revenue)}</div><div className="foot">+ GST/TCS {formatINRShort(f.taxCollected)} → billed {formatINRShort(f.invoiced)}</div></div>
-        <div className="metric c-amber"><div className="label">Your cost</div><div className="value">{formatINR(f.cost)}</div><div className="foot">hotels {formatINR(f.hotelCost)} · cars {formatINR(f.carRental)}{f.driverCost > 0 ? ` · drivers ${formatINR(f.driverCost)}` : ""}{f.extrasCost > 0 ? ` · extras ${formatINR(f.extrasCost)}` : ""}</div></div>
+        <div className="metric c-amber"><div className="label">Your cost</div><div className="value">{formatINR(f.cost)}</div><div className="foot">hotels {formatINR(f.hotelCost)} · cars {formatINR(f.carRental)}{f.driverCost > 0 ? ` · drivers ${formatINR(f.driverCost)}` : ""}{f.extrasCost > 0 ? ` · extras ${formatINR(f.extrasCost)}` : ""}{f.inclusionsCost > 0 ? ` · inclusions ${formatINR(f.inclusionsCost)}` : ""}</div></div>
         <div className="metric c-violet"><div className="label">Profit</div><div className="value">{formatINR(f.profit)}</div><div className="foot">{Math.round(f.margin * 100)}% margin</div></div>
         <div className="metric c-sky"><div className="label">Outstanding</div><div className="value">{formatINR(f.outstanding)}</div><div className="foot">{formatINR(f.paid)} collected</div></div>
         <div className={`metric ${f.unbookedNights + f.expiringHolds + f.shortRoomNights > 0 ? "c-rose" : "c-emerald"}`}><div className="label">Needs attention</div><div className="value">{f.unbookedNights + f.expiringHolds + f.shortRoomNights}</div><div className="foot">{f.unbookedNights} unbooked · {f.shortRoomNights} short rooms · {f.expiringHolds} holds expiring</div></div>
@@ -540,6 +542,81 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
             </form>
           </div>
         </details>
+        </div>
+      </details>
+
+      {/* INCLUSIONS */}
+      <details className="section">
+        <summary>
+          <span className="sec-title">Inclusions &amp; extras</span>
+          <span className="sec-hi" style={{ marginLeft: "auto", marginRight: 12 }}>
+            {trip.inclusions.length} item{trip.inclusions.length !== 1 ? "s" : ""}
+            {trip.inclusions.filter((i) => i.isDefault).length > 0 ? ` · ${trip.inclusions.filter((i) => i.isDefault).length} default` : ""}
+          </span>
+        </summary>
+        <div className="sec-body">
+          <p className="small muted" style={{ margin: "0 0 12px" }}>Defaults are auto-ticked on every new booking (your cost only). Optional ones are upsells you tick per customer (cost + charge). Prices are per person.</p>
+          {trip.inclusions.length === 0 ? (
+            <div className="empty small">None yet. Add whale watching, blue lagoon, etc. below.</div>
+          ) : (
+            <div className="stack" style={{ marginBottom: 14 }}>
+              {trip.inclusions.map((inc) => (
+                <details key={inc.id} className="add" style={{ border: "1px solid var(--border)", borderRadius: 10, padding: "8px 12px", margin: 0 }}>
+                  <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ fontWeight: 500 }}>{inc.name}</span>
+                    {inc.isDefault ? <span className="badge green">default</span> : <span className="badge gray">optional</span>}
+                    {inc.taxable ? <span className="badge sky">GST/TCS</span> : <span className="badge gray">no tax</span>}
+                    <span className="small muted" style={{ marginLeft: "auto" }}>cost {formatINR(inc.cost)}/pp{!inc.isDefault ? ` · charge ${formatINR(inc.sellContribution)}/pp` : ""}</span>
+                  </summary>
+                  <div className="form-box" style={{ marginTop: 10 }}>
+                    <form action={updateInclusion}>
+                      <input type="hidden" name="id" value={inc.id} />
+                      <div className="row-3">
+                        <label className="field"><span className="lbl">Name</span><input name="name" defaultValue={inc.name} /></label>
+                        <label className="field"><span className="lbl">On every booking?</span>
+                          <select name="isDefault" defaultValue={inc.isDefault ? "yes" : "no"}><option value="yes">Default (cost only)</option><option value="no">Optional upsell</option></select>
+                        </label>
+                        <label className="field"><span className="lbl">GST + TCS?</span>
+                          <select name="taxable" defaultValue={inc.taxable ? "yes" : "no"}><option value="yes">Yes</option><option value="no">No</option></select>
+                        </label>
+                      </div>
+                      <div className="row-3">
+                        <label className="field"><span className="lbl">Your cost / person</span><input name="cost" defaultValue={inc.cost || ""} /></label>
+                        <label className="field"><span className="lbl">Customer charge / person</span><input name="charge" defaultValue={inc.sellContribution || ""} placeholder="optional only" /></label>
+                        <div className="flex" style={{ alignItems: "flex-end", paddingBottom: 12, gap: 8 }}>
+                          <button className="primary sm" type="submit">Save</button>
+                        </div>
+                      </div>
+                    </form>
+                    <form action={deleteInclusion} style={{ marginTop: 4 }}><input type="hidden" name="id" value={inc.id} /><button className="sm danger" type="submit">Delete inclusion</button></form>
+                    <p className="small muted" style={{ margin: "8px 0 0" }}>Editing the price only affects future selections — bookings that already have it keep their snapshotted price.</p>
+                  </div>
+                </details>
+              ))}
+            </div>
+          )}
+          <details className="add">
+            <summary>+ Add inclusion</summary>
+            <div className="form-box">
+              <form action={addInclusion}>
+                <input type="hidden" name="tripId" value={trip.id} />
+                <div className="row-3">
+                  <label className="field"><span className="lbl">Name</span><input name="name" placeholder="Whale watching" required /></label>
+                  <label className="field"><span className="lbl">On every booking?</span>
+                    <select name="isDefault" defaultValue="no"><option value="no">Optional upsell</option><option value="yes">Default — auto-added (cost only)</option></select>
+                  </label>
+                  <label className="field"><span className="lbl">GST + TCS on charge?</span>
+                    <select name="taxable" defaultValue="yes"><option value="yes">Yes</option><option value="no">No</option></select>
+                  </label>
+                </div>
+                <div className="row">
+                  <label className="field"><span className="lbl">Your cost / person</span><input name="cost" placeholder="10000 or 10k" /></label>
+                  <label className="field"><span className="lbl">Customer charge / person</span><input name="charge" placeholder="₹ (optional upsells only)" /></label>
+                </div>
+                <button className="primary sm" type="submit">Add inclusion</button>
+              </form>
+            </div>
+          </details>
         </div>
       </details>
 

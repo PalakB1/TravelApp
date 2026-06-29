@@ -261,3 +261,9 @@ details.add > summary:hover { background: #e4e1ff; transform: translateY(-1px); 
 .log-row { display: block; border-radius: 8px; border-bottom: 1px solid var(--border); }
 .log-row:last-child { border-bottom: none; }
 .log-row:hover { background: var(--surface-2); }
+
+/* Inclusion check toggle */
+.incl-toggle { width: 24px; height: 24px; padding: 0; justify-content: center; border-radius: 7px;
+  border: 1.5px solid var(--border-strong); background: var(--surface); color: #fff; font-size: 14px; font-weight: 700; }
+.incl-toggle.on { background: var(--accent-grad); border-color: transparent; box-shadow: 0 2px 6px rgba(91,80,230,0.3); }
+.incl-toggle:hover { border-color: var(--accent); }

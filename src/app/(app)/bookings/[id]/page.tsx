@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookingTotal, bookingPaid, bookingBalance } from "@/lib/calc";
+import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookingTotal, bookingPaid, bookingBalance, bookingInclTaxCharge, bookingInclNonTaxCharge, bookingInclusionCost } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
-import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted } from "../../data-actions";
+import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion } from "../../data-actions";
 import AutoFill from "@/components/AutoFill";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +17,13 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const b = await prisma.booking.findUnique({
     where: { id },
-    include: { trip: true, variant: true, customer: true, travellers: { orderBy: { createdAt: "asc" } }, payments: { orderBy: { date: "asc" } } },
+    include: {
+      trip: { include: { inclusions: { orderBy: { createdAt: "asc" } } } },
+      variant: true, customer: true,
+      travellers: { orderBy: { createdAt: "asc" } },
+      payments: { orderBy: { date: "asc" } },
+      inclusions: { orderBy: { bookedAt: "asc" } },
+    },
   });
   if (!b) notFound();
 
@@ -164,6 +170,54 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
         </details>
       </div>
 
+      {b.trip.inclusions.length > 0 && (
+        <div className="card">
+          <div className="card-title">
+            Inclusions
+            <span className="small muted">tick what this party gets · prices × {b.pax} pax</span>
+          </div>
+          <div>
+            {b.trip.inclusions.map((inc) => {
+              const sel = b.inclusions.find((s) => s.inclusionId === inc.id);
+              const on = !!sel;
+              const perPP = inc.isDefault ? inc.cost : inc.sellContribution;
+              return (
+                <div key={inc.id} className="between" style={{ padding: "9px 0", borderBottom: "1px solid var(--border)" }}>
+                  <div className="flex" style={{ gap: 12, alignItems: "flex-start" }}>
+                    <form action={toggleBookingInclusion} style={{ marginTop: 1 }}>
+                      <input type="hidden" name="bookingId" value={b.id} />
+                      <input type="hidden" name="inclusionId" value={inc.id} />
+                      <input type="hidden" name="on" value={on ? "0" : "1"} />
+                      <button type="submit" className={`incl-toggle ${on ? "on" : ""}`} aria-label={on ? "Remove" : "Add"}>{on ? "✓" : ""}</button>
+                    </form>
+                    <div>
+                      <div style={{ fontWeight: 500 }}>
+                        {inc.name}{" "}
+                        {inc.isDefault ? <span className="badge green">default</span> : <span className="badge gray">optional</span>}{" "}
+                        {!inc.taxable && <span className="badge gray">no tax</span>}
+                      </div>
+                      <div className="small muted">
+                        {inc.isDefault ? `cost ${formatINR(inc.cost)}/pp · in package` : `charge ${formatINR(inc.sellContribution)}/pp · cost ${formatINR(inc.cost)}/pp`}
+                        {sel ? ` · booked ${fmtDate(sel.bookedAt)} @ ${formatINR(inc.isDefault ? sel.cost : sel.charge)}/pp` : ""}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="right" style={{ whiteSpace: "nowrap" }}>
+                    {on ? (
+                      <>
+                        <div style={{ fontWeight: 600 }}>{inc.isDefault ? <span className="muted">cost {formatINR(sel!.cost * b.pax)}</span> : `+ ${formatINR(sel!.charge * b.pax)}`}</div>
+                        <div className="small muted">{formatINR(inc.isDefault ? sel!.cost : sel!.charge)} × {b.pax}</div>
+                      </>
+                    ) : <span className="muted small">not added · {formatINR(perPP)}/pp</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="small muted" style={{ marginTop: 10 }}>Defaults add to your cost only. Optional ones add to the customer’s bill (and your cost). Each tick locks in today’s price.</p>
+        </div>
+      )}
+
       <div className="grid-2">
         {/* INVOICE */}
         <div className="card">
@@ -173,10 +227,12 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           {b.flightAmount > 0 && <Line label="Flights" value={formatINR(b.flightAmount)} />}
           {base === 0 && <div className="empty small">No package amount set yet. Edit the invoice below.</div>}
           {b.discount > 0 && <Line label={`Discount${b.discountReason ? " · " + b.discountReason : ""}`} value={`− ${formatINR(b.discount)}`} muted />}
+          {bookingInclTaxCharge(b) > 0 && <Line label="Inclusions (taxable)" value={formatINR(bookingInclTaxCharge(b))} muted />}
           <Line label="Taxable value" value={formatINR(taxable)} strong />
           <Line label={`GST @ ${b.gstRate}%`} value={formatINR(gst)} muted />
           <Line label={`TCS @ ${b.tcsRate}%`} value={formatINR(tcs)} muted />
           {b.nonTaxable > 0 && <Line label="Non-taxable (no GST/TCS)" value={formatINR(b.nonTaxable)} muted />}
+          {bookingInclNonTaxCharge(b) > 0 && <Line label="Inclusions (no tax)" value={formatINR(bookingInclNonTaxCharge(b))} muted />}
           <div className="between" style={{ paddingTop: 10 }}>
             <span style={{ fontSize: 15, fontWeight: 500 }}>Invoice total</span>
             <span style={{ fontSize: 16, fontWeight: 500 }}>{formatINR(total)}</span>

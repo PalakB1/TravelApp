@@ -73,7 +73,7 @@ export default async function TripsPage() {
         </div>
       )}
 
-      <ActivityLog category={["trip", "car"]} title="Trip & car activity" />
+      <ActivityLog category={["trip", "car", "inclusion"]} title="Trip, car & inclusion activity" />
     </>
   );
 }

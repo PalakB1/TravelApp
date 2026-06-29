@@ -187,7 +187,7 @@ export async function duplicateTrip(formData: FormData) {
       },
       variants: { create: src.variants.map((v) => ({ name: v.name, sellPrice: v.sellPrice, occupancy: v.occupancy })) },
       inclusions: {
-        create: src.inclusions.map((i) => ({ name: i.name, category: i.category, sellContribution: i.sellContribution, cost: i.cost, perPax: i.perPax })),
+        create: src.inclusions.map((i) => ({ name: i.name, category: i.category, isDefault: i.isDefault, sellContribution: i.sellContribution, cost: i.cost, taxable: i.taxable, perPax: i.perPax })),
       },
       // Cars and vendor extras are NOT copied — add them for the new departure.
     },
@@ -221,20 +221,39 @@ export async function deleteVariant(formData: FormData) {
   refresh();
 }
 
-// ---- Inclusions ----
+// ---- Inclusions (trip activities/extras) ----
 export async function addInclusion(formData: FormData) {
   await guard();
   const tripId = String(formData.get("tripId"));
   const name = String(formData.get("name") || "").trim();
-  if (!name) return;
+  if (!tripId || !name) return;
+  const isDefault = String(formData.get("isDefault")) === "yes";
   await prisma.inclusion.create({
     data: {
       tripId,
       name,
-      category: String(formData.get("category") || "other"),
-      sellContribution: parseAmount(String(formData.get("sellContribution"))),
+      isDefault,
       cost: parseAmount(String(formData.get("cost"))),
-      perPax: String(formData.get("perPax")) !== "flat",
+      sellContribution: isDefault ? 0 : parseAmount(String(formData.get("charge"))),
+      taxable: String(formData.get("taxable")) === "yes",
+    },
+  });
+  await logActivity("inclusion", "added", `Inclusion “${name}”${isDefault ? " (default)" : ""}`, `/trips/${tripId}`);
+  refresh();
+}
+
+export async function updateInclusion(formData: FormData) {
+  await guard();
+  const id = String(formData.get("id"));
+  const isDefault = String(formData.get("isDefault")) === "yes";
+  await prisma.inclusion.update({
+    where: { id },
+    data: {
+      name: String(formData.get("name") || "").trim() || undefined,
+      isDefault,
+      cost: parseAmount(String(formData.get("cost"))),
+      sellContribution: isDefault ? 0 : parseAmount(String(formData.get("charge"))),
+      taxable: String(formData.get("taxable")) === "yes",
     },
   });
   refresh();
@@ -243,6 +262,44 @@ export async function addInclusion(formData: FormData) {
 export async function deleteInclusion(formData: FormData) {
   await guard();
   await prisma.inclusion.delete({ where: { id: String(formData.get("id")) } });
+  refresh();
+}
+
+// Recompute the denormalised per-person inclusion sums on a booking.
+async function recomputeBookingInclusions(bookingId: string) {
+  const sels = await prisma.bookingInclusion.findMany({ where: { bookingId } });
+  const inclCostPP = sels.reduce((s, x) => s + x.cost, 0);
+  const inclTaxPP = sels.reduce((s, x) => s + (x.taxable ? x.charge : 0), 0);
+  const inclNonTaxPP = sels.reduce((s, x) => s + (!x.taxable ? x.charge : 0), 0);
+  await prisma.booking.update({ where: { id: bookingId }, data: { inclCostPP, inclTaxPP, inclNonTaxPP } });
+}
+
+// Tick / untick an inclusion for a booking. On tick, the current price + date are
+// snapshotted; on untick the selection is removed. Customer balance/cost recompute.
+export async function toggleBookingInclusion(formData: FormData) {
+  await guard();
+  const bookingId = String(formData.get("bookingId"));
+  const inclusionId = String(formData.get("inclusionId"));
+  const on = String(formData.get("on")) === "1";
+  if (!bookingId || !inclusionId) return;
+
+  if (on) {
+    const incl = await prisma.inclusion.findUnique({ where: { id: inclusionId } });
+    if (incl) {
+      const existing = await prisma.bookingInclusion.findFirst({ where: { bookingId, inclusionId } });
+      if (!existing) {
+        await prisma.bookingInclusion.create({
+          data: {
+            bookingId, inclusionId, name: incl.name, cost: incl.cost,
+            charge: incl.isDefault ? 0 : incl.sellContribution, taxable: incl.taxable, isDefault: incl.isDefault,
+          },
+        });
+      }
+    }
+  } else {
+    await prisma.bookingInclusion.deleteMany({ where: { bookingId, inclusionId } });
+  }
+  await recomputeBookingInclusions(bookingId);
   refresh();
 }
 
@@ -322,6 +379,14 @@ export async function addBooking(formData: FormData) {
       status: String(formData.get("status") || "confirmed"),
     },
   });
+  // Auto-attach the trip's default inclusions (cost-only), snapshotting price + date.
+  const defaults = await prisma.inclusion.findMany({ where: { tripId, isDefault: true } });
+  if (defaults.length) {
+    await prisma.bookingInclusion.createMany({
+      data: defaults.map((d) => ({ bookingId: booking.id, inclusionId: d.id, name: d.name, cost: d.cost, charge: 0, taxable: d.taxable, isDefault: true })),
+    });
+    await recomputeBookingInclusions(booking.id);
+  }
   await logActivity("booking", "added", `New booking — ${booking.customerName} · ${booking.pax} pax · ${booking.trip.name}`, `/bookings/${booking.id}`);
   refresh();
 }

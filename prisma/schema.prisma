@@ -120,16 +120,39 @@ model Variant {
   bookings  Booking[]
 }
 
-// What's in the package — each carries what it adds to price AND what it costs you
+// Trip activities/extras (whale watching, blue lagoon…). Defaults are auto-added
+// to every booking (cost only). Non-defaults are optional upsells (cost + charge).
+// Prices are PER PERSON and snapshotted onto each booking when selected.
 model Inclusion {
   id              String @id @default(cuid())
   tripId          String
   trip            Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
   name            String
   category        String @default("other") // hotel | flight | transfer | meal | tour | car | guide | other
-  sellContribution Int   @default(0)
-  cost            Int    @default(0) // your actual cost
-  perPax          Boolean @default(true) // cost is per traveller vs flat for the trip
+  isDefault       Boolean @default(false)  // pre-selected on every booking
+  cost            Int    @default(0) // your cost per person
+  sellContribution Int   @default(0) // what you charge the customer per person (non-default upsells)
+  taxable         Boolean @default(true)   // does the charge attract GST + TCS
+  perPax          Boolean @default(true)
+  createdAt       DateTime @default(now())
+
+  selections      BookingInclusion[]
+}
+
+// An inclusion selected on a specific booking — price + date snapshotted so later
+// price edits never change past bookings.
+model BookingInclusion {
+  id          String    @id @default(cuid())
+  bookingId   String
+  booking     Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  inclusionId String?
+  inclusion   Inclusion? @relation(fields: [inclusionId], references: [id], onDelete: SetNull)
+  name        String     // snapshot
+  cost        Int        @default(0) // per-person snapshot
+  charge      Int        @default(0) // per-person snapshot (0 for defaults)
+  taxable     Boolean    @default(true)
+  isDefault   Boolean    @default(false)
+  bookedAt    DateTime   @default(now())
 }
 
 // A person who books — reused across trips so you can see their full history.
@@ -175,10 +198,17 @@ model Booking {
   taxRemittedOn  DateTime?
   taxRemittedNote String? // challan / filing reference
 
+  // Denormalised PER-PERSON inclusion sums (× pax at read time) — kept in sync
+  // when selections change, so financial pages don't need to load the relation.
+  inclCostPP     Int       @default(0) // your cost per person from selected inclusions
+  inclTaxPP      Int       @default(0) // taxable charge per person (gets GST/TCS)
+  inclNonTaxPP   Int       @default(0) // non-taxable charge per person
+
   status         String    @default("confirmed") // enquiry | confirmed | travelled | cancelled
   createdAt      DateTime  @default(now())
   payments       Payment[]
   travellers     Traveller[]
+  inclusions     BookingInclusion[]
 }
 
 // An individual person on a booking (a family member / party member).
