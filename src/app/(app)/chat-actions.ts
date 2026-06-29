@@ -42,7 +42,7 @@ export async function interpretCommand(text: string): Promise<ChatResult> {
     // ---- Log a payment ----
     if (cmd.kind === "payment") {
       const booking = await prisma.booking.findFirst({
-        where: { customerName: { contains: cmd.customer }, status: { not: "cancelled" } },
+        where: { customerName: { contains: cmd.customer, mode: "insensitive" }, status: { not: "cancelled" } },
         orderBy: { createdAt: "desc" },
         include: { variant: true, payments: true, trip: true },
       });

@@ -6,7 +6,7 @@ import { formatINR, formatINRShort } from "@/lib/money";
 import {
   addVariant, deleteVariant,
   addVendorBooking, updateVendorBooking, deleteVendorBooking,
-  addBooking,
+  addBooking, deleteTrip,
   addNight, updateNight, deleteNight,
   addHotelBooking, updateHotelBooking, deleteHotelBooking,
   addCar, updateCar, deleteCar,
@@ -120,6 +120,25 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                   Copies the {trip.itinerary.length} nights, hotels, {trip.cars.length} cars and pricing, shifting every date. Hotels &amp; cars reset to “not booked”; bookings stay on this trip.
                 </p>
               </form>
+            </div>
+          </details>
+          <details className="menu-pop" style={{ position: "relative" }}>
+            <summary className="btn sm" style={{ listStyle: "none", cursor: "pointer", color: "var(--danger)", borderColor: "var(--danger-bg)" }}>Delete trip</summary>
+            <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", width: 320, maxWidth: "80vw", zIndex: 30, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, boxShadow: "0 12px 32px rgba(27,28,43,0.16)", padding: 16 }}>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>Delete “{trip.name}”?</div>
+              <p className="small muted" style={{ margin: "0 0 12px" }}>
+                This permanently removes the trip and its {trip.itinerary.length} nights, all hotels, {trip.cars.length} cars and {trip.bookings.length} booking{trip.bookings.length === 1 ? "" : "s"} (with their payments). This cannot be undone.
+              </p>
+              <details>
+                <summary className="btn danger sm" style={{ listStyle: "none", cursor: "pointer" }}>Yes, I want to delete</summary>
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+                  <p className="small" style={{ margin: "0 0 10px", color: "var(--danger)", fontWeight: 600 }}>Are you absolutely sure? There’s no undo.</p>
+                  <form action={deleteTrip}>
+                    <input type="hidden" name="id" value={trip.id} />
+                    <button className="danger sm" type="submit">Delete this trip forever</button>
+                  </form>
+                </div>
+              </details>
             </div>
           </details>
         </div>

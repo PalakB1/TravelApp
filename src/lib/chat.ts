@@ -65,8 +65,8 @@ export function parseCommand(input: string): Command {
   if (/\b(paid|payment|received|advance|balance|deposit|installment|instalment)\b/.test(lower)) {
     const amount = extractAmount(text);
     let customer = "";
-    const from = text.match(/from\s+([a-z][a-z .]+?)(?:\s+(?:by|via|in|cash|upi|card|bank|today|of|for|\d)|$)/i);
-    const before = text.match(/^([a-z][a-z .]+?)\s+(?:paid|gave|sent|made)/i);
+    const from = text.match(/from\s+([a-z][a-z .&'-]+?)(?:\s+(?:by|via|in|cash|upi|card|bank|today|of|for|\d)|$)/i);
+    const before = text.match(/^([a-z][a-z .&'-]+?)\s+(?:paid|gave|sent|made)/i);
     if (from) customer = from[1];
     else if (before) customer = before[1];
     customer = customer.replace(/\b(mr|mrs|ms|sir|madam)\b\.?/gi, "").trim();
