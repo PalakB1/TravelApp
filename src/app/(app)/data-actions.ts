@@ -56,6 +56,26 @@ export async function updateCustomer(formData: FormData) {
   refresh();
 }
 
+export async function createCustomer(formData: FormData) {
+  await guard();
+  const name = String(formData.get("name") || "").trim();
+  if (!name) return;
+  const phone = String(formData.get("phone") || "").trim() || null;
+  const email = String(formData.get("email") || "").trim() || null;
+  const existing = await matchCustomer(name);
+  if (existing) {
+    await prisma.customer.update({
+      where: { id: existing.id },
+      data: { phone: phone ?? existing.phone, email: email ?? existing.email },
+    });
+    refresh();
+    redirect(`/customers/${existing.id}`);
+  }
+  const c = await prisma.customer.create({ data: { name, phone, email } });
+  refresh();
+  redirect(`/customers/${c.id}`);
+}
+
 export async function deleteCustomer(formData: FormData) {
   await guard();
   const id = String(formData.get("id"));

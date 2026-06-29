@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { tripFinancials, bookingBalance, bookingPaid, bookingTotal, bookingRevenue, bookingTax, isActive, isNightGap, holdExpiringSoon } from "@/lib/calc";
 import { formatINR, formatINRShort } from "@/lib/money";
-import ChatBox from "@/components/ChatBox";
+import QuickEntry from "@/components/QuickEntry";
 import { Donut, HBars } from "@/components/Charts";
 
 export const dynamic = "force-dynamic";
@@ -97,6 +97,19 @@ export default async function Dashboard() {
     })
     .filter((r) => r.tripNames.length > 0)
     .sort((a, b) => b.out - a.out);
+
+  // ---- Quick-entry options (existing customers / trips / nights) ----
+  const payableOptions = trips
+    .flatMap((t) => t.bookings.filter((b) => isActive(b.status)).map((b) => {
+      const bal = bookingBalance(b);
+      return { id: b.id, label: b.customerName, sub: `${t.name}${bal > 0 ? ` · ${formatINRShort(bal)} due` : " · fully paid"}`, _bal: bal };
+    }))
+    .sort((a, b) => b._bal - a._bal)
+    .map(({ _bal, ...o }) => o);
+  const tripOptions = trips.map((t) => ({ id: t.id, name: t.name }));
+  const nightsByTrip: Record<string, { id: string; label: string }[]> = {};
+  for (const t of trips) nightsByTrip[t.id] = t.itinerary.map((n) => ({ id: n.id, label: `${n.date ? fmtDate(n.date) : "—"} · ${n.location}` }));
+  const customerNameList = customers.map((c) => c.name).sort((a, b) => a.localeCompare(b));
 
   // recent payments for an activity feel
   const recentPayments = await prisma.payment.findMany({
@@ -197,8 +210,8 @@ export default async function Dashboard() {
 
       <div className="grid-2">
         <div className="card">
-          <div className="card-title">Quick entry — just chat</div>
-          <ChatBox />
+          <div className="card-title">Quick entry <span className="small muted">pick what you’re adding</span></div>
+          <QuickEntry payable={payableOptions} trips={tripOptions} nightsByTrip={nightsByTrip} customerNames={customerNameList} />
         </div>
 
         <div className="card">
