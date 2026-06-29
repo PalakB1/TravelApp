@@ -112,6 +112,10 @@ a.metric { text-decoration: none; color: inherit; display: block; transition: bo
 a.metric::after { content: "›"; position: absolute; top: 12px; right: 14px; font-size: 18px; color: var(--text-3); opacity: .5; }
 a.metric:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(27,28,43,0.10); }
 a.metric:hover::after { opacity: 1; }
+
+/* Clickable list rows (upcoming trips) */
+a.up-trip { display: block; padding: 10px 12px; margin: 0 -12px; border-radius: 10px; transition: background .12s; }
+a.up-trip:hover { background: var(--surface-2); }
 .metric.c-emerald { background: var(--emerald-bg); } .metric.c-emerald::before { background: var(--emerald); } .metric.c-emerald .value { color: #0b7a52; }
 .metric.c-amber   { background: var(--amber-bg); }   .metric.c-amber::before { background: var(--amber); }   .metric.c-amber .value { color: #9a6109; }
 .metric.c-violet  { background: var(--violet-bg); }  .metric.c-violet::before { background: var(--violet); }  .metric.c-violet .value { color: #6d28d9; }

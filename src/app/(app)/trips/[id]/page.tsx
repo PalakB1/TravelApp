@@ -6,7 +6,7 @@ import { formatINR } from "@/lib/money";
 import {
   addVariant, deleteVariant,
   addVendorBooking, updateVendorBooking, deleteVendorBooking,
-  addBooking, deleteTrip,
+  addBooking,
   addNight, updateNight, deleteNight,
   addHotelBooking, updateHotelBooking, deleteHotelBooking,
   addCar, updateCar, deleteCar,
@@ -91,10 +91,6 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
               </form>
             </div>
           </details>
-          <form action={deleteTrip}>
-            <input type="hidden" name="id" value={trip.id} />
-            <button className="danger sm" type="submit">Delete trip</button>
-          </form>
         </div>
       </div>
 

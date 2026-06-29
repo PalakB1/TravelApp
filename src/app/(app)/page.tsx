@@ -223,15 +223,18 @@ export default async function Dashboard() {
               {upcoming.slice(0, 5).map(({ trip, f }) => {
                 const filled = trip.capacity > 0 ? Math.min(100, Math.round((f.pax / trip.capacity) * 100)) : 0;
                 return (
-                  <Link key={trip.id} href={`/trips/${trip.id}`} style={{ display: "block" }}>
+                  <Link key={trip.id} href={`/trips/${trip.id}`} className="up-trip">
                     <div className="between" style={{ marginBottom: 6 }}>
                       <div>
                         <div style={{ fontWeight: 500, fontSize: 14 }}>{trip.name}</div>
                         <div className="small muted">{trip.destination || "—"} · {fmtDate(trip.departureDate)}</div>
                       </div>
-                      <div className="right">
-                        <div style={{ fontWeight: 500, fontSize: 14 }}>{formatINRShort(f.revenue)}</div>
-                        <div className="small muted">{trip.capacity > 0 ? `${f.pax}/${trip.capacity} seats` : `${f.pax} pax`}</div>
+                      <div className="right" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div>
+                          <div style={{ fontWeight: 500, fontSize: 14 }}>{formatINRShort(f.revenue)}</div>
+                          <div className="small muted">{trip.capacity > 0 ? `${f.pax}/${trip.capacity} seats` : `${f.pax} pax`}</div>
+                        </div>
+                        <span style={{ color: "var(--text-3)", fontSize: 18 }}>›</span>
                       </div>
                     </div>
                     {trip.capacity > 0 && (
