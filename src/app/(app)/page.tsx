@@ -116,31 +116,31 @@ export default async function Dashboard() {
       </div>
 
       <div className="metrics">
-        <div className="metric c-emerald">
+        <Link className="metric c-emerald" href="/reports/revenue">
           <div className="label">Revenue booked</div>
           <div className="value">{formatINRShort(revenue)}</div>
           <div className="foot">{formatINR(revenue)}</div>
-        </div>
-        <div className="metric c-amber">
+        </Link>
+        <Link className="metric c-amber" href="/reports/cost">
           <div className="label">Your cost</div>
           <div className="value">{formatINRShort(cost)}</div>
           <div className="foot">hotels, cars, drivers</div>
-        </div>
-        <div className="metric c-violet">
+        </Link>
+        <Link className="metric c-violet" href="/reports/profit">
           <div className="label">Profit</div>
           <div className="value">{formatINRShort(profit)}</div>
           <div className="foot">{margin}% margin</div>
-        </div>
-        <div className="metric c-sky">
+        </Link>
+        <Link className="metric c-sky" href="/reports/outstanding">
           <div className="label">Outstanding</div>
           <div className="value">{formatINRShort(outstanding)}</div>
           <div className="foot">due from customers</div>
-        </div>
-        <div className={`metric ${unbookedNights + expiringHolds + shortRoomNights + seatIssues > 0 ? "c-rose" : "c-emerald"}`}>
+        </Link>
+        <Link className={`metric ${unbookedNights + expiringHolds + shortRoomNights + seatIssues > 0 ? "c-rose" : "c-emerald"}`} href="/reports/attention">
           <div className="label">Needs attention</div>
           <div className="value">{unbookedNights + expiringHolds + shortRoomNights + seatIssues}</div>
           <div className="foot">{unbookedNights} unbooked · {shortRoomNights} short rooms · {seatIssues} car seats · {expiringHolds} holds</div>
-        </div>
+        </Link>
       </div>
 
       {alerts.length > 0 && (
