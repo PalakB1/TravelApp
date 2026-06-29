@@ -19,10 +19,18 @@ export default function ChatBox() {
   ]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
-  const endRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const firstRender = useRef(true);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Don't move the page on initial load — only keep the chat list pinned to
+    // the latest message after one is added (scrolls the list, not the window).
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [msgs]);
 
   async function send(value: string) {
@@ -44,13 +52,12 @@ export default function ChatBox() {
 
   return (
     <div>
-      <div className="chat-msgs" style={{ maxHeight: 240, overflowY: "auto" }}>
+      <div ref={listRef} className="chat-msgs" style={{ maxHeight: 240, overflowY: "auto" }}>
         {msgs.map((m, i) => (
           <div key={i} className={`bubble ${m.role === "user" ? "user" : m.role === "err" ? "err" : "bot"}`}>
             {m.text}
           </div>
         ))}
-        <div ref={endRef} />
       </div>
 
       <form
