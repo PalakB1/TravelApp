@@ -662,14 +662,16 @@ export async function addCar(formData: FormData) {
       confirmationNo: String(formData.get("confirmationNo") || "") || null,
     },
   });
+  await logActivity("car", "added", `Added ${car.label}${car.carType ? ` · ${car.carType}` : ""} — ${car.trip.name}`, `/trips/${tripId}`);
   refresh();
 }
 
 export async function updateCar(formData: FormData) {
   await guard();
   const id = String(formData.get("id"));
-  await prisma.car.update({
+  const car = await prisma.car.update({
     where: { id },
+    include: { trip: { select: { name: true } } },
     data: {
       carType: String(formData.get("carType") || "") || null,
       seats: Number(formData.get("seats")) || 0,
@@ -684,7 +686,7 @@ export async function updateCar(formData: FormData) {
       confirmationNo: String(formData.get("confirmationNo") || "") || null,
     },
   });
-  await logActivity("car", "added", `Added ${car.label}${car.carType ? ` · ${car.carType}` : ""} — ${car.trip.name}`, `/trips/${tripId}`);
+  await logActivity("car", "updated", `Updated ${car.label} — ${car.trip.name}`, `/trips/${car.tripId}`);
   refresh();
 }
 
