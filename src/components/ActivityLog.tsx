@@ -24,9 +24,11 @@ export default async function ActivityLog({ category, title = "Activity log", li
 
   return (
     <details className="card">
-      <summary style={{ listStyle: "none", cursor: "pointer", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+      <summary style={{ listStyle: "none", cursor: "pointer", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
         <span>🕑 {title}</span>
-        <span className="small muted">{logs.length} recent ▾</span>
+        <span className="small muted" style={{ fontWeight: 400 }}>
+          {logs[0] ? <>last changed <b style={{ color: "var(--text-2)" }}>{fmtWhen(logs[0].createdAt)}</b> · </> : ""}{logs.length} entries ▾
+        </span>
       </summary>
       <div style={{ marginTop: 12 }}>
         {logs.length === 0 ? (
