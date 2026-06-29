@@ -206,3 +206,37 @@ details.add[open] > summary { margin-bottom: 10px; }
 details.add .form-box { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
 .form-box { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
 .inline-form { display: flex; gap: 8px; align-items: center; }
+
+/* ============ Friendly polish ============ */
+.card { border-radius: 16px; }
+button, .btn { transition: background .12s, transform .06s, box-shadow .12s, filter .12s; }
+button:hover, .btn:hover { transform: translateY(-1px); }
+button:active, .btn:active { transform: translateY(0) scale(0.98); }
+button.primary, .btn.primary { padding: 10px 17px; }
+button.primary:hover, .btn.primary:hover { box-shadow: 0 7px 18px rgba(91,80,230,0.4); }
+input:hover, select:hover, textarea:hover { border-color: var(--accent-2); }
+table.t a.row-link:hover { text-decoration: underline; }
+
+/* Inviting "+ add" buttons */
+details.add > summary { padding: 8px 14px; border: 1px dashed var(--accent-2); border-radius: 10px;
+  background: var(--accent-bg); transition: background .12s, transform .06s, box-shadow .12s; }
+details.add > summary:hover { background: #e4e1ff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(91,80,230,0.16); }
+
+/* Friendly empty state with a call to action */
+.empty { text-align: center; padding: 28px 16px; color: var(--text-2); font-size: 14px; }
+.empty-cta { text-align: center; padding: 28px 20px; border: 1.5px dashed var(--border-strong);
+  border-radius: 14px; background: var(--surface-2); }
+.empty-cta .emoji { font-size: 30px; display: block; margin-bottom: 8px; }
+.empty-cta .t { font-weight: 600; font-size: 15px; margin-bottom: 4px; color: var(--text); }
+.empty-cta .d { color: var(--text-2); font-size: 13.5px; margin-bottom: 14px; line-height: 1.5; }
+
+/* Progress nudges */
+.prog-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; }
+.prog .ptop { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; gap: 8px; }
+.prog .plabel { font-size: 13px; font-weight: 600; color: var(--text-2); }
+.prog .pcount { font-size: 13px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.prog .pcount.pdone { color: var(--success); }
+.prog .pfoot { font-size: 11.5px; color: var(--text-3); margin-top: 5px; }
+.bar.lg { height: 10px; }
+.bar > span.emerald { background: linear-gradient(135deg, #34d39a, #0f9d6b); }
+.bar > span.sky { background: linear-gradient(135deg, #5bc6f5, #0ea5e9); }

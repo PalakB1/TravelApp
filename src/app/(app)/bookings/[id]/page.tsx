@@ -110,6 +110,12 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           Travellers
           <span className="small muted">{b.travellers.length} of {b.pax} named{b.travellers.length !== b.pax ? " · update pax in the invoice if needed" : ""}</span>
         </div>
+        {b.pax > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <div className="bar lg"><span className={b.travellers.length >= b.pax ? "emerald" : "sky"} style={{ width: `${Math.min(100, Math.round((b.travellers.length / b.pax) * 100))}%` }} /></div>
+            <div className="pfoot" style={{ marginTop: 5 }}>{b.travellers.length >= b.pax ? "Everyone's named 🎉" : `${b.pax - b.travellers.length} more to name`}</div>
+          </div>
+        )}
         {b.travellers.length === 0 ? (
           <div className="empty small">No people added yet. Add each family member below.</div>
         ) : (

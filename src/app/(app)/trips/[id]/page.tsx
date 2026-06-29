@@ -29,6 +29,23 @@ function statusBadge(s: string) {
   return <span className={`badge ${map[s] || "gray"}`}>{s}</span>;
 }
 
+// A single completeness bar — nudges the user to finish filling a trip.
+function Prog({ label, done, total, color, money, unit }: { label: string; done: number; total: number; color: string; money?: boolean; unit?: string }) {
+  const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+  const complete = total > 0 && done >= total;
+  const left = Math.max(0, total - done);
+  return (
+    <div className="prog">
+      <div className="ptop">
+        <span className="plabel">{label}</span>
+        <span className={`pcount ${complete ? "pdone" : ""}`}>{money ? `${formatINRShort(done)} / ${formatINRShort(total)}` : `${done} / ${total}`}{complete ? " ✓" : ""}</span>
+      </div>
+      <div className="bar lg"><span className={color} style={{ width: `${pct}%` }} /></div>
+      <div className="pfoot">{total === 0 ? "nothing to do yet" : complete ? "all done 🎉" : money ? `${pct}% collected` : `${pct}% · ${left} ${unit || ""} to go`}</div>
+    </div>
+  );
+}
+
 export default async function TripDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const trip = await prisma.trip.findUnique({
@@ -38,7 +55,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
       vendorBookings: { orderBy: { createdAt: "asc" } },
       itinerary: { orderBy: { order: "asc" }, include: { hotels: { orderBy: { createdAt: "asc" } } } },
       cars: { orderBy: { createdAt: "asc" } },
-      bookings: { include: { variant: true, payments: true }, orderBy: { createdAt: "desc" } },
+      bookings: { include: { variant: true, payments: true, travellers: true }, orderBy: { createdAt: "desc" } },
     },
   });
   if (!trip) notFound();
@@ -101,6 +118,22 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
         <div className="metric c-sky"><div className="label">Outstanding</div><div className="value">{formatINR(f.outstanding)}</div><div className="foot">{formatINR(f.paid)} collected</div></div>
         <div className={`metric ${f.unbookedNights + f.expiringHolds + f.shortRoomNights > 0 ? "c-rose" : "c-emerald"}`}><div className="label">Needs attention</div><div className="value">{f.unbookedNights + f.expiringHolds + f.shortRoomNights}</div><div className="foot">{f.unbookedNights} unbooked · {f.shortRoomNights} short rooms · {f.expiringHolds} holds expiring</div></div>
       </div>
+
+      {(trip.itinerary.length > 0 || trip.bookings.length > 0) && (() => {
+        const roomNightsNeeded = f.roomsNeeded * trip.itinerary.length;
+        const roomNightsBooked = trip.itinerary.reduce((s, n) => s + Math.min(nightBookedRooms(n), f.roomsNeeded), 0);
+        const namedTravellers = Math.min(trip.bookings.reduce((s, b) => s + b.travellers.length, 0), f.pax);
+        return (
+          <div className="card">
+            <div className="card-title">Trip setup <span className="small muted">how ready this trip is — fill the gaps to reach 100%</span></div>
+            <div className="prog-strip">
+              <Prog label="Hotels booked" done={roomNightsBooked} total={roomNightsNeeded} color="emerald" unit="room-nights" />
+              <Prog label="Travellers named" done={namedTravellers} total={f.pax} color="sky" unit="people" />
+              <Prog label="Payments collected" done={f.paid} total={f.invoiced} color="" money />
+            </div>
+          </div>
+        );
+      })()}
 
       {trip.notes ? (
         <details className="card">
@@ -435,7 +468,12 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
       <div className="card">
         <div className="card-title">Bookings</div>
         {trip.bookings.length === 0 ? (
-          <div className="empty">No bookings yet. Add a party below, or use the chat box on the dashboard.</div>
+          <div className="empty-cta">
+            <span className="emoji">🧳</span>
+            <div className="t">No bookings yet</div>
+            <div className="d">Add your first party to start tracking revenue, payments and travellers for this trip.</div>
+            <span className="btn primary sm" style={{ pointerEvents: "none" }}>↓ Add a booking below</span>
+          </div>
         ) : (
           <table className="t">
             <thead><tr><th>Party</th><th>Pax</th><th>Status</th><th className="num">Total</th><th className="num">Paid</th><th className="num">Balance</th></tr></thead>
