@@ -37,7 +37,7 @@ export default async function CustomersPage() {
           <table className="t">
             <thead>
               <tr>
-                <th style={{ paddingLeft: 20 }}>Customer</th><th>Phone</th><th>Trips</th>
+                <th style={{ paddingLeft: 20 }}>Customer</th><th>Phone</th><th>Added</th><th>Trips</th>
                 <th className="num">Invoiced</th><th className="num">Paid</th><th className="num">Outstanding</th>
               </tr>
             </thead>
@@ -46,6 +46,7 @@ export default async function CustomersPage() {
                 <tr key={c.id}>
                   <td style={{ paddingLeft: 20 }}><Link className="row-link" href={`/customers/${c.id}`}>{c.name}</Link></td>
                   <td className="muted small">{c.phone || "—"}</td>
+                  <td className="muted small">{c.createdAt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</td>
                   <td>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                       {tripNames.length ? tripNames.map((tn) => <span key={tn} className="badge accent">{tn}</span>) : <span className="muted small">—</span>}

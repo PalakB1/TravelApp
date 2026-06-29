@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookingTotal, bookingPaid, bookingBalance } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted } from "../../data-actions";
+import AutoFill from "@/components/AutoFill";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,19 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
     include: { trip: true, variant: true, customer: true, travellers: { orderBy: { createdAt: "asc" } }, payments: { orderBy: { date: "asc" } } },
   });
   if (!b) notFound();
+
+  // Known ages from every traveller ever added, so the same person's age
+  // auto-fills next time they're entered on any trip (most recent age wins).
+  const knownPeople = await prisma.traveller.findMany({
+    where: { age: { not: null } },
+    orderBy: { createdAt: "desc" },
+    select: { name: true, age: true },
+  });
+  const ageMap: Record<string, { age?: number | null }> = {};
+  for (const p of knownPeople) {
+    const k = p.name.trim().toLowerCase();
+    if (!(k in ageMap)) ageMap[k] = { age: p.age };
+  }
 
   const base = bookingBase(b);
   const taxable = bookingTaxable(b);
@@ -100,7 +114,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           <div className="empty small">No people added yet. Add each family member below.</div>
         ) : (
           <table className="t">
-            <thead><tr><th>#</th><th>Name</th><th>Age</th><th></th><th></th></tr></thead>
+            <thead><tr><th>#</th><th>Name</th><th>Age</th><th></th><th>Added</th><th></th></tr></thead>
             <tbody>
               {b.travellers.map((tr, i) => (
                 <tr key={tr.id}>
@@ -117,6 +131,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                   <td>
                     {tr.age != null && tr.age < 12 ? <span className="badge amber">child</span> : null}
                   </td>
+                  <td className="muted small">{fmtDate(tr.createdAt)}</td>
                   <td className="num">
                     <span className="flex" style={{ justifyContent: "flex-end", gap: 6 }}>
                       <button className="sm" type="submit" form={`tr-${tr.id}`}>Save</button>
@@ -133,10 +148,16 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           <div className="form-box">
             <form action={addTraveller}>
               <input type="hidden" name="bookingId" value={b.id} />
+              <AutoFill sourceId="tr-name" fills={[{ targetId: "tr-age", key: "age" }]} data={ageMap} />
               <div className="row">
-                <label className="field"><span className="lbl">Name</span><input name="name" placeholder="Aarav Sharma" required /></label>
-                <label className="field"><span className="lbl">Age</span><input name="age" type="number" min="0" max="120" placeholder="optional" /></label>
+                <label className="field"><span className="lbl">Name</span><input id="tr-name" name="name" list="people-list" placeholder="Aarav Sharma" required /></label>
+                <label className="field"><span className="lbl">Age</span><input id="tr-age" name="age" type="number" min="0" max="120" placeholder="optional" /></label>
               </div>
+              <datalist id="people-list">
+                {Object.keys(ageMap).length > 0 && knownPeople
+                  .filter((p, idx, arr) => arr.findIndex((q) => q.name.trim().toLowerCase() === p.name.trim().toLowerCase()) === idx)
+                  .map((p) => <option key={p.name} value={p.name} />)}
+              </datalist>
               <button className="primary sm" type="submit">Add traveller</button>
             </form>
           </div>

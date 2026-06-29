@@ -14,6 +14,7 @@ import {
 } from "../../data-actions";
 import ImportItinerary from "@/components/ImportItinerary";
 import CloseDetails from "@/components/CloseDetails";
+import AutoFill from "@/components/AutoFill";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,9 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
 
   // hotel names already used, for the "pick or type new" dropdown
   const known = await prisma.hotelBooking.findMany({ distinct: ["hotelName"], select: { hotelName: true }, orderBy: { hotelName: "asc" } });
-  const customers = await prisma.customer.findMany({ select: { name: true }, orderBy: { name: "asc" } });
+  const customers = await prisma.customer.findMany({ select: { name: true, phone: true }, orderBy: { name: "asc" } });
+  const customerPhoneMap: Record<string, { phone?: string | null }> = {};
+  for (const c of customers) if (c.phone) customerPhoneMap[c.name.trim().toLowerCase()] = { phone: c.phone };
 
   const allHotels = trip.itinerary.flatMap((n) => n.hotels);
   const totalRooms = allHotels.reduce((s, h) => s + h.rooms, 0);
@@ -469,9 +472,10 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
           <div className="form-box">
             <form action={addBooking}>
               <input type="hidden" name="tripId" value={trip.id} />
+              <AutoFill sourceId="bk-name" fills={[{ targetId: "bk-phone", key: "phone" }]} data={customerPhoneMap} />
               <div className="row-3">
-                <label className="field"><span className="lbl">Lead name / party</span><input name="customerName" list="customer-list" placeholder="Pick or type a customer" required /></label>
-                <label className="field"><span className="lbl">Phone</span><input name="customerPhone" placeholder="98765 43210" /></label>
+                <label className="field"><span className="lbl">Lead name / party</span><input id="bk-name" name="customerName" list="customer-list" placeholder="Pick or type a customer" required /></label>
+                <label className="field"><span className="lbl">Phone</span><input id="bk-phone" name="customerPhone" placeholder="98765 43210" /></label>
                 <label className="field"><span className="lbl">Package</span>
                   <select name="packageType" defaultValue="land"><option value="land">Land only</option><option value="lva">Land + visa (LVA)</option><option value="full">Full (incl. flights)</option></select>
                 </label>

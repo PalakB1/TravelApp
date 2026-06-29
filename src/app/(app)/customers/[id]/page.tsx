@@ -36,7 +36,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
         <div>
           <div className="small muted"><Link href="/customers" style={{ color: "var(--text-2)" }}>← Customers</Link></div>
           <h1 style={{ marginTop: 6 }}>{c.name}</h1>
-          <p className="sub">{[c.phone, c.email].filter(Boolean).join(" · ") || "No contact details yet"}</p>
+          <p className="sub">{[c.phone, c.email].filter(Boolean).join(" · ") || "No contact details yet"} · Added {fmtDate(c.createdAt)}</p>
         </div>
       </div>
 
