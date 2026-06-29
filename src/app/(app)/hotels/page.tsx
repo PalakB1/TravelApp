@@ -9,6 +9,15 @@ export const dynamic = "force-dynamic";
 function fmtDate(d: Date | null) {
   return d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
 }
+function fmtDay(d: Date) {
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}
+// The night booked → the morning the group checks out (one night later).
+function stayRange(d: Date | null) {
+  if (!d) return "— no date";
+  const out = new Date(new Date(d).getTime() + 864e5);
+  return `${fmtDay(d)} → ${fmtDay(out)} ${out.getFullYear()}`;
+}
 
 export default async function HotelsPage() {
   const hotels = await prisma.hotelBooking.findMany({
@@ -41,7 +50,7 @@ export default async function HotelsPage() {
             <table className="t">
               <thead>
                 <tr>
-                  <th>Hotel</th><th>Trip</th><th>Location</th><th>Date</th>
+                  <th>Hotel</th><th>Booked for (check-in → out)</th><th>Trip</th><th>Location</th>
                   <th className="num">Rooms</th><th className="num">Cost</th><th className="num">/room</th>
                   <th>Status</th><th>Hold until</th><th>Source</th>
                 </tr>
@@ -50,9 +59,9 @@ export default async function HotelsPage() {
                 {hotels.map((h) => (
                   <tr key={h.id}>
                     <td><Link className="row-link" href={`/trips/${h.night.tripId}`}>{h.hotelName}</Link></td>
+                    <td className="small" style={{ fontWeight: 500, whiteSpace: "nowrap" }}>{stayRange(h.night.date)}</td>
                     <td className="muted">{h.night.trip.name}</td>
                     <td>{h.night.location}</td>
-                    <td className="muted small">{fmtDate(h.night.date)}</td>
                     <td className="num">{h.rooms}</td>
                     <td className="num">{formatINR(h.cost)}</td>
                     <td className="num muted">{h.rooms > 0 ? formatINR(pricePerRoom(h)) : "—"}</td>
