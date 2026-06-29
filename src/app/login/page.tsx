@@ -18,7 +18,7 @@ export default function LoginPage() {
         <form action={formAction}>
           <label className="field">
             <span className="lbl">Email</span>
-            <input name="email" type="email" placeholder="admin@travel.local" autoComplete="username" defaultValue="admin@travel.local" />
+            <input name="email" type="email" placeholder="you@example.com" autoComplete="username" />
           </label>
           <label className="field">
             <span className="lbl">Password</span>
@@ -31,9 +31,6 @@ export default function LoginPage() {
             {pending ? "Signing in…" : "Sign in"}
           </button>
         </form>
-        <p className="small muted" style={{ marginTop: 14, textAlign: "center" }}>
-          Demo login: admin@travel.local / travel123
-        </p>
       </div>
     </div>
   );
