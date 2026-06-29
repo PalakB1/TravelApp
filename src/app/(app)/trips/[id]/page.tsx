@@ -229,6 +229,24 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
             </div>
             {(() => {
               let totReq = 0, totBooked = 0, totLeft = 0;
+              // Core itinerary days are Day 1..N; add-on nights keep that numbering
+              // intact and read as "Day 1-1/-2" (before) or "Day N+1/+2" (after).
+              const itin = trip.itinerary;
+              const coreIdx = itin.map((n, i) => (n.extra ? -1 : i)).filter((i) => i >= 0);
+              const firstCore = coreIdx[0];
+              const lastCore = coreIdx[coreIdx.length - 1];
+              const coreCount = coreIdx.length;
+              const coreDay = new Map<number, number>();
+              coreIdx.forEach((idx, k) => coreDay.set(idx, k + 1));
+              const dayLabel = (i: number): string => {
+                if (!itin[i].extra) return `Day ${coreDay.get(i)}`;
+                if (firstCore === undefined) return `Day 1-${i + 1}`;
+                if (i < firstCore) return `Day 1-${firstCore - i}`;
+                if (i > lastCore) return `Day ${coreCount}+${i - lastCore}`;
+                let prev = 1;
+                for (let j = i - 1; j >= 0; j--) if (!itin[j].extra) { prev = coreDay.get(j)!; break; }
+                return `Day ${prev}+`;
+              };
               const rows = trip.itinerary.map((n, i) => {
                 const isExtra = n.extra;
                 const req = isExtra ? 0 : f.roomsNeeded;
@@ -240,7 +258,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                   <details className="rpn-day" key={n.id}>
                     <summary>
                       <span className="rpn-chev">▶</span>
-                      <span className="small muted">Day {i + 1}</span>
+                      <span className="small muted">{dayLabel(i)}</span>
                       <span className="small muted">{fmtDate(n.date)}</span>
                       <span style={{ fontWeight: 500, color: !isExtra && left > 0 ? "var(--danger)" : "var(--text)" }}>{n.location}{isExtra ? <span className="badge gray" style={{ marginLeft: 6 }}>add-on</span> : null}</span>
                       <span className="rpn-num" style={{ fontWeight: 500 }}>{isExtra ? "—" : req}</span>
