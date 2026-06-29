@@ -119,8 +119,18 @@ export default async function Dashboard() {
         <Link className="metric c-emerald" href="/reports/revenue">
           <div className="label">Revenue booked</div>
           <div className="value">{formatINRShort(revenue)}</div>
-          <div className="foot">{formatINR(revenue)}</div>
+          <div className="foot">your earning (pre-tax)</div>
         </Link>
+        <Link className="metric c-orange" href="/tax">
+          <div className="label">GST + TCS</div>
+          <div className="value">{formatINRShort(taxCollected)}</div>
+          <div className="foot">collected for govt</div>
+        </Link>
+        <div className="metric c-sky">
+          <div className="label">Total billed</div>
+          <div className="value">{formatINRShort(totalInvoiced)}</div>
+          <div className="foot">revenue + tax — what clients pay</div>
+        </div>
         <Link className="metric c-amber" href="/reports/cost">
           <div className="label">Your cost</div>
           <div className="value">{formatINRShort(cost)}</div>

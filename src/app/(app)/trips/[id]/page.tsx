@@ -75,10 +75,27 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
           <h1 style={{ marginTop: 6 }}>{trip.name}</h1>
           <p className="sub">{trip.destination || "—"} · {dateRange} · {trip.itinerary.length} nights · {f.pax} travellers{f.hiredDrivers > 0 ? ` + ${f.hiredDrivers} driver${f.hiredDrivers > 1 ? "s" : ""} = ${f.totalPeople} total` : ""} · {trip.cars.length} cars</p>
         </div>
-        <form action={deleteTrip}>
-          <input type="hidden" name="id" value={trip.id} />
-          <button className="danger sm" type="submit">Delete trip</button>
-        </form>
+        <div className="flex" style={{ gap: 8, alignItems: "flex-start" }}>
+          <details className="menu-pop" style={{ position: "relative" }}>
+            <summary className="btn sm" style={{ listStyle: "none", cursor: "pointer" }}>Copy for new dates</summary>
+            <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", width: 360, maxWidth: "80vw", zIndex: 30, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, boxShadow: "0 12px 32px rgba(27,28,43,0.16)", padding: 16 }}>
+              <div style={{ fontWeight: 500, marginBottom: 10 }}>Run this itinerary on new dates</div>
+              <form action={duplicateTrip}>
+                <input type="hidden" name="id" value={trip.id} />
+                <label className="field"><span className="lbl">New departure date</span><input name="departureDate" type="date" /></label>
+                <label className="field"><span className="lbl">New trip name</span><input name="name" placeholder={`${trip.name} (copy)`} /></label>
+                <button className="primary sm" type="submit" style={{ marginTop: 4 }}>Duplicate trip</button>
+                <p className="small muted" style={{ margin: "10px 0 0" }}>
+                  Copies the {trip.itinerary.length} nights, hotels, {trip.cars.length} cars and pricing, shifting every date. Hotels &amp; cars reset to “not booked”; bookings stay on this trip.
+                </p>
+              </form>
+            </div>
+          </details>
+          <form action={deleteTrip}>
+            <input type="hidden" name="id" value={trip.id} />
+            <button className="danger sm" type="submit">Delete trip</button>
+          </form>
+        </div>
       </div>
 
       <div className="metrics">
@@ -97,27 +114,6 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
           <p className="small" style={{ color: "var(--text-2)", whiteSpace: "pre-wrap", margin: "10px 0 0", lineHeight: 1.6 }}>{trip.notes}</p>
         </details>
       ) : null}
-
-      {/* COPY FOR NEW DATES */}
-      <details className="card">
-        <summary style={{ listStyle: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-          <span style={{ fontWeight: 500 }}>Run this itinerary again on new dates</span>
-          <span className="btn sm">Copy for new dates</span>
-        </summary>
-        <form action={duplicateTrip} style={{ marginTop: 14 }}>
-          <input type="hidden" name="id" value={trip.id} />
-          <div className="row-3">
-            <label className="field"><span className="lbl">New departure date</span><input name="departureDate" type="date" /></label>
-            <label className="field"><span className="lbl">New trip name</span><input name="name" placeholder={`${trip.name} (copy)`} /></label>
-            <div className="flex" style={{ alignItems: "flex-end", paddingBottom: 12 }}>
-              <button className="primary sm" type="submit">Duplicate trip</button>
-            </div>
-          </div>
-          <p className="small muted" style={{ margin: 0 }}>
-            Copies the {trip.itinerary.length} nights, their hotels, {trip.cars.length} cars and pricing, and shifts every date to the new departure. Hotels and cars reset to “not booked”. Customer bookings stay on this trip.
-          </p>
-        </form>
-      </details>
 
       {/* HOTELS — ROOMS PER NIGHT (one table; click a day to see its hotels) */}
       {trip.itinerary.length > 0 && (
