@@ -116,6 +116,9 @@ a.metric:hover::after { opacity: 1; }
 /* Clickable list rows (upcoming trips) */
 a.up-trip { display: block; padding: 10px 12px; margin: 0 -12px; border-radius: 10px; transition: background .12s; }
 a.up-trip:hover { background: var(--surface-2); }
+a.hbar-row { display: block; padding: 6px 8px; margin: 0 -8px; border-radius: 9px; transition: background .12s; }
+a.hbar-row:hover { background: var(--surface-2); }
+.hbar-go { color: var(--text-3); font-weight: 400; }
 .metric.c-emerald { background: var(--emerald-bg); } .metric.c-emerald::before { background: var(--emerald); } .metric.c-emerald .value { color: #0b7a52; }
 .metric.c-amber   { background: var(--amber-bg); }   .metric.c-amber::before { background: var(--amber); }   .metric.c-amber .value { color: #9a6109; }
 .metric.c-violet  { background: var(--violet-bg); }  .metric.c-violet::before { background: var(--violet); }  .metric.c-violet .value { color: #6d28d9; }

@@ -76,7 +76,7 @@ export default async function Dashboard() {
   const packageMix = [...pkgMap.entries()].map(([k, v]) => ({ name: PKG[k]?.name || k, value: v, color: PKG[k]?.color || "#9094ac" }));
 
   const revByTrip = perTrip
-    .map(({ trip, f }) => ({ label: trip.name, value: f.revenue, sub: `profit ${formatINRShort(f.profit)} · ${Math.round(f.margin * 100)}% margin`, color: "var(--accent-grad)" }))
+    .map(({ trip, f }) => ({ label: trip.name, value: f.revenue, sub: `profit ${formatINRShort(f.profit)} · ${Math.round(f.margin * 100)}% margin`, color: "var(--accent-grad)", href: `/trips/${trip.id}` }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
 
@@ -162,7 +162,7 @@ export default async function Dashboard() {
         <>
           <div className="grid-2">
             <div className="card">
-              <div className="card-title">Revenue by trip</div>
+              <div className="card-title">Revenue by trip <span className="small muted">click a trip to open & add</span></div>
               {revByTrip.length === 0 ? <div className="empty small">No revenue yet.</div> : <HBars rows={revByTrip} />}
             </div>
             <div className="card">

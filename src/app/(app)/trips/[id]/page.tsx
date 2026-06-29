@@ -68,6 +68,17 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
   const customerPhoneMap: Record<string, { phone?: string | null }> = {};
   for (const c of customers) if (c.phone) customerPhoneMap[c.name.trim().toLowerCase()] = { phone: c.phone };
 
+  // Car "catalog" — every car type used before, so picking it re-fills seats/price/driver cost.
+  const pastCars = await prisma.car.findMany({ where: { carType: { not: null } }, orderBy: { createdAt: "desc" }, select: { carType: true, seats: true, rentalCost: true, driverCost: true, vendor: true } });
+  const carCatalog: Record<string, { seats?: number; rentalCost?: number; driverCost?: number; vendor?: string | null }> = {};
+  const carTypes: string[] = [];
+  for (const c of pastCars) {
+    const k = (c.carType || "").trim().toLowerCase();
+    if (!k || k in carCatalog) continue;
+    carCatalog[k] = { seats: c.seats || undefined, rentalCost: c.rentalCost || undefined, driverCost: c.driverCost || undefined, vendor: c.vendor };
+    carTypes.push(c.carType!.trim());
+  }
+
   const allHotels = trip.itinerary.flatMap((n) => n.hotels);
   const totalRooms = allHotels.reduce((s, h) => s + h.rooms, 0);
   const avgPerRoom = totalRooms > 0 ? Math.round(f.hotelCost / totalRooms) : 0;
@@ -84,6 +95,9 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
       </datalist>
       <datalist id="customer-list">
         {customers.map((c) => <option key={c.name} value={c.name} />)}
+      </datalist>
+      <datalist id="car-type-list">
+        {carTypes.map((t) => <option key={t} value={t} />)}
       </datalist>
 
       <div className="page-head">
@@ -430,20 +444,22 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
           <div className="form-box">
             <form action={addCar}>
               <input type="hidden" name="tripId" value={trip.id} />
+              <AutoFill sourceId="car-type" data={carCatalog} fills={[{ targetId: "car-seats", key: "seats" }, { targetId: "car-rental", key: "rentalCost" }, { targetId: "car-driver-cost", key: "driverCost" }, { targetId: "car-vendor", key: "vendor" }]} />
+              {carTypes.length > 0 && <p className="small muted" style={{ margin: "0 0 10px" }}>💡 Pick a car you’ve used before to auto-fill seats, price &amp; driver cost — all still editable.</p>}
               <div className="row-3">
                 <label className="field"><span className="lbl">Label</span><input name="label" placeholder={`Car ${trip.cars.length + 1}`} /></label>
-                <label className="field"><span className="lbl">Car type</span><input name="carType" placeholder="Dacia Duster" /></label>
-                <label className="field"><span className="lbl">Seats (incl. driver)</span><input name="seats" type="number" min="0" placeholder="5 (4 guests + driver)" /></label>
+                <label className="field"><span className="lbl">Car type</span><input id="car-type" name="carType" list="car-type-list" placeholder="Pick or type — Dacia Duster" /></label>
+                <label className="field"><span className="lbl">Seats (incl. driver)</span><input id="car-seats" name="seats" type="number" min="0" placeholder="5 (4 guests + driver)" /></label>
               </div>
               <div className="row">
-                <label className="field"><span className="lbl">Vendor</span><input name="vendor" placeholder="Blue Car Rental" /></label>
+                <label className="field"><span className="lbl">Vendor</span><input id="car-vendor" name="vendor" placeholder="Blue Car Rental" /></label>
               </div>
               <div className="row-3">
-                <label className="field"><span className="lbl">Rental cost</span><input name="rentalCost" placeholder="₹" /></label>
+                <label className="field"><span className="lbl">Rental cost</span><input id="car-rental" name="rentalCost" placeholder="₹" /></label>
                 <label className="field"><span className="lbl">Driver</span>
                   <select name="driverMode" defaultValue="self"><option value="self">Client drives</option><option value="hired">Hired driver</option></select>
                 </label>
-                <label className="field"><span className="lbl">Driver cost</span><input name="driverCost" placeholder="₹ (if hired)" /></label>
+                <label className="field"><span className="lbl">Driver cost</span><input id="car-driver-cost" name="driverCost" placeholder="₹ (if hired)" /></label>
               </div>
               <label className="field" style={{ maxWidth: 280 }}><span className="lbl">Driver needs a room? (if hired)</span>
                 <select name="driverNeedsStay" defaultValue="no"><option value="no">No</option><option value="yes">Yes — book a room each night</option></select>

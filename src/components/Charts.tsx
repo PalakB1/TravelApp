@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { formatINRShort } from "@/lib/money";
 
 type Seg = { name: string; value: number; color: string };
@@ -40,22 +41,27 @@ export function Donut({ segments, centerTop, centerBottom, size = 150 }: { segme
 }
 
 // Horizontal bars — good for labelled categories like trips.
-export function HBars({ rows, max }: { rows: { label: string; value: number; sub?: string; color?: string }[]; max?: number }) {
+export function HBars({ rows, max }: { rows: { label: string; value: number; sub?: string; color?: string; href?: string }[]; max?: number }) {
   const top = max ?? Math.max(...rows.map((r) => r.value), 1);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {rows.map((r, i) => (
-        <div key={i}>
-          <div className="between" style={{ marginBottom: 4 }}>
-            <span style={{ fontSize: 13, fontWeight: 500 }}>{r.label}</span>
-            <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{formatINRShort(r.value)}</span>
-          </div>
-          <div style={{ height: 9, background: "var(--surface-2)", borderRadius: 20, overflow: "hidden" }}>
-            <div style={{ width: `${Math.max(2, (r.value / top) * 100)}%`, height: "100%", background: r.color || "var(--accent-grad)", borderRadius: 20 }} />
-          </div>
-          {r.sub && <div className="small muted" style={{ marginTop: 3 }}>{r.sub}</div>}
-        </div>
-      ))}
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {rows.map((r, i) => {
+        const inner = (
+          <>
+            <div className="between" style={{ marginBottom: 4 }}>
+              <span style={{ fontSize: 13, fontWeight: 500 }}>{r.label}{r.href && <span className="hbar-go"> ›</span>}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{formatINRShort(r.value)}</span>
+            </div>
+            <div style={{ height: 9, background: "var(--surface-2)", borderRadius: 20, overflow: "hidden" }}>
+              <div style={{ width: `${Math.max(2, (r.value / top) * 100)}%`, height: "100%", background: r.color || "var(--accent-grad)", borderRadius: 20 }} />
+            </div>
+            {r.sub && <div className="small muted" style={{ marginTop: 3 }}>{r.sub}</div>}
+          </>
+        );
+        return r.href
+          ? <Link key={i} href={r.href} className="hbar-row">{inner}</Link>
+          : <div key={i} style={{ padding: "6px 0" }}>{inner}</div>;
+      })}
     </div>
   );
 }

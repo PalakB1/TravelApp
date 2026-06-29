@@ -2,8 +2,8 @@
 
 import { useEffect } from "react";
 
-type Fill = { targetId: string; key: "phone" | "age" };
-type Record_ = { phone?: string | null; age?: number | null };
+type Fill = { targetId: string; key: string };
+type Record_ = Record<string, string | number | null | undefined>;
 
 // Watches a "name" input; when its value matches a known person, fills the
 // linked phone/age inputs (by id) — but never overwrites a value the user typed.
