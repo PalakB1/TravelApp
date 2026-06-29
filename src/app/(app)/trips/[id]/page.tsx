@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { tripFinancials, bookingTotal, bookingPaid, bookingBalance, isNightGap, holdExpiringSoon, carCost, pricePerRoom, nightCost, nightBookedRooms, carPassengerSeats } from "@/lib/calc";
-import { formatINR } from "@/lib/money";
+import { formatINR, formatINRShort } from "@/lib/money";
 import {
   addVariant, deleteVariant,
   addVendorBooking, updateVendorBooking, deleteVendorBooking,
@@ -95,9 +95,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
       </div>
 
       <div className="metrics">
-        <div className="metric c-emerald"><div className="label">Revenue</div><div className="value">{formatINR(f.revenue)}</div><div className="foot">your earning (pre-tax)</div></div>
-        <div className="metric c-orange"><div className="label">GST + TCS</div><div className="value">{formatINR(f.taxCollected)}</div><div className="foot">collected for govt</div></div>
-        <div className="metric c-sky"><div className="label">Total billed</div><div className="value">{formatINR(f.invoiced)}</div><div className="foot">revenue + tax — what clients pay</div></div>
+        <div className="metric c-emerald"><div className="label">Revenue</div><div className="value">{formatINR(f.revenue)}</div><div className="foot">+ GST/TCS {formatINRShort(f.taxCollected)} → billed {formatINRShort(f.invoiced)}</div></div>
         <div className="metric c-amber"><div className="label">Your cost</div><div className="value">{formatINR(f.cost)}</div><div className="foot">hotels {formatINR(f.hotelCost)} · cars {formatINR(f.carRental)}{f.driverCost > 0 ? ` · drivers ${formatINR(f.driverCost)}` : ""}{f.extrasCost > 0 ? ` · extras ${formatINR(f.extrasCost)}` : ""}</div></div>
         <div className="metric c-violet"><div className="label">Profit</div><div className="value">{formatINR(f.profit)}</div><div className="foot">{Math.round(f.margin * 100)}% margin</div></div>
         <div className="metric c-sky"><div className="label">Outstanding</div><div className="value">{formatINR(f.outstanding)}</div><div className="foot">{formatINR(f.paid)} collected</div></div>
