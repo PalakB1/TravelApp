@@ -71,8 +71,8 @@ export async function interpretCommand(text: string): Promise<ChatResult> {
         trip = await prisma.trip.findFirst({
           where: {
             OR: [
-              { name: { contains: cmd.tripQuery } },
-              { destination: { contains: cmd.tripQuery } },
+              { name: { contains: cmd.tripQuery, mode: "insensitive" } },
+              { destination: { contains: cmd.tripQuery, mode: "insensitive" } },
             ],
           },
           include: { variants: true },
