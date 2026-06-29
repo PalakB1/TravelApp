@@ -240,18 +240,18 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
               coreIdx.forEach((idx, k) => coreDay.set(idx, k + 1));
               const dayLabel = (i: number): string => {
                 if (!itin[i].extra) return `Day ${coreDay.get(i)}`;
-                if (firstCore === undefined) return `Day 1-${i + 1}`;
-                if (i < firstCore) return `Day 1-${firstCore - i}`;
-                if (i > lastCore) return `Day ${coreCount}+${i - lastCore}`;
+                if (firstCore === undefined) return `Day ${-(i + 1)}`;
+                if (i < firstCore) return `Day ${-(firstCore - i)}`;   // before the trip: -1, -2 …
+                if (i > lastCore) return `Day ${coreCount + (i - lastCore)}`; // after: N+1, N+2 …
                 let prev = 1;
                 for (let j = i - 1; j >= 0; j--) if (!itin[j].extra) { prev = coreDay.get(j)!; break; }
                 return `Day ${prev}+`;
               };
               const rows = trip.itinerary.map((n, i) => {
                 const isExtra = n.extra;
-                const req = isExtra ? 0 : f.roomsNeeded;
                 const booked = nightBookedRooms(n);
-                const left = isExtra ? 0 : Math.max(0, req - booked);
+                const req = isExtra ? booked : f.roomsNeeded; // add-on: required = whatever is booked
+                const left = isExtra ? 0 : Math.max(0, req - booked); // add-on: to-book always 0
                 if (!isExtra) { totReq += req; totLeft += left; }
                 totBooked += booked;
                 return (
@@ -261,9 +261,9 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                       <span className="small muted">{dayLabel(i)}</span>
                       <span className="small muted">{fmtDate(n.date)}</span>
                       <span style={{ fontWeight: 500, color: !isExtra && left > 0 ? "var(--danger)" : "var(--text)" }}>{n.location}{isExtra ? <span className="badge gray" style={{ marginLeft: 6 }}>add-on</span> : null}</span>
-                      <span className="rpn-num" style={{ fontWeight: 500 }}>{isExtra ? "—" : req}</span>
+                      <span className="rpn-num" style={{ fontWeight: 500 }}>{req}</span>
                       <span className="rpn-num">{booked}</span>
-                      <span className="rpn-num">{isExtra ? <span className="muted small">extra</span> : left > 0 ? <span className="badge red">{left} more</span> : <span className="badge green">✓</span>}</span>
+                      <span className="rpn-num">{isExtra ? <span className="muted">0</span> : left > 0 ? <span className="badge red">{left} more</span> : <span className="badge green">✓</span>}</span>
                     </summary>
                     <div className="rpn-detail">
                       {!isExtra && n.hotels.length === 0 ? (
