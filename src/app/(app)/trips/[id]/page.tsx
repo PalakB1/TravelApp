@@ -122,13 +122,11 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
       {(trip.itinerary.length > 0 || trip.bookings.length > 0) && (() => {
         const roomNightsNeeded = f.roomsNeeded * trip.itinerary.length;
         const roomNightsBooked = trip.itinerary.reduce((s, n) => s + Math.min(nightBookedRooms(n), f.roomsNeeded), 0);
-        const namedTravellers = Math.min(trip.bookings.reduce((s, b) => s + b.travellers.length, 0), f.pax);
         return (
           <div className="card">
             <div className="card-title">Trip setup <span className="small muted">how ready this trip is — fill the gaps to reach 100%</span></div>
             <div className="prog-strip">
               <Prog label="Hotels booked" done={roomNightsBooked} total={roomNightsNeeded} color="emerald" unit="room-nights" />
-              <Prog label="Travellers named" done={namedTravellers} total={f.pax} color="sky" unit="people" />
               <Prog label="Payments collected" done={f.paid} total={f.invoiced} color="" money />
             </div>
           </div>

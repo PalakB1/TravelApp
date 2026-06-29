@@ -145,6 +145,9 @@ table.t a.row-link { color: var(--accent); font-weight: 600; }
 .badge.violet { background: var(--violet-bg); color: #6d28d9; }
 
 .chip { font-size: 12px; background: var(--surface-2); border: 1px solid var(--border); padding: 4px 10px; border-radius: 8px; color: var(--text-2); }
+button.chip { cursor: pointer; font-weight: 600; transition: background .12s, color .12s, border-color .12s; }
+button.chip:hover { background: var(--accent-bg); transform: none; }
+button.chip.chip-on { background: var(--accent-grad); color: #fff; border-color: transparent; }
 
 /* Forms */
 label.field { display: block; margin-bottom: 12px; }

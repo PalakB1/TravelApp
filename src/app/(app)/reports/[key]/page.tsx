@@ -8,6 +8,7 @@ import {
 import { formatINR, formatINRShort } from "@/lib/money";
 import { addBooking, addPayment, addVendorBooking } from "../../data-actions";
 import AutoFill from "@/components/AutoFill";
+import TableSearch from "@/components/TableSearch";
 
 export const dynamic = "force-dynamic";
 
@@ -75,7 +76,8 @@ export default async function Report({ params }: { params: Promise<{ key: string
             <div className="metrics">
               <div className={`metric ${meta.color}`}><div className="label">Total revenue booked</div><div className="value">{formatINR(total)}</div><div className="foot">{rows.length} bookings</div></div>
             </div>
-            <div className="card" style={{ padding: 0 }}>
+            <div className="card" style={{ padding: "16px 20px" }}>
+              <TableSearch placeholder="Search this report…">
               <table className="t">
                 <thead><tr><th style={{ paddingLeft: 20 }}>Booked on</th><th>Customer</th><th>Trip</th><th>Package</th><th className="num">Pax</th><th className="num">Revenue</th></tr></thead>
                 <tbody>
@@ -92,6 +94,7 @@ export default async function Report({ params }: { params: Promise<{ key: string
                 </tbody>
                 {rows.length > 0 && <tfoot><tr><td colSpan={5} style={{ paddingLeft: 20, fontWeight: 500 }}>Total</td><td className="num" style={{ fontWeight: 600 }}>{formatINR(total)}</td></tr></tfoot>}
               </table>
+              </TableSearch>
             </div>
             <details className="card add" open={rows.length === 0}>
               <summary>+ Add a booking</summary>
@@ -139,7 +142,8 @@ export default async function Report({ params }: { params: Promise<{ key: string
             <div className="metrics">
               <div className={`metric ${meta.color}`}><div className="label">Total outstanding</div><div className="value">{formatINR(total)}</div><div className="foot">{rows.length} bookings with a balance</div></div>
             </div>
-            <div className="card" style={{ padding: 0 }}>
+            <div className="card" style={{ padding: "16px 20px" }}>
+              <TableSearch placeholder="Search this report…">
               <table className="t">
                 <thead><tr><th style={{ paddingLeft: 20 }}>Customer</th><th>Trip</th><th>Booked on</th><th className="num">Invoice</th><th className="num">Paid</th><th className="num">Balance</th></tr></thead>
                 <tbody>
@@ -156,6 +160,7 @@ export default async function Report({ params }: { params: Promise<{ key: string
                 </tbody>
                 {rows.length > 0 && <tfoot><tr><td colSpan={5} style={{ paddingLeft: 20, fontWeight: 500 }}>Total due</td><td className="num" style={{ fontWeight: 600 }}>{formatINR(total)}</td></tr></tfoot>}
               </table>
+              </TableSearch>
             </div>
             <details className="card add" open={rows.length === 0 ? false : true}>
               <summary>+ Record a payment</summary>
@@ -206,7 +211,8 @@ export default async function Report({ params }: { params: Promise<{ key: string
             <div className="metrics">
               <div className={`metric ${meta.color}`}><div className="label">Total cost</div><div className="value">{formatINR(total)}</div><div className="foot">{items.length} line items</div></div>
             </div>
-            <div className="card" style={{ padding: 0 }}>
+            <div className="card" style={{ padding: "16px 20px" }}>
+              <TableSearch placeholder="Search this report…">
               <table className="t">
                 <thead><tr><th style={{ paddingLeft: 20 }}>Type</th><th>Detail</th><th>Trip</th><th>Date</th><th className="num">Cost</th></tr></thead>
                 <tbody>
@@ -222,6 +228,7 @@ export default async function Report({ params }: { params: Promise<{ key: string
                 </tbody>
                 {items.length > 0 && <tfoot><tr><td colSpan={4} style={{ paddingLeft: 20, fontWeight: 500 }}>Total</td><td className="num" style={{ fontWeight: 600 }}>{formatINR(total)}</td></tr></tfoot>}
               </table>
+              </TableSearch>
             </div>
             <p className="small muted" style={{ margin: "4px 2px 10px" }}>Hotels and cars are added on each trip page. Add a quick extra cost (fuel, parking, permits…) here:</p>
             <details className="card add">
@@ -263,7 +270,8 @@ export default async function Report({ params }: { params: Promise<{ key: string
               <div className="metric c-amber"><div className="label">Cost</div><div className="value">{formatINR(cost)}</div></div>
               <div className="metric c-violet"><div className="label">Profit</div><div className="value">{formatINR(profit)}</div><div className="foot">{rev > 0 ? Math.round((profit / rev) * 100) : 0}% margin</div></div>
             </div>
-            <div className="card" style={{ padding: 0 }}>
+            <div className="card" style={{ padding: "16px 20px" }}>
+              <TableSearch placeholder="Search this report…">
               <table className="t">
                 <thead><tr><th style={{ paddingLeft: 20 }}>Trip</th><th>Dates</th><th className="num">Revenue</th><th className="num">Cost</th><th className="num">Profit</th><th className="num">Margin</th></tr></thead>
                 <tbody>
@@ -280,6 +288,7 @@ export default async function Report({ params }: { params: Promise<{ key: string
                 </tbody>
                 {rows.length > 0 && <tfoot><tr><td colSpan={2} style={{ paddingLeft: 20, fontWeight: 500 }}>Total</td><td className="num" style={{ fontWeight: 600 }}>{formatINR(rev)}</td><td className="num" style={{ fontWeight: 600 }}>{formatINR(cost)}</td><td className="num" style={{ fontWeight: 600 }}>{formatINR(profit)}</td><td className="num">{rev > 0 ? Math.round((profit / rev) * 100) : 0}%</td></tr></tfoot>}
               </table>
+              </TableSearch>
             </div>
             <p className="small muted" style={{ marginTop: 8 }}>Profit moves when you add bookings (revenue) or hotels, cars and extras (cost) — open a trip to edit, or use the Revenue and Cost reports.</p>
           </>

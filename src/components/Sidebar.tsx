@@ -7,6 +7,7 @@ import { logout } from "@/app/(app)/actions";
 const links = [
   { href: "/", label: "Dashboard", icon: "grid" },
   { href: "/trips", label: "Trips", icon: "map" },
+  { href: "/hotels", label: "Hotels", icon: "bed" },
   { href: "/customers", label: "Customers", icon: "users" },
   { href: "/bookings", label: "Bookings", icon: "ticket" },
   { href: "/payments", label: "Payments", icon: "wallet" },
@@ -22,6 +23,7 @@ function Icon({ name }: { name: string }) {
     users: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>,
     receipt: <><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z" /><line x1="8" y1="8" x2="16" y2="8" /><line x1="8" y1="12" x2="16" y2="12" /></>,
     wallet: <><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2" /><path d="M21 12a2 2 0 0 0-2-2h-4a2 2 0 0 0 0 4h4a2 2 0 0 0 2-2z" /></>,
+    bed: <><path d="M2 4v16" /><path d="M2 8h18a2 2 0 0 1 2 2v10" /><path d="M2 17h20" /><path d="M6 8v9" /></>,
   };
   return <svg {...common}>{paths[name]}</svg>;
 }

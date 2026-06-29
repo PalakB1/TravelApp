@@ -56,6 +56,16 @@ export async function updateCustomer(formData: FormData) {
   refresh();
 }
 
+export async function deleteCustomer(formData: FormData) {
+  await guard();
+  const id = String(formData.get("id"));
+  // Unlink any bookings (keep their history + denormalised name), then remove the customer.
+  await prisma.booking.updateMany({ where: { customerId: id }, data: { customerId: null } });
+  await prisma.customer.delete({ where: { id } });
+  refresh();
+  redirect("/customers");
+}
+
 // ---- Trips ----
 export async function createTrip(formData: FormData) {
   await guard();

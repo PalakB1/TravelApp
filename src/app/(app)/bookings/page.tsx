@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { bookingTotal, bookingPaid, bookingBalance } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
+import TableSearch from "@/components/TableSearch";
 
 export const dynamic = "force-dynamic";
 
@@ -28,9 +29,17 @@ export default async function BookingsPage() {
       </div>
 
       {bookings.length === 0 ? (
-        <div className="card"><div className="empty">No bookings yet. Open a trip to add one, or use the chat box on the dashboard.</div></div>
+        <div className="card">
+          <div className="empty-cta">
+            <span className="emoji">🎫</span>
+            <div className="t">No bookings yet</div>
+            <div className="d">Open a trip to add your first party, or just type it in the chat box on the dashboard.</div>
+            <Link className="btn primary sm" href="/trips">Go to trips</Link>
+          </div>
+        </div>
       ) : (
-        <div className="card" style={{ padding: 0 }}>
+        <div className="card" style={{ padding: "18px 20px" }}>
+          <TableSearch placeholder="Search customer or trip…" tags={["confirmed", "enquiry", "travelled", "cancelled"]}>
           <table className="t">
             <thead>
               <tr><th style={{ paddingLeft: 20 }}>Customer</th><th>Trip</th><th>Pax</th><th>Status</th><th className="num">Total</th><th className="num">Paid</th><th className="num">Balance</th></tr>
@@ -52,6 +61,7 @@ export default async function BookingsPage() {
               })}
             </tbody>
           </table>
+          </TableSearch>
         </div>
       )}
     </>

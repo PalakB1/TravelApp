@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { bookingTotal, bookingPaid, bookingBalance, isActive } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
-import { updateCustomer } from "../../data-actions";
+import { updateCustomer, deleteCustomer } from "../../data-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +38,21 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
           <h1 style={{ marginTop: 6 }}>{c.name}</h1>
           <p className="sub">{[c.phone, c.email].filter(Boolean).join(" · ") || "No contact details yet"} · Added {fmtDate(c.createdAt)}</p>
         </div>
+        <details className="menu-pop" style={{ position: "relative" }}>
+          <summary className="btn sm" style={{ listStyle: "none", cursor: "pointer", color: "var(--danger)", borderColor: "var(--danger-bg)" }}>Delete customer</summary>
+          <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", width: 280, maxWidth: "80vw", zIndex: 30, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, boxShadow: "0 12px 32px rgba(27,28,43,0.16)", padding: 16 }}>
+            <div style={{ fontWeight: 500, marginBottom: 6 }}>Delete {c.name}?</div>
+            <p className="small muted" style={{ margin: "0 0 12px" }}>
+              {c.bookings.length > 0
+                ? `Their ${c.bookings.length} booking${c.bookings.length > 1 ? "s" : ""} stay on the trip (kept by name) but are unlinked from this profile.`
+                : "This customer has no bookings."}
+            </p>
+            <form action={deleteCustomer}>
+              <input type="hidden" name="id" value={c.id} />
+              <button className="danger sm" type="submit">Yes, delete</button>
+            </form>
+          </div>
+        </details>
       </div>
 
       <div className="metrics">

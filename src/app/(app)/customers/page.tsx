@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { bookingTotal, bookingPaid, bookingBalance, isActive } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
+import TableSearch from "@/components/TableSearch";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,8 @@ export default async function CustomersPage() {
       {customers.length === 0 ? (
         <div className="card"><div className="empty">No customers yet. They’re created automatically when you add a booking.</div></div>
       ) : (
-        <div className="card" style={{ padding: 0 }}>
+        <div className="card" style={{ padding: "18px 20px" }}>
+          <TableSearch placeholder="Search name, phone or trip…">
           <table className="t">
             <thead>
               <tr>
@@ -59,6 +61,7 @@ export default async function CustomersPage() {
               ))}
             </tbody>
           </table>
+          </TableSearch>
         </div>
       )}
     </>

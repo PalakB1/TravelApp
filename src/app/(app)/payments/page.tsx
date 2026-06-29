@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { bookingTotal, bookingPaid, bookingBalance, isActive } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
+import TableSearch from "@/components/TableSearch";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,7 @@ export default async function PaymentsPage() {
         {recent.length === 0 ? (
           <div className="empty">No payments recorded yet.</div>
         ) : (
+          <TableSearch placeholder="Search customer, trip or mode…" tags={["upi", "cash", "card", "bank"]}>
           <table className="t">
             <thead><tr><th>Date</th><th>Customer</th><th>Trip</th><th>Mode</th><th className="num">Amount</th></tr></thead>
             <tbody>
@@ -76,6 +78,7 @@ export default async function PaymentsPage() {
               ))}
             </tbody>
           </table>
+          </TableSearch>
         )}
       </div>
     </>
