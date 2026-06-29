@@ -737,6 +737,12 @@ export async function markTaxRemittedBulk(formData: FormData) {
 }
 
 // ---- Travellers (people on a booking) ----
+// Keep the booking's denormalised per-traveller extras total in sync.
+async function recomputeTravellerExtra(bookingId: string) {
+  const sum = await prisma.traveller.aggregate({ where: { bookingId }, _sum: { extraCharge: true } });
+  await prisma.booking.update({ where: { id: bookingId }, data: { travellerExtra: sum._sum.extraCharge || 0 } });
+}
+
 export async function addTraveller(formData: FormData) {
   await guard();
   const bookingId = String(formData.get("bookingId"));
@@ -744,27 +750,37 @@ export async function addTraveller(formData: FormData) {
   if (!bookingId || !name) return;
   const ageStr = String(formData.get("age") || "").trim();
   await prisma.traveller.create({
-    data: { bookingId, name, age: ageStr ? Number(ageStr) || null : null },
+    data: {
+      bookingId, name,
+      age: ageStr ? Number(ageStr) || null : null,
+      extraCharge: parseAmount(String(formData.get("extraCharge"))),
+      extraNote: String(formData.get("extraNote") || "") || null,
+    },
   });
+  await recomputeTravellerExtra(bookingId);
   refresh();
 }
 
 export async function updateTraveller(formData: FormData) {
   await guard();
   const ageStr = String(formData.get("age") || "").trim();
-  await prisma.traveller.update({
+  const tr = await prisma.traveller.update({
     where: { id: String(formData.get("id")) },
     data: {
       name: String(formData.get("name") || "").trim() || undefined,
       age: ageStr ? Number(ageStr) || null : null,
+      extraCharge: parseAmount(String(formData.get("extraCharge"))),
+      extraNote: String(formData.get("extraNote") || "") || null,
     },
   });
+  await recomputeTravellerExtra(tr.bookingId);
   refresh();
 }
 
 export async function deleteTraveller(formData: FormData) {
   await guard();
-  await prisma.traveller.delete({ where: { id: String(formData.get("id")) } });
+  const tr = await prisma.traveller.delete({ where: { id: String(formData.get("id")) } });
+  await recomputeTravellerExtra(tr.bookingId);
   refresh();
 }
 

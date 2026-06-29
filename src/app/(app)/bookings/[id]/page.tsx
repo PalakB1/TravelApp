@@ -120,7 +120,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           <div className="empty small">{b.pax === 1 ? `Single traveller — it's ${b.customerName} (filled in below, just add age if you like).` : "No people added yet. Add each family member below."}</div>
         ) : (
           <table className="t">
-            <thead><tr><th>#</th><th>Name</th><th>Age</th><th></th><th>Added</th><th></th></tr></thead>
+            <thead><tr><th>#</th><th>Name</th><th>Age</th><th></th><th>Extra charge</th><th></th></tr></thead>
             <tbody>
               {b.travellers.map((tr, i) => (
                 <tr key={tr.id}>
@@ -128,16 +128,21 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                   <td>
                     <form action={updateTraveller} className="inline-form" id={`tr-${tr.id}`}>
                       <input type="hidden" name="id" value={tr.id} />
-                      <input name="name" defaultValue={tr.name} style={{ maxWidth: 240 }} />
+                      <input name="name" defaultValue={tr.name} style={{ maxWidth: 220 }} />
                     </form>
                   </td>
                   <td>
-                    <input name="age" defaultValue={tr.age ?? ""} form={`tr-${tr.id}`} type="number" min="0" max="120" placeholder="—" style={{ width: 80 }} />
+                    <input name="age" defaultValue={tr.age ?? ""} form={`tr-${tr.id}`} type="number" min="0" max="120" placeholder="—" style={{ width: 70 }} />
                   </td>
                   <td>
                     {tr.age != null && tr.age < 12 ? <span className="badge amber">child</span> : null}
                   </td>
-                  <td className="muted small">{fmtDate(tr.createdAt)}</td>
+                  <td>
+                    <span className="flex" style={{ gap: 6 }}>
+                      <input name="extraCharge" defaultValue={tr.extraCharge || ""} form={`tr-${tr.id}`} placeholder="₹0" style={{ width: 90 }} />
+                      <input name="extraNote" defaultValue={tr.extraNote || ""} form={`tr-${tr.id}`} placeholder="why? e.g. single room" style={{ width: 150 }} />
+                    </span>
+                  </td>
                   <td className="num">
                     <span className="flex" style={{ justifyContent: "flex-end", gap: 6 }}>
                       <button className="sm" type="submit" form={`tr-${tr.id}`}>Save</button>
@@ -155,10 +160,12 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
             <form action={addTraveller}>
               <input type="hidden" name="bookingId" value={b.id} />
               <AutoFill sourceId="tr-name" fills={[{ targetId: "tr-age", key: "age" }]} data={ageMap} />
-              <div className="row">
+              <div className="row-3">
                 <label className="field"><span className="lbl">Name</span><input id="tr-name" name="name" list="people-list" defaultValue={b.travellers.length === 0 ? b.customerName : ""} placeholder="Aarav Sharma" required /></label>
                 <label className="field"><span className="lbl">Age</span><input id="tr-age" name="age" type="number" min="0" max="120" placeholder="optional" /></label>
+                <label className="field"><span className="lbl">Extra charge (optional)</span><input name="extraCharge" placeholder="₹ for this person only" /></label>
               </div>
+              <label className="field"><span className="lbl">Extra charge reason</span><input name="extraNote" placeholder="e.g. single room supplement" /></label>
               <datalist id="people-list">
                 {Object.keys(ageMap).length > 0 && knownPeople
                   .filter((p, idx, arr) => arr.findIndex((q) => q.name.trim().toLowerCase() === p.name.trim().toLowerCase()) === idx)
@@ -228,6 +235,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           {base === 0 && <div className="empty small">No package amount set yet. Edit the invoice below.</div>}
           {b.discount > 0 && <Line label={`Discount${b.discountReason ? " · " + b.discountReason : ""}`} value={`− ${formatINR(b.discount)}`} muted />}
           {bookingInclTaxCharge(b) > 0 && <Line label="Inclusions (taxable)" value={formatINR(bookingInclTaxCharge(b))} muted />}
+          {b.travellerExtra > 0 && <Line label="Per-person extras" value={formatINR(b.travellerExtra)} muted />}
           <Line label="Taxable value" value={formatINR(taxable)} strong />
           <Line label={`GST @ ${b.gstRate}%`} value={formatINR(gst)} muted />
           <Line label={`TCS @ ${b.tcsRate}%`} value={formatINR(tcs)} muted />

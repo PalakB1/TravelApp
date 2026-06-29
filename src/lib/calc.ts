@@ -20,6 +20,7 @@ type BookingLite = {
   inclCostPP?: number;
   inclTaxPP?: number;
   inclNonTaxPP?: number;
+  travellerExtra?: number;
   variant?: VariantLite;
   payments?: PaymentLite[];
 };
@@ -57,9 +58,10 @@ export function bookingInclusionCost(b: BookingLite): number {
 function bookingNonTaxTotal(b: BookingLite): number {
   return (b.nonTaxable || 0) + bookingInclNonTaxCharge(b);
 }
-// Taxable subtotal after discount + taxable inclusion charges — the company's sale value.
+// Taxable subtotal after discount + taxable inclusion charges + per-traveller
+// extras — the company's sale value.
 export function bookingTaxable(b: BookingLite): number {
-  return Math.max(0, bookingBase(b) - (b.discount || 0)) + bookingInclTaxCharge(b);
+  return Math.max(0, bookingBase(b) - (b.discount || 0)) + bookingInclTaxCharge(b) + (b.travellerExtra || 0);
 }
 export function bookingGst(b: BookingLite): number {
   return Math.round((bookingTaxable(b) * (b.gstRate ?? 5)) / 100);

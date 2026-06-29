@@ -203,6 +203,7 @@ model Booking {
   inclCostPP     Int       @default(0) // your cost per person from selected inclusions
   inclTaxPP      Int       @default(0) // taxable charge per person (gets GST/TCS)
   inclNonTaxPP   Int       @default(0) // non-taxable charge per person
+  travellerExtra Int       @default(0) // sum of per-traveller extra charges (flat, taxable)
 
   status         String    @default("confirmed") // enquiry | confirmed | travelled | cancelled
   createdAt      DateTime  @default(now())
@@ -213,12 +214,14 @@ model Booking {
 
 // An individual person on a booking (a family member / party member).
 model Traveller {
-  id        String   @id @default(cuid())
-  bookingId String
-  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  name      String
-  age       Int?
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  bookingId   String
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  name        String
+  age         Int?
+  extraCharge Int      @default(0) // extra billed to this specific person (supplement, upgrade…)
+  extraNote   String? // why (e.g. "single room")
+  createdAt   DateTime @default(now())
 }
 
 // Money received against a booking (advance, installments, balance)
