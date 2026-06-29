@@ -11,6 +11,7 @@ type Props = {
   trips: { id: string; name: string }[];
   nightsByTrip: Record<string, { id: string; label: string }[]>;
   customerNames: string[];
+  sources: string[];
 };
 
 const ACTIONS = [
@@ -22,7 +23,7 @@ const ACTIONS = [
 ] as const;
 type ActionKey = (typeof ACTIONS)[number]["key"];
 
-export default function QuickEntry({ payable, trips, nightsByTrip, customerNames }: Props) {
+export default function QuickEntry({ payable, trips, nightsByTrip, customerNames, sources }: Props) {
   const [action, setAction] = useState<ActionKey>("payment");
   const [hotelTrip, setHotelTrip] = useState(trips[0]?.id || "");
   // Client runtime — fine to read the clock here (defaults the date to today).
@@ -89,6 +90,7 @@ export default function QuickEntry({ payable, trips, nightsByTrip, customerNames
       {/* BOOK HOTEL */}
       {action === "hotel" && (
         <form action={addHotelBooking} key="hotel">
+          <datalist id="qe-source-list">{sources.map((s) => <option key={s} value={s} />)}</datalist>
           <div className="row">
             <label className="field"><span className="lbl">Trip</span>
               <select value={hotelTrip} onChange={(e) => setHotelTrip(e.target.value)}>{trips.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select>
@@ -109,7 +111,7 @@ export default function QuickEntry({ payable, trips, nightsByTrip, customerNames
               <select name="status" defaultValue="hold"><option value="hold">On hold</option><option value="final">Confirmed</option><option value="unbooked">Not booked</option></select>
             </label>
             <label className="field"><span className="lbl">Hold until</span><input name="holdUntil" type="date" /></label>
-            <label className="field"><span className="lbl">Booked on</span><input name="source" placeholder="Booking.com / Agoda" /></label>
+            <label className="field"><span className="lbl">Booked on</span><input name="source" list="qe-source-list" placeholder="Pick or type — Booking.com" /></label>
           </div>
           <button className="primary" type="submit" disabled={nights.length === 0}>Add hotel</button>
         </form>

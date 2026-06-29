@@ -68,6 +68,13 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
   const customerPhoneMap: Record<string, { phone?: string | null }> = {};
   for (const c of customers) if (c.phone) customerPhoneMap[c.name.trim().toLowerCase()] = { phone: c.phone };
 
+  // Distinct "booked / held on" sources used before (Booking.com, Agoda, a vendor…) — pick or type new.
+  const [hotelSources, carSources] = await Promise.all([
+    prisma.hotelBooking.findMany({ where: { source: { not: null } }, distinct: ["source"], select: { source: true } }),
+    prisma.car.findMany({ where: { source: { not: null } }, distinct: ["source"], select: { source: true } }),
+  ]);
+  const sources = [...new Set([...hotelSources, ...carSources].map((s) => (s.source || "").trim()).filter(Boolean))].sort();
+
   // Car "catalog" — every car type used before, so picking it re-fills seats/price/driver cost.
   const pastCars = await prisma.car.findMany({ where: { carType: { not: null } }, orderBy: { createdAt: "desc" }, select: { carType: true, seats: true, rentalCost: true, driverCost: true, vendor: true } });
   const carCatalog: Record<string, { seats?: number; rentalCost?: number; driverCost?: number; vendor?: string | null }> = {};
@@ -98,6 +105,9 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
       </datalist>
       <datalist id="car-type-list">
         {carTypes.map((t) => <option key={t} value={t} />)}
+      </datalist>
+      <datalist id="source-list">
+        {sources.map((s) => <option key={s} value={s} />)}
       </datalist>
 
       <div className="page-head">
@@ -267,7 +277,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                                     <select name="status" defaultValue={h.status}><option value="unbooked">Not booked</option><option value="hold">On hold</option><option value="final">Confirmed</option></select>
                                   </label>
                                   <label className="field"><span className="lbl">Hold until</span><input name="holdUntil" type="date" defaultValue={dateInput(h.holdUntil)} /></label>
-                                  <label className="field"><span className="lbl">Booked / held on</span><input name="source" defaultValue={h.source || ""} placeholder="Booking.com" /></label>
+                                  <label className="field"><span className="lbl">Booked / held on</span><input name="source" list="source-list" defaultValue={h.source || ""} placeholder="Pick or type — Booking.com" /></label>
                                 </div>
                                 <div className="row">
                                   <label className="field"><span className="lbl">Confirmation #</span><input name="confirmationNo" defaultValue={h.confirmationNo || ""} placeholder="optional" /></label>
@@ -299,7 +309,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                                 <select name="status" defaultValue="hold"><option value="unbooked">Not booked</option><option value="hold">On hold</option><option value="final">Confirmed</option></select>
                               </label>
                               <label className="field"><span className="lbl">Hold until</span><input name="holdUntil" type="date" /></label>
-                              <label className="field"><span className="lbl">Booked / held on</span><input name="source" placeholder="Booking.com" /></label>
+                              <label className="field"><span className="lbl">Booked / held on</span><input name="source" list="source-list" placeholder="Pick or type — Booking.com" /></label>
                             </div>
                             <label className="field"><span className="lbl">Notes</span><input name="notes" placeholder="e.g. 2 triple rooms" /></label>
                             <div className="flex" style={{ gap: 8 }}>
@@ -447,7 +457,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                           <select name="status" defaultValue={c.status}><option value="hold">On hold</option><option value="final">Confirmed</option></select>
                         </label>
                         <label className="field"><span className="lbl">Hold until</span><input name="holdUntil" type="date" defaultValue={dateInput(c.holdUntil)} /></label>
-                        <label className="field"><span className="lbl">Held on</span><input name="source" defaultValue={c.source || ""} placeholder="vendor / app" /></label>
+                        <label className="field"><span className="lbl">Held on</span><input name="source" list="source-list" defaultValue={c.source || ""} placeholder="vendor / app" /></label>
                       </div>
                       <button className="primary sm" type="submit">Save car</button>
                     </form>
@@ -488,7 +498,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                   <select name="status" defaultValue="hold"><option value="hold">On hold</option><option value="final">Confirmed</option></select>
                 </label>
                 <label className="field"><span className="lbl">Hold until</span><input name="holdUntil" type="date" /></label>
-                <label className="field"><span className="lbl">Held on</span><input name="source" placeholder="vendor / app" /></label>
+                <label className="field"><span className="lbl">Held on</span><input name="source" list="source-list" placeholder="vendor / app" /></label>
               </div>
               <button className="primary sm" type="submit">Add car</button>
             </form>

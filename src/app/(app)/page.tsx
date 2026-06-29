@@ -110,6 +110,10 @@ export default async function Dashboard() {
   const nightsByTrip: Record<string, { id: string; label: string }[]> = {};
   for (const t of trips) nightsByTrip[t.id] = t.itinerary.map((n) => ({ id: n.id, label: `${n.date ? fmtDate(n.date) : "—"} · ${n.location}` }));
   const customerNameList = customers.map((c) => c.name).sort((a, b) => a.localeCompare(b));
+  const sourceList = [...new Set(trips.flatMap((t) => [
+    ...t.itinerary.flatMap((n) => n.hotels.map((h) => h.source)),
+    ...t.cars.map((c) => c.source),
+  ]).map((s) => (s || "").trim()).filter(Boolean))].sort();
 
   // recent payments for an activity feel
   const recentPayments = await prisma.payment.findMany({
@@ -211,7 +215,7 @@ export default async function Dashboard() {
       <div className="grid-2">
         <div className="card">
           <div className="card-title">Quick entry <span className="small muted">pick what you’re adding</span></div>
-          <QuickEntry payable={payableOptions} trips={tripOptions} nightsByTrip={nightsByTrip} customerNames={customerNameList} />
+          <QuickEntry payable={payableOptions} trips={tripOptions} nightsByTrip={nightsByTrip} customerNames={customerNameList} sources={sourceList} />
         </div>
 
         <div className="card">
