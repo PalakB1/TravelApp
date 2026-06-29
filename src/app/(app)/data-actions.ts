@@ -379,6 +379,10 @@ export async function addBooking(formData: FormData) {
       status: String(formData.get("status") || "confirmed"),
     },
   });
+  // A single-traveller booking IS the customer — seed the traveller automatically.
+  if (booking.pax === 1) {
+    await prisma.traveller.create({ data: { bookingId: booking.id, name: customer.name } });
+  }
   // Auto-attach the trip's default inclusions (cost-only), snapshotting price + date.
   const defaults = await prisma.inclusion.findMany({ where: { tripId, isDefault: true } });
   if (defaults.length) {

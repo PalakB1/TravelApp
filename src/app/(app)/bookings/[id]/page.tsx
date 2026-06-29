@@ -117,7 +117,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           <span className="small muted">{b.travellers.length} of {b.pax} named{b.travellers.length !== b.pax ? " · update pax in the invoice if needed" : ""}</span>
         </div>
         {b.travellers.length === 0 ? (
-          <div className="empty small">No people added yet. Add each family member below.</div>
+          <div className="empty small">{b.pax === 1 ? `Single traveller — it's ${b.customerName} (filled in below, just add age if you like).` : "No people added yet. Add each family member below."}</div>
         ) : (
           <table className="t">
             <thead><tr><th>#</th><th>Name</th><th>Age</th><th></th><th>Added</th><th></th></tr></thead>
@@ -156,7 +156,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
               <input type="hidden" name="bookingId" value={b.id} />
               <AutoFill sourceId="tr-name" fills={[{ targetId: "tr-age", key: "age" }]} data={ageMap} />
               <div className="row">
-                <label className="field"><span className="lbl">Name</span><input id="tr-name" name="name" list="people-list" placeholder="Aarav Sharma" required /></label>
+                <label className="field"><span className="lbl">Name</span><input id="tr-name" name="name" list="people-list" defaultValue={b.travellers.length === 0 ? b.customerName : ""} placeholder="Aarav Sharma" required /></label>
                 <label className="field"><span className="lbl">Age</span><input id="tr-age" name="age" type="number" min="0" max="120" placeholder="optional" /></label>
               </div>
               <datalist id="people-list">
