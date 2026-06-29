@@ -426,6 +426,68 @@ export async function addHotelBooking(formData: FormData) {
   refresh();
 }
 
+// Book one hotel across a range of nights at once. Each night in
+// [checkIn, checkOut) gets its own HotelBooking; the total cost is split evenly.
+// Dates outside the existing itinerary are added as new nights, labelled
+// "Day X−n" (before the trip) or "Day Y+n" (after it).
+export async function addHotelStay(formData: FormData) {
+  await guard();
+  const tripId = String(formData.get("tripId"));
+  const hotelName = String(formData.get("hotelName") || "").trim();
+  const checkInStr = String(formData.get("checkIn") || "");
+  if (!tripId || !hotelName || !checkInStr) return;
+
+  const DAY = 864e5;
+  const startOfDay = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+  const checkIn = startOfDay(new Date(checkInStr));
+  const checkOutStr = String(formData.get("checkOut") || "");
+  const checkOut = checkOutStr ? startOfDay(new Date(checkOutStr)) : new Date(checkIn.getTime() + DAY);
+  const nights = Math.max(1, Math.round((checkOut.getTime() - checkIn.getTime()) / DAY));
+
+  const rooms = Number(formData.get("rooms")) || 0;
+  const totalCost = parseAmount(String(formData.get("cost")));
+  const perNight = Math.floor(totalCost / nights);
+  const remainder = totalCost - perNight * nights;
+  const status = String(formData.get("status") || "hold");
+  const holdUntil = toDate(formData.get("holdUntil"));
+  const source = String(formData.get("source") || "") || null;
+
+  const trip = await prisma.trip.findUnique({ where: { id: tripId }, include: { itinerary: true } });
+  if (!trip) return;
+  const nightsList = [...trip.itinerary];
+  const dated = nightsList.filter((n) => n.date).map((n) => startOfDay(new Date(n.date!)).getTime());
+  const minDate = dated.length ? Math.min(...dated) : null;
+  const maxDate = dated.length ? Math.max(...dated) : null;
+  const orders = nightsList.map((n) => n.order);
+  const minOrder = orders.length ? Math.min(...orders) : 0;
+  const maxOrder = orders.length ? Math.max(...orders) : 0;
+  const sameDay = (a: Date, b: Date) => startOfDay(a).getTime() === startOfDay(b).getTime();
+
+  for (let i = 0; i < nights; i++) {
+    const d = startOfDay(new Date(checkIn.getTime() + i * DAY));
+    let night = nightsList.find((n) => n.date && sameDay(new Date(n.date), d));
+    if (!night) {
+      let location = "Extra night";
+      let order = maxOrder + 1;
+      if (minDate != null && d.getTime() < minDate) {
+        const k = Math.round((minDate - d.getTime()) / DAY);
+        location = `Day X−${k}`;
+        order = minOrder - k;
+      } else if (maxDate != null && d.getTime() > maxDate) {
+        const k = Math.round((d.getTime() - maxDate) / DAY);
+        location = `Day Y+${k}`;
+        order = maxOrder + k;
+      }
+      night = await prisma.night.create({ data: { tripId, date: d, location, order } });
+      nightsList.push(night);
+    }
+    await prisma.hotelBooking.create({
+      data: { nightId: night.id, hotelName, rooms, cost: perNight + (i === 0 ? remainder : 0), status, holdUntil, source },
+    });
+  }
+  refresh();
+}
+
 export async function updateHotelBooking(formData: FormData) {
   await guard();
   await prisma.hotelBooking.update({

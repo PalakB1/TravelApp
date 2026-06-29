@@ -3,13 +3,12 @@
 import { useState } from "react";
 import Combobox, { type ComboOption } from "./Combobox";
 import {
-  addPayment, addBooking, addHotelBooking, createCustomer, createTrip,
+  addPayment, addBooking, addHotelStay, createCustomer, createTrip,
 } from "@/app/(app)/data-actions";
 
 type Props = {
   payable: ComboOption[];
   trips: { id: string; name: string }[];
-  nightsByTrip: Record<string, { id: string; label: string }[]>;
   customerNames: string[];
   sources: string[];
 };
@@ -23,13 +22,10 @@ const ACTIONS = [
 ] as const;
 type ActionKey = (typeof ACTIONS)[number]["key"];
 
-export default function QuickEntry({ payable, trips, nightsByTrip, customerNames, sources }: Props) {
+export default function QuickEntry({ payable, trips, customerNames, sources }: Props) {
   const [action, setAction] = useState<ActionKey>("payment");
-  const [hotelTrip, setHotelTrip] = useState(trips[0]?.id || "");
   // Client runtime — fine to read the clock here (defaults the date to today).
   const today = new Date().toISOString().slice(0, 10);
-
-  const nights = nightsByTrip[hotelTrip] || [];
 
   return (
     <div>
@@ -87,33 +83,32 @@ export default function QuickEntry({ payable, trips, nightsByTrip, customerNames
         </form>
       )}
 
-      {/* BOOK HOTEL */}
+      {/* BOOK HOTEL — multi-night stay, splits across days */}
       {action === "hotel" && (
-        <form action={addHotelBooking} key="hotel">
+        <form action={addHotelStay} key="hotel">
           <datalist id="qe-source-list">{sources.map((s) => <option key={s} value={s} />)}</datalist>
           <div className="row">
             <label className="field"><span className="lbl">Trip</span>
-              <select value={hotelTrip} onChange={(e) => setHotelTrip(e.target.value)}>{trips.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select>
+              <select name="tripId" required defaultValue={trips[0]?.id || ""}>{trips.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select>
             </label>
-            <label className="field"><span className="lbl">Night (date · place)</span>
-              {nights.length === 0
-                ? <input disabled placeholder="This trip has no itinerary nights yet" />
-                : <select name="nightId" required defaultValue="">{<option value="" disabled>Pick a night…</option>}{nights.map((n) => <option key={n.id} value={n.id}>{n.label}</option>)}</select>}
-            </label>
+            <label className="field"><span className="lbl">Hotel name</span><input name="hotelName" list="hotel-list" placeholder="Pick or type a hotel" required /></label>
           </div>
           <div className="row-3">
-            <label className="field"><span className="lbl">Hotel name</span><input name="hotelName" list="hotel-list" placeholder="Hotel name" required /></label>
-            <label className="field"><span className="lbl">Rooms</span><input name="rooms" type="number" min="0" placeholder="3" /></label>
-            <label className="field"><span className="lbl">Cost (total)</span><input name="cost" placeholder="₹" /></label>
+            <label className="field"><span className="lbl">Check-in</span><input name="checkIn" type="date" required /></label>
+            <label className="field"><span className="lbl">Check-out</span><input name="checkOut" type="date" /></label>
+            <label className="field"><span className="lbl">Rooms / night</span><input name="rooms" type="number" min="0" placeholder="3" /></label>
           </div>
           <div className="row-3">
+            <label className="field"><span className="lbl">Total cost (split across nights)</span><input name="cost" placeholder="₹ for the whole stay" /></label>
             <label className="field"><span className="lbl">Status</span>
               <select name="status" defaultValue="hold"><option value="hold">On hold</option><option value="final">Confirmed</option><option value="unbooked">Not booked</option></select>
             </label>
-            <label className="field"><span className="lbl">Hold until</span><input name="holdUntil" type="date" /></label>
-            <label className="field"><span className="lbl">Booked on</span><input name="source" list="qe-source-list" placeholder="Pick or type — Booking.com" /></label>
+            <label className="field"><span className="lbl">Booked / held on</span><input name="source" list="qe-source-list" placeholder="Pick or type — Booking.com" /></label>
           </div>
-          <button className="primary" type="submit" disabled={nights.length === 0}>Add hotel</button>
+          <button className="primary" type="submit">Add hotel stay</button>
+          <p className="small muted" style={{ margin: "10px 0 0" }}>
+            One row per night between check-in and check-out, cost split evenly. Dates outside the itinerary are added as extra nights (Day&nbsp;X−1 before, Day&nbsp;Y+1 after).
+          </p>
         </form>
       )}
 

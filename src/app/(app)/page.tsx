@@ -107,8 +107,6 @@ export default async function Dashboard() {
     .sort((a, b) => b._bal - a._bal)
     .map(({ _bal, ...o }) => o);
   const tripOptions = trips.map((t) => ({ id: t.id, name: t.name }));
-  const nightsByTrip: Record<string, { id: string; label: string }[]> = {};
-  for (const t of trips) nightsByTrip[t.id] = t.itinerary.map((n) => ({ id: n.id, label: `${n.date ? fmtDate(n.date) : "—"} · ${n.location}` }));
   const customerNameList = customers.map((c) => c.name).sort((a, b) => a.localeCompare(b));
   const sourceList = [...new Set(trips.flatMap((t) => [
     ...t.itinerary.flatMap((n) => n.hotels.map((h) => h.source)),
@@ -215,7 +213,7 @@ export default async function Dashboard() {
       <div className="grid-2">
         <div className="card">
           <div className="card-title">Quick entry <span className="small muted">pick what you’re adding</span></div>
-          <QuickEntry payable={payableOptions} trips={tripOptions} nightsByTrip={nightsByTrip} customerNames={customerNameList} sources={sourceList} />
+          <QuickEntry payable={payableOptions} trips={tripOptions} customerNames={customerNameList} sources={sourceList} />
         </div>
 
         <div className="card">
