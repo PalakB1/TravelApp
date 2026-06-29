@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { bookingTotal, bookingPaid, bookingBalance, isActive } from "@/lib/calc";
-import { formatINR } from "@/lib/money";
+import { formatINR, formatINRShort } from "@/lib/money";
 import TableSearch from "@/components/TableSearch";
+import { addPayment } from "../data-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,13 @@ export default async function PaymentsPage() {
   const totalDue = owing.reduce((s, b) => s + bookingBalance(b), 0);
   const totalCollected = bookings.reduce((s, b) => s + bookingPaid(b), 0);
 
+  // Pick-from-list of existing customers/groups — payments only ever attach to
+  // a booking that already exists (no new customers created here).
+  const payable = bookings
+    .filter((b) => isActive(b.status))
+    .map((b) => ({ b, bal: bookingBalance(b) }))
+    .sort((a, c) => (c.bal - a.bal) || a.b.customerName.localeCompare(c.b.customerName));
+
   return (
     <>
       <div className="page-head">
@@ -34,6 +42,40 @@ export default async function PaymentsPage() {
           <h1>Payments</h1>
           <p className="sub">{formatINR(totalCollected)} collected · {formatINR(totalDue)} outstanding</p>
         </div>
+      </div>
+
+      <div className="card">
+        <div className="card-title">Record a payment <span className="small muted">choose an existing customer — no typing names</span></div>
+        {payable.length === 0 ? (
+          <div className="empty">No bookings yet. Add a booking on a trip first, then you can record payments here.</div>
+        ) : (
+          <form action={addPayment}>
+            <div className="row-3">
+              <label className="field"><span className="lbl">Customer · group</span>
+                <select name="bookingId" required defaultValue="">
+                  <option value="" disabled>Select a customer…</option>
+                  {payable.map(({ b, bal }) => (
+                    <option key={b.id} value={b.id}>
+                      {b.customerName} — {b.trip.name}{bal > 0 ? ` · ${formatINRShort(bal)} due` : " · fully paid"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field"><span className="lbl">Amount</span><input name="amount" placeholder="40000 or 40k" required /></label>
+              <label className="field"><span className="lbl">Date</span><input name="date" type="date" /></label>
+            </div>
+            <div className="row-3">
+              <label className="field"><span className="lbl">Mode</span>
+                <select name="mode" defaultValue="upi"><option value="upi">UPI</option><option value="cash">Cash</option><option value="card">Card</option><option value="bank">Bank transfer</option><option value="other">Other</option></select>
+              </label>
+              <label className="field"><span className="lbl">Note</span><input name="note" placeholder="advance / installment 2" /></label>
+              <div className="flex" style={{ alignItems: "flex-end", paddingBottom: 12 }}>
+                <button className="primary" type="submit">Record payment</button>
+              </div>
+            </div>
+            <p className="small muted" style={{ margin: 0 }}>Don’t see someone? They need a booking on a trip first — that’s the only place a new customer is created.</p>
+          </form>
+        )}
       </div>
 
       <div className="card">
