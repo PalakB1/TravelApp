@@ -24,6 +24,7 @@ export default async function Dashboard() {
   });
 
   let revenue = 0, cost = 0, outstanding = 0, unbookedNights = 0, expiringHolds = 0, shortRoomNights = 0, seatIssues = 0, paxTotal = 0, bookingCount = 0;
+  let hotelCost = 0, carRental = 0, driverCost = 0, extrasCost = 0, inclusionsCost = 0, driversTotal = 0, carsTotal = 0, taxCollectedAll = 0;
   const perTrip = trips.map((t) => {
     const f = tripFinancials({ bookings: t.bookings, nights: t.itinerary, cars: t.cars, vendorBookings: t.vendorBookings, maxPerRoom: t.maxPerRoom });
     revenue += f.revenue;
@@ -35,6 +36,14 @@ export default async function Dashboard() {
     seatIssues += f.seatsShort > 0 ? 1 : 0;
     paxTotal += f.pax;
     bookingCount += f.bookingCount;
+    hotelCost += f.hotelCost;
+    carRental += f.carRental;
+    driverCost += f.driverCost;
+    extrasCost += f.extrasCost;
+    inclusionsCost += f.inclusionsCost;
+    driversTotal += f.hiredDrivers;
+    carsTotal += t.cars.length;
+    taxCollectedAll += f.taxCollected;
     return { trip: t, f };
   });
   const profit = revenue - cost;
@@ -125,7 +134,7 @@ export default async function Dashboard() {
       <div className="page-head">
         <div>
           <h1>Dashboard</h1>
-          <p className="sub">{trips.length} trips · {bookingCount} bookings · {paxTotal} travellers</p>
+          <p className="sub">{trips.length} trips · {bookingCount} bookings · {paxTotal} travellers{driversTotal > 0 ? ` + ${driversTotal} driver${driversTotal > 1 ? "s" : ""} = ${paxTotal + driversTotal} people` : ""} · {carsTotal} cars</p>
         </div>
         <Link className="btn primary" href="/trips/new">+ New trip</Link>
       </div>
@@ -139,7 +148,7 @@ export default async function Dashboard() {
         <Link className="metric c-amber" href="/reports/cost">
           <div className="label">Your cost</div>
           <div className="value">{formatINRShort(cost)}</div>
-          <div className="foot">hotels, cars, drivers</div>
+          <div className="foot">hotels {formatINRShort(hotelCost)} · cars {formatINRShort(carRental)}{driverCost > 0 ? ` · drivers ${formatINRShort(driverCost)}` : ""}{extrasCost > 0 ? ` · extras ${formatINRShort(extrasCost)}` : ""}{inclusionsCost > 0 ? ` · inclusions ${formatINRShort(inclusionsCost)}` : ""}</div>
         </Link>
         <Link className="metric c-violet" href="/reports/profit">
           <div className="label">Profit</div>
