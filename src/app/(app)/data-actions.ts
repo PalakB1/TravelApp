@@ -388,14 +388,33 @@ export async function addNight(formData: FormData) {
   const tripId = String(formData.get("tripId"));
   const location = String(formData.get("location") || "").trim();
   if (!tripId || !location) return;
-  const count = await prisma.night.count({ where: { tripId } });
+  const extra = String(formData.get("extra")) === "yes";
+  const date = toDate(formData.get("date"));
+  const existing = await prisma.night.findMany({ where: { tripId }, select: { order: true, date: true } });
+
+  // Normal nights append to the end. Add-on nights slot in chronologically so a
+  // pre-trip night sorts ahead of Day 1 (and reads as Day -1) instead of last.
+  let order = existing.length;
+  if (extra && date) {
+    const orders = existing.map((n) => n.order);
+    const minOrder = orders.length ? Math.min(...orders) : 0;
+    const maxOrder = orders.length ? Math.max(...orders) : 0;
+    const ts = existing.filter((n) => n.date).map((n) => new Date(n.date!).getTime());
+    const minT = ts.length ? Math.min(...ts) : null;
+    const maxT = ts.length ? Math.max(...ts) : null;
+    if (minT != null && date.getTime() < minT) order = minOrder - 1;
+    else if (maxT != null && date.getTime() > maxT) order = maxOrder + 1;
+    else order = maxOrder + 1;
+  }
+
   const hotelName = String(formData.get("hotelName") || "").trim();
   await prisma.night.create({
     data: {
       tripId,
       location,
-      order: count,
-      date: toDate(formData.get("date")),
+      order,
+      extra,
+      date,
       // optionally seed the first hotel from the same form
       hotels: hotelName
         ? { create: [{ hotelName, rooms: Number(formData.get("rooms")) || 0, cost: parseAmount(String(formData.get("cost"))), status: String(formData.get("status") || "hold") }] }

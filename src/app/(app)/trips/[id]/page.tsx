@@ -86,6 +86,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
     carTypes.push(c.carType!.trim());
   }
 
+  const coreNightCount = trip.itinerary.filter((n) => !n.extra).length;
   const allHotels = trip.itinerary.flatMap((n) => n.hotels);
   const totalRooms = allHotels.reduce((s, h) => s + h.rooms, 0);
   const avgPerRoom = totalRooms > 0 ? Math.round(f.hotelCost / totalRooms) : 0;
@@ -114,7 +115,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
         <div>
           <div className="small muted"><Link href="/trips" style={{ color: "var(--text-2)" }}>← Trips</Link></div>
           <h1 style={{ marginTop: 6 }}>{trip.name}</h1>
-          <p className="sub">{trip.destination || "—"} · {dateRange} · {trip.itinerary.length} nights · {f.pax} travellers{f.hiredDrivers > 0 ? ` + ${f.hiredDrivers} driver${f.hiredDrivers > 1 ? "s" : ""} = ${f.totalPeople} total` : ""} · {trip.cars.length} cars</p>
+          <p className="sub">{trip.destination || "—"} · {dateRange} · {coreNightCount} nights · {f.pax} travellers{f.hiredDrivers > 0 ? ` + ${f.hiredDrivers} driver${f.hiredDrivers > 1 ? "s" : ""} = ${f.totalPeople} total` : ""} · {trip.cars.length} cars</p>
         </div>
         <div className="flex" style={{ gap: 8, alignItems: "flex-start" }}>
           <details className="menu-pop" style={{ position: "relative" }}>
@@ -163,8 +164,8 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
       </div>
 
       {(trip.itinerary.length > 0 || trip.bookings.length > 0) && (() => {
-        const roomNightsNeeded = f.roomsNeeded * trip.itinerary.length;
-        const roomNightsBooked = trip.itinerary.reduce((s, n) => s + Math.min(nightBookedRooms(n), f.roomsNeeded), 0);
+        const roomNightsNeeded = f.roomsNeeded * coreNightCount;
+        const roomNightsBooked = trip.itinerary.filter((n) => !n.extra).reduce((s, n) => s + Math.min(nightBookedRooms(n), f.roomsNeeded), 0);
         return (
           <div className="card">
             <div className="card-title">Trip setup <span className="small muted">how ready this trip is — fill the gaps to reach 100%</span></div>
@@ -393,6 +394,12 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                         <select name="status" defaultValue="hold"><option value="unbooked">Not booked</option><option value="hold">On hold</option><option value="final">Confirmed</option></select>
                       </label>
                     </div>
+                    <label className="field" style={{ maxWidth: 320 }}><span className="lbl">Type of night</span>
+                      <select name="extra" defaultValue="no">
+                        <option value="no">Itinerary night (counts toward rooms)</option>
+                        <option value="yes">Add-on night — not part of itinerary (no room requirement)</option>
+                      </select>
+                    </label>
                     <button className="primary sm" type="submit">Add night</button>
                   </form>
                   <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14 }}>
@@ -420,6 +427,12 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                   <label className="field"><span className="lbl">Location (stay)</span><input name="location" placeholder="Reykjavik" required /></label>
                   <label className="field"><span className="lbl">First hotel (optional)</span><input name="hotelName" list="hotel-list" placeholder="leave blank if not booked" /></label>
                 </div>
+                <label className="field" style={{ maxWidth: 320 }}><span className="lbl">Type of night</span>
+                  <select name="extra" defaultValue="no">
+                    <option value="no">Itinerary night (counts toward rooms)</option>
+                    <option value="yes">Add-on night — not part of itinerary (no room requirement)</option>
+                  </select>
+                </label>
                 <button className="primary sm" type="submit">Add night</button>
               </form>
             </div>
