@@ -814,3 +814,32 @@ export async function deletePayment(formData: FormData) {
   await logActivity("payment", "deleted", p ? `Removed ${formatINR(p.amount)} payment — ${p.booking.customerName}` : "Removed a payment");
   refresh();
 }
+
+// ---- Customer-submitted payments (public link) approval ----
+export async function approvePendingPayment(formData: FormData) {
+  await guard();
+  const id = String(formData.get("id"));
+  const p = await prisma.pendingPayment.findUnique({ where: { id }, include: { booking: { select: { id: true, customerName: true } } } });
+  if (!p) return;
+  await prisma.payment.create({
+    data: {
+      bookingId: p.bookingId,
+      amount: p.amount,
+      mode: p.mode,
+      date: p.date,
+      note: [p.reference ? `ref ${p.reference}` : "", p.note || "", "via link"].filter(Boolean).join(" · ") || null,
+    },
+  });
+  await prisma.pendingPayment.delete({ where: { id } });
+  await logActivity("payment", "added", `Approved ${formatINR(p.amount)} (${p.mode}) — ${p.booking.customerName}`, `/bookings/${p.booking.id}`);
+  refresh();
+}
+
+export async function rejectPendingPayment(formData: FormData) {
+  await guard();
+  const id = String(formData.get("id"));
+  const p = await prisma.pendingPayment.findUnique({ where: { id }, include: { booking: { select: { customerName: true } } } });
+  await prisma.pendingPayment.delete({ where: { id } });
+  if (p) await logActivity("payment", "deleted", `Rejected self-reported ${formatINR(p.amount)} — ${p.booking.customerName}`);
+  refresh();
+}

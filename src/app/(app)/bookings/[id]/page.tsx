@@ -5,6 +5,7 @@ import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookin
 import { formatINR } from "@/lib/money";
 import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion } from "../../data-actions";
 import AutoFill from "@/components/AutoFill";
+import CopyLink from "@/components/CopyLink";
 
 export const dynamic = "force-dynamic";
 
@@ -285,6 +286,11 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           <div className="card-title">Payments</div>
           <div className="bar" style={{ marginBottom: 6 }}><span className={balance > 0 ? "amber" : ""} style={{ width: `${pct}%` }} /></div>
           <div className="small muted" style={{ marginBottom: 12 }}>{pct}% collected · {formatINR(balance)} remaining</div>
+          <div className="form-box" style={{ marginBottom: 12 }}>
+            <div className="small" style={{ fontWeight: 600, marginBottom: 6 }}>🔗 Payment link for the customer</div>
+            <CopyLink path={`/pay/${b.id}`} label="Copy link" />
+            <p className="small muted" style={{ margin: "8px 0 0" }}>Send this to {b.customerName}. They confirm their payment + upload a screenshot; it appears under “awaiting approval” on the Payments page.</p>
+          </div>
 
           {b.payments.length === 0 ? (
             <div className="empty">No payments recorded yet.</div>

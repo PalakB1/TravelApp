@@ -5,7 +5,7 @@ import { formatINR, formatINRShort } from "@/lib/money";
 import TableSearch from "@/components/TableSearch";
 import Combobox from "@/components/Combobox";
 import ActivityLog from "@/components/ActivityLog";
-import { addPayment } from "../data-actions";
+import { addPayment, approvePendingPayment, rejectPendingPayment } from "../data-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +20,10 @@ export default async function PaymentsPage() {
   const recent = await prisma.payment.findMany({
     take: 25,
     orderBy: { date: "desc" },
+    include: { booking: { include: { trip: true } } },
+  });
+  const pending = await prisma.pendingPayment.findMany({
+    orderBy: { createdAt: "desc" },
     include: { booking: { include: { trip: true } } },
   });
 
@@ -42,9 +46,38 @@ export default async function PaymentsPage() {
       <div className="page-head">
         <div>
           <h1>Payments</h1>
-          <p className="sub">{formatINR(totalCollected)} collected · {formatINR(totalDue)} outstanding</p>
+          <p className="sub">{formatINR(totalCollected)} collected · {formatINR(totalDue)} outstanding{pending.length > 0 ? ` · ${pending.length} awaiting approval` : ""}</p>
         </div>
       </div>
+
+      {pending.length > 0 && (
+        <div className="card" style={{ borderColor: "var(--warning)", background: "var(--warning-bg)" }}>
+          <div className="card-title" style={{ color: "var(--warning)" }}>🔔 Customer-submitted payments — approve to record</div>
+          <div className="stack">
+            {pending.map((p) => (
+              <div key={p.id} className="between" style={{ background: "var(--surface)", borderRadius: 10, padding: "12px 14px", gap: 12, flexWrap: "wrap" }}>
+                <div className="flex" style={{ gap: 12, alignItems: "flex-start", minWidth: 0 }}>
+                  {p.screenshot ? (
+                    <a href={p.screenshot} target="_blank" rel="noopener">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={p.screenshot} alt="proof" style={{ width: 54, height: 54, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)" }} />
+                    </a>
+                  ) : <div style={{ width: 54, height: 54, borderRadius: 8, background: "var(--surface-2)", display: "grid", placeItems: "center", fontSize: 11, color: "var(--text-3)" }}>no img</div>}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 600 }}>{formatINR(p.amount)} <span className="badge gray">{p.mode}</span></div>
+                    <div className="small muted">{p.payerName || p.booking.customerName} · {p.booking.trip.name} · {fmtDate(p.date)}{p.reference ? ` · ref ${p.reference}` : ""}</div>
+                    {p.note ? <div className="small" style={{ color: "var(--text-3)" }}>{p.note}</div> : null}
+                  </div>
+                </div>
+                <div className="flex" style={{ gap: 8 }}>
+                  <form action={approvePendingPayment}><input type="hidden" name="id" value={p.id} /><button className="primary sm" type="submit">Approve</button></form>
+                  <form action={rejectPendingPayment}><input type="hidden" name="id" value={p.id} /><button className="danger sm" type="submit">Reject</button></form>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <div className="card-title">Record a payment <span className="small muted">type a name to find an existing customer</span></div>

@@ -210,6 +210,7 @@ model Booking {
   payments       Payment[]
   travellers     Traveller[]
   inclusions     BookingInclusion[]
+  pendingPayments PendingPayment[]
 }
 
 // An individual person on a booking (a family member / party member).
@@ -233,6 +234,22 @@ model Payment {
   date      DateTime @default(now())
   mode      String   @default("upi") // upi | card | cash | bank | other
   note      String?
+}
+
+// A payment a CUSTOMER self-reported via the public link — must be approved
+// before it becomes a real Payment. Doesn't affect any balance until approved.
+model PendingPayment {
+  id         String   @id @default(cuid())
+  bookingId  String
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  amount     Int
+  mode       String   @default("upi")
+  date       DateTime @default(now())
+  reference  String? // UTR / transaction id
+  screenshot String? // base64 data URL of the proof image
+  payerName  String?
+  note       String?
+  createdAt  DateTime @default(now())
 }
 
 // Operational bookings YOU make for a trip — hotels, cars, flights — and what they cost
