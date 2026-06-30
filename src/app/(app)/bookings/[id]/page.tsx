@@ -288,7 +288,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           <div className="small muted" style={{ marginBottom: 12 }}>{pct}% collected · {formatINR(balance)} remaining</div>
           <div className="form-box" style={{ marginBottom: 12 }}>
             <div className="small" style={{ fontWeight: 600, marginBottom: 6 }}>🔗 Payment link for the customer</div>
-            <CopyLink path={`/pay/${b.id}`} label="Copy link" />
+            <CopyLink path={`/pay/${b.id}`} label="Copy link" waPhone={b.customerPhone} waText={`Hi ${b.customerName}, please confirm your payment for ${b.trip.name} here:`} />
             <p className="small muted" style={{ margin: "8px 0 0" }}>Send this to {b.customerName}. They confirm their payment + upload a screenshot; it appears under “awaiting approval” on the Payments page.</p>
           </div>
 
