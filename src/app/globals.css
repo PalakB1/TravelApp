@@ -183,10 +183,25 @@ button:disabled { opacity: 0.55; cursor: default; }
 .flex { display: flex; align-items: center; gap: 10px; }
 .between { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+/* Mobile top bar — hidden on desktop, shown when the sidebar is gone */
+.mobile-topbar { display: none; }
 @media (max-width: 760px) {
   .grid-2, .row, .row-3 { grid-template-columns: 1fr; }
   .sidebar { display: none; }
-  .main { padding: 18px; }
+  .app { flex-direction: column; }
+  .main { padding: 16px; }
+  .mobile-topbar { display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 50; background: var(--surface);
+    border-bottom: 1px solid var(--border); padding: 10px 16px; }
+  .mobile-menu { position: relative; }
+  .mobile-menu > summary::-webkit-details-marker { display: none; }
+  .mobile-nav { position: absolute; right: 0; top: calc(100% + 8px); z-index: 60;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: 0 12px 28px rgba(27,28,43,0.18); padding: 8px; min-width: 210px;
+    display: flex; flex-direction: column; gap: 2px; }
+  .mobile-nav a { display: flex; align-items: center; gap: 10px; padding: 11px 12px;
+    border-radius: 9px; color: var(--text-2); font-size: 14px; font-weight: 500; }
+  .mobile-nav a.active { background: var(--accent-bg); color: var(--accent); }
 }
 
 .empty { text-align: center; padding: 30px 16px; color: var(--text-3); font-size: 14px; }

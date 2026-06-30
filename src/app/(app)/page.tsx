@@ -158,7 +158,7 @@ export default async function Dashboard() {
         <Link className="metric c-sky" href="/reports/outstanding">
           <div className="label">Outstanding</div>
           <div className="value">{formatINRShort(outstanding)}</div>
-          <div className="foot">due from customers</div>
+          <div className="foot">{formatINRShort(totalPaid)} received · due from customers</div>
         </Link>
         <Link className={`metric ${unbookedNights + expiringHolds + shortRoomNights + seatIssues > 0 ? "c-rose" : "c-emerald"}`} href="/reports/attention">
           <div className="label">Needs attention</div>

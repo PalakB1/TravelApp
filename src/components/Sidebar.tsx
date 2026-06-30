@@ -32,25 +32,48 @@ export default function Sidebar({ name }: { name: string }) {
   const path = usePathname();
   const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
 
+  const closeMenu = (e: React.MouseEvent) => (e.currentTarget as HTMLElement).closest("details")?.removeAttribute("open");
+
   return (
-    <aside className="sidebar">
-      <div className="brand">
-        <span className="dot">✦</span> Trip Desk
-      </div>
-      <nav className="nav">
-        {links.map((l) => (
-          <Link key={l.href} href={l.href} className={isActive(l.href) ? "active" : ""}>
-            <Icon name={l.icon} />
-            {l.label}
-          </Link>
-        ))}
-      </nav>
-      <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
-        <p className="small muted" style={{ padding: "0 11px 8px" }}>Signed in as {name}</p>
-        <form action={logout}>
-          <button className="sm" style={{ width: "100%", justifyContent: "center" }} type="submit">Sign out</button>
-        </form>
-      </div>
-    </aside>
+    <>
+      <aside className="sidebar">
+        <div className="brand">
+          <span className="dot">✦</span> Trip Desk
+        </div>
+        <nav className="nav">
+          {links.map((l) => (
+            <Link key={l.href} href={l.href} className={isActive(l.href) ? "active" : ""}>
+              <Icon name={l.icon} />
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+        <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+          <p className="small muted" style={{ padding: "0 11px 8px" }}>Signed in as {name}</p>
+          <form action={logout}>
+            <button className="sm" style={{ width: "100%", justifyContent: "center" }} type="submit">Sign out</button>
+          </form>
+        </div>
+      </aside>
+
+      {/* Mobile top bar — the sidebar is hidden on small screens */}
+      <header className="mobile-topbar">
+        <Link href="/" className="brand" style={{ padding: 0, fontSize: 16 }}><span className="dot">✦</span> Trip Desk</Link>
+        <details className="mobile-menu">
+          <summary className="btn sm" style={{ listStyle: "none", cursor: "pointer" }}>☰ Menu</summary>
+          <nav className="mobile-nav">
+            {links.map((l) => (
+              <Link key={l.href} href={l.href} onClick={closeMenu} className={isActive(l.href) ? "active" : ""}>
+                <Icon name={l.icon} />
+                {l.label}
+              </Link>
+            ))}
+            <form action={logout} style={{ borderTop: "1px solid var(--border)", marginTop: 4, paddingTop: 6 }}>
+              <button className="sm" style={{ width: "100%", justifyContent: "center" }} type="submit">Sign out</button>
+            </form>
+          </nav>
+        </details>
+      </header>
+    </>
   );
 }
