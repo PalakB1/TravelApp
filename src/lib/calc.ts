@@ -187,6 +187,17 @@ export function tripFinancials(args: {
     ? coreNights.filter((n) => !isNightGap(n) && nightBookedRooms(n) < needRooms).length
     : 0;
 
+  // Assumed cost of the rooms still to book: room-nights short × the average rate
+  // of rooms already booked. Lets us project a profit that includes the rooms we
+  // haven't sourced yet.
+  const bookedRoomNights = nights.reduce((s, n) => s + nightBookedRooms(n), 0);
+  const roomNightsToBook = needRooms > 0 ? coreNights.reduce((s, n) => s + Math.max(0, needRooms - nightBookedRooms(n)), 0) : 0;
+  const avgRoomCost = bookedRoomNights > 0 ? hotelCost / bookedRoomNights : 0;
+  const assumedRoomCost = Math.round(roomNightsToBook * avgRoomCost);
+  const assumedCost = cost + assumedRoomCost;
+  const assumedProfit = revenue - assumedCost;
+  const assumedMargin = revenue > 0 ? assumedProfit / revenue : 0;
+
   return {
     pax,
     revenue,
@@ -205,6 +216,12 @@ export function tripFinancials(args: {
     cost,
     profit,
     margin,
+    roomNightsToBook,
+    avgRoomCost: Math.round(avgRoomCost),
+    assumedRoomCost,
+    assumedCost,
+    assumedProfit,
+    assumedMargin,
     bookingCount: active.length,
     nightCount: nights.length,
     unbookedNights,
