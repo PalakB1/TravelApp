@@ -52,14 +52,34 @@ export default function VisaForm({ tripId }: { tripId: string }) {
 
       <Section title="Work & income">
         <div className="row-3">
-          <label className="field"><span className="lbl">Occupation</span><input name="occupation" placeholder="e.g. Software Engineer, Business owner, Student" /></label>
-          <label className="field"><span className="lbl">Employer / business</span><input name="employer" placeholder="Company name (or self-employed)" /></label>
+          <label className="field"><span className="lbl">I am…</span>
+            <select name="employmentType" defaultValue="employed">
+              <option value="employed">Employed (salaried)</option>
+              <option value="business">Business owner</option>
+              <option value="self">Self-employed / freelancer</option>
+              <option value="student">Student</option>
+              <option value="retired">Retired</option>
+              <option value="homemaker">Homemaker</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <label className="field"><span className="lbl">Occupation / role</span><input name="occupation" placeholder="e.g. Software Engineer, Director" /></label>
           <label className="field"><span className="lbl">Monthly / annual income</span><input name="income" placeholder="e.g. ₹1,20,000 / month" /></label>
         </div>
-        <label className="field"><span className="lbl">Employer / business address</span><input name="employerAddress" /></label>
+        <div className="row-3">
+          <label className="field"><span className="lbl">Employer / business name</span><input name="employer" placeholder="Company / firm name" /></label>
+          <label className="field"><span className="lbl">GST no. (if business)</span><input name="gstNo" placeholder="business owners only" /></label>
+          <label className="field"><span className="lbl">Employer / business address</span><input name="employerAddress" /></label>
+        </div>
       </Section>
 
-      <Section title="Funding & history">
+      <Section title="Ties to home country (make your case stronger)">
+        <label className="field"><span className="lbl">Family / dependants staying back in India</span><input name="dependents" placeholder="e.g. spouse and 2 children, elderly parents" /></label>
+        <label className="field"><span className="lbl">Investments & assets in India</span><input name="investments" placeholder="e.g. 2 flats in Pune, FDs ₹20L, mutual funds ₹15L" /></label>
+        <label className="field"><span className="lbl">Past international travel</span><input name="travelHistory" placeholder="e.g. UK 2019, Singapore 2022, Dubai 2023 — or None" /></label>
+      </Section>
+
+      <Section title="Funding & Schengen history">
         <div className="row-3">
           <label className="field"><span className="lbl">Who is paying?</span>
             <select name="funding" defaultValue="self"><option value="self">Myself</option><option value="sponsor">A sponsor</option></select>

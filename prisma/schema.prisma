@@ -43,14 +43,19 @@ model VisaApplicant {
   pin             String?
   phone           String?
   email           String?
+  employmentType  String?   @default("employed") // employed | business | self | student | retired | homemaker | other
   occupation      String?
   employer        String?
   employerAddress String?
+  gstNo           String? // for business owners
   income          String?
   funding         String?   @default("self") // self | sponsor
   sponsorName     String?
   sponsorRelation String?
-  prevSchengen    String? // "no" or details
+  prevSchengen    String? // "no" or details (kept for back-compat)
+  travelHistory   String? // past international travel — strengthens ties
+  dependents      String? // family staying home — ties to home
+  investments     String? // property, FDs, MFs — financial roots
   notes           String?
   createdAt       DateTime  @default(now())
 }
