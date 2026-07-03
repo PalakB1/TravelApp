@@ -110,78 +110,88 @@ export function visaCoverLetter(a: ApplicantLite, t: TripLite) {
 }
 
 export type ChecklistItem = { label: string; note?: string };
+// Based on the official Embassy of Iceland / VFS Global checklist for India
+// (Tourism/Business, Feb 2025). Verify against the current VFS list each season.
 export function visaChecklist(a: ApplicantLite): { title: string; items: ChecklistItem[] }[] {
   const age = ageFromDob(a.dob);
   const type = a.employmentType || "employed";
+  const travelled = has(a.travelHistory) || has(a.prevSchengen);
+
   const core: ChecklistItem[] = [
-    { label: "Passport", note: "valid ≥ 3 months beyond return, min 2 blank pages, plus copies of all old passports" },
-    { label: "Completed & signed Schengen application form" },
-    { label: "2 recent photographs", note: "35×45 mm, white background, 80% face, Schengen spec" },
-    { label: "Travel medical insurance", note: "min €30,000 cover, valid across the whole Schengen stay" },
-    { label: "Confirmed round-trip flight reservation" },
-    { label: "Confirmed hotel bookings / day-by-day itinerary", note: "provided by us from your trip" },
-    { label: "This cover letter (signed)" },
-    { label: "Personal bank statements", note: "last 6 months — must be original and STAMPED & SIGNED by the bank, showing sufficient balance" },
+    { label: "Passport", note: "valid ≥ 3 months beyond departure from Schengen, issued within the last 10 years, min 2 blank pages" },
+    { label: "Copies of previous Schengen visas & entry/exit stamps", note: travelled ? "you indicated prior travel — include copies of those visas/stamps from current & old passports" : "from current & old passports, if you have ever travelled to the Schengen area" },
+    { label: "Schengen visa application form — printed & signed", note: "plus the confirmation of the online form submitted at visa.government.is" },
+    { label: "Passport photograph", note: "3.5 × 4.5 cm, white background, taken within the last 6 months (official asks 1 — carry 2)" },
+    { label: "Travel medical insurance", note: "the POLICY (an insurance card is not enough) covering ≥ €30,000 for all risks, valid across all Schengen countries for the whole trip incl. arrival & departure dates" },
+    { label: "Round-trip flight reservation", note: "with PNR and the traveller's name" },
+    { label: "Proof of accommodation — hotel bookings / itinerary", note: "we provide this from your trip" },
+    { label: "Cover letter", note: "purpose, duration, accompanying persons, transport & accommodation — we generate this" },
+    { label: "Original personal bank statement", note: "last 3 months showing movements — ALL PAGES must be STAMPED & SIGNED by the bank (required of every applicant, even if sponsored)" },
+    { label: "Indian Income Tax Return (ITR) acknowledgment", note: "last 2 assessment years, barcode-verifiable" },
+    { label: "Proof of sufficient funds", note: "statement must show ≥ 8,000 ISK/day (≈ €58) for the stay, or 4,000 ISK/day if a third party bears your expenses" },
   ];
 
   let work: ChecklistItem[];
+  let workTitle: string;
   if (a.funding === "sponsor") {
+    workTitle = "Sponsorship";
     work = [
-      { label: "Sponsor’s bank statements (6 months)", note: "must be STAMPED & SIGNED by the bank" },
-      { label: "Signed sponsorship / affidavit letter from sponsor" },
-      { label: "Sponsor’s ITR / income proof" },
-      { label: "Proof of relationship with sponsor" },
+      { label: "Proof of sponsorship + signed letter from the sponsor" },
+      { label: "Copy of the sponsor's photo ID (passport / residence-permit card)" },
+      { label: "Sponsor's bank statement", note: "last 3 months, ALL pages STAMPED & SIGNED by the bank" },
+      { label: "If the sponsor is your spouse — marriage certificate" },
+      { label: "Your own employment / business proof (as applicable)" },
     ];
   } else if (type === "business" || type === "self") {
+    workTitle = "Business (self-employed)";
     work = [
-      { label: "GST registration certificate", note: a.gstNo ? `GST no. ${a.gstNo}` : undefined },
-      { label: "Certificate of incorporation / partnership deed / MSME or Shop & Establishment registration" },
-      { label: "Company / business bank statements", note: "last 6–12 months — must be STAMPED & SIGNED by the bank" },
-      { label: "Business Income Tax Returns (last 2–3 years)" },
-      { label: "Personal Income Tax Returns (last 2–3 years)" },
-      { label: "Proof of business address / office ownership or rent agreement" },
+      { label: "Certificate of registration of the company", note: a.gstNo ? `including GST no. ${a.gstNo}` : "including the GST registration number (for India-based companies)" },
+      { label: "Business bank account statement", note: "STAMPED & SIGNED by the bank" },
+      { label: "Income Tax Return, last 2 assessment years", note: "barcode-verifiable" },
     ];
   } else if (type === "student") {
+    workTitle = "Student";
     work = [
-      { label: "Bonafide / enrolment letter from your institution" },
-      { label: "No-objection certificate (NOC) from the institution" },
-      { label: "Sponsor’s (parent) ITR + bank statements (bank-stamped) + sponsorship letter" },
+      { label: "Certificate from the institution where you are enrolled" },
+      { label: "Sponsor's (parent) documents — sponsorship letter, photo-ID copy, and bank-stamped statement" },
     ];
   } else if (type === "retired") {
+    workTitle = "Retired";
     work = [
-      { label: "Pension statement / retirement proof" },
-      { label: "Income Tax Returns (last 2–3 years), if filed" },
+      { label: "Pension statements for the last 3 months" },
+      { label: "Proof of regular income from property or business ownership" },
     ];
   } else if (type === "homemaker") {
+    workTitle = "Homemaker";
     work = [
-      { label: "Spouse’s sponsorship letter + ITR + bank statements (bank-stamped)" },
+      { label: "Spouse's sponsorship — signed letter + photo-ID copy + bank-stamped statement" },
       { label: "Marriage certificate" },
     ];
   } else {
+    workTitle = "Employment";
     work = [
-      { label: "Income Tax Returns (last 2–3 years)" },
-      { label: "Salary slips (last 3 months)" },
-      { label: "Leave-approval / NOC letter from employer, on letterhead" },
+      { label: "Pay slips for the last 3 months" },
+      { label: "Employment contract" },
+      { label: "Leave-approval / NOC letter from your employer" },
     ];
   }
 
   const ties: ChecklistItem[] = [];
-  if (a.investments && a.investments.trim()) ties.push({ label: "Proof of investments / assets", note: a.investments });
-  if (a.dependents && a.dependents.trim()) ties.push({ label: "Proof of family staying in India (ties to home)", note: a.dependents });
-  if (a.travelHistory && a.travelHistory.trim()) ties.push({ label: "Copies of prior visas / entry-exit stamps", note: a.travelHistory });
+  if (has(a.investments)) ties.push({ label: "Proof of investments / assets", note: a.investments || undefined });
+  if (has(a.dependents)) ties.push({ label: "Proof of family staying in India (ties to home)", note: a.dependents || undefined });
 
   const conditional: ChecklistItem[] = [];
   if (age != null && age < 18) {
-    conditional.push({ label: "Birth certificate" });
-    conditional.push({ label: "Notarised parental consent + both parents’ passport copies" });
+    conditional.push({ label: "Notarised parental consent", note: "from the non-travelling parent if travelling with one parent; from BOTH parents if travelling alone (or court order if one parent has sole custody)" });
+    conditional.push({ label: "Photocopies of both parents' passports / photo IDs (or the minor's birth certificate)" });
   }
-  if ((a.maritalStatus || "").toLowerCase() === "married") {
-    conditional.push({ label: "Marriage certificate (recommended, esp. if travelling with spouse)" });
+  if ((a.maritalStatus || "").toLowerCase() === "married" && a.funding !== "sponsor") {
+    conditional.push({ label: "Marriage certificate", note: "recommended — required if visiting/travelling with spouse" });
   }
 
   const groups = [
-    { title: "Core documents", items: core },
-    { title: a.funding === "sponsor" ? "Sponsor & income" : type === "business" || type === "self" ? "Business & income" : "Income & employment", items: work },
+    { title: "Core documents (every applicant)", items: core },
+    { title: workTitle, items: work },
   ];
   if (ties.length) groups.push({ title: "Ties to home (strengthens your case)", items: ties });
   if (conditional.length) groups.push({ title: "Because of your details", items: conditional });
