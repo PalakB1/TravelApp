@@ -26,6 +26,8 @@ type ApplicantLite = {
   sponsorName?: string | null;
   sponsorRelation?: string | null;
   prevSchengen?: string | null;
+  wantsLongTerm?: boolean | null;
+  travellingWith?: string | null;
   travelHistory?: string | null;
   dependents?: string | null;
   investments?: string | null;
@@ -88,13 +90,21 @@ export function visaCoverLetter(a: ApplicantLite, t: TripLite) {
     ? `I have strong personal, financial and professional ties to India. ${ties.join(" ")} I will return well before my visa expires.`
     : `I have strong personal and professional ties to my home country and I fully intend to return before the expiry of my visa.`;
 
+  const longTerm = !!a.wantsLongTerm && has(a.prevSchengen);
   const schengenPara = has(a.prevSchengen)
-    ? `I have previously held a Schengen visa (${a.prevSchengen}), which I used and honoured fully.`
+    ? `I have previously held a Schengen visa (${a.prevSchengen}), which I used and honoured fully.${longTerm ? " In view of my compliant travel record, I respectfully request a long-term multiple-entry visa, and I have obtained travel medical insurance valid for one year in support of this request." : ""}`
     : `This is my first application for a Schengen visa.`;
 
+  const companion =
+    !a.travellingWith || /alone|solo|single/i.test(a.travellingWith)
+      ? "I am undertaking this trip as part of the group tour."
+      : `I am travelling together with ${a.travellingWith}.`;
+
+  const applyType = longTerm ? "a long-term multiple-entry Schengen tourist visa" : "a short-stay Schengen tourist visa";
+
   const paragraphs = [
-    `I, ${a.fullName}, holder of passport number ${a.passportNo || "____________"} (issued at ${a.passportPlace || "____________"} on ${d(a.passportIssue)}, valid until ${d(a.passportExpiry)}), a citizen of ${a.nationality || "India"}, born on ${d(a.dob)} at ${a.placeOfBirth || "____________"}, residing at ${[a.address, a.city, a.pin].filter(Boolean).join(", ") || "____________"}, respectfully apply for a short-stay Schengen tourist visa to visit ${dest}.`,
-    `I intend to travel from ${d(t.departureDate)} to ${d(t.endDate)}${days ? ` (${days} days)` : ""} as part of a self-drive group tour, “${t.name}”. My day-by-day itinerary and confirmed accommodation are listed below.`,
+    `I, ${a.fullName}, holder of passport number ${a.passportNo || "____________"} (issued at ${a.passportPlace || "____________"} on ${d(a.passportIssue)}, valid until ${d(a.passportExpiry)}), a citizen of ${a.nationality || "India"}, born on ${d(a.dob)} at ${a.placeOfBirth || "____________"}, residing at ${[a.address, a.city, a.pin].filter(Boolean).join(", ") || "____________"}, respectfully apply for ${applyType} to visit ${dest}.`,
+    `I intend to travel from ${d(t.departureDate)} to ${d(t.endDate)}${days ? ` (${days} days)` : ""} as part of a self-drive group tour, “${t.name}”. ${companion} My day-by-day itinerary and confirmed accommodation are listed below.`,
     `${workLine} ${fundingLine}`,
     `${tiesPara} ${schengenPara}`,
     `All required supporting documents are enclosed with this application. I kindly request you to grant me the visa, and I thank you for your consideration.`,
@@ -122,7 +132,7 @@ export function visaChecklist(a: ApplicantLite): { title: string; items: Checkli
     { label: "Copies of previous Schengen visas & entry/exit stamps", note: travelled ? "you indicated prior travel — include copies of those visas/stamps from current & old passports" : "from current & old passports, if you have ever travelled to the Schengen area" },
     { label: "Schengen visa application form — printed & signed", note: "plus the confirmation of the online form submitted at visa.government.is" },
     { label: "Passport photograph", note: "3.5 × 4.5 cm, white background, taken within the last 6 months (official asks 1 — carry 2)" },
-    { label: "Travel medical insurance", note: "the POLICY (an insurance card is not enough) covering ≥ €30,000 for all risks, valid across all Schengen countries for the whole trip incl. arrival & departure dates" },
+    { label: "Travel medical insurance", note: (!!a.wantsLongTerm && has(a.prevSchengen)) ? "for the LONG-TERM multiple-entry visa, the policy must cover ≥ €30,000 and be VALID FOR 1 YEAR (all Schengen countries, all risks)" : "the POLICY (an insurance card is not enough) covering ≥ €30,000 for all risks, valid across all Schengen countries for the whole trip incl. arrival & departure dates" },
     { label: "Round-trip flight reservation", note: "with PNR and the traveller's name" },
     { label: "Proof of accommodation — hotel bookings / itinerary", note: "we provide this from your trip" },
     { label: "Cover letter", note: "purpose, duration, accompanying persons, transport & accommodation — we generate this" },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { submitVisaApplicant, type VisaResult } from "../actions";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -14,6 +14,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function VisaForm({ tripId }: { tripId: string }) {
   const [state, action, pending] = useActionState<VisaResult | undefined, FormData>(submitVisaApplicant, undefined);
+  const [prevVisa, setPrevVisa] = useState("");
+  const hasPrevVisa = prevVisa.trim() !== "" && prevVisa.trim().toLowerCase() !== "no";
 
   if (state?.ok) {
     return (
@@ -97,7 +99,16 @@ export default function VisaForm({ tripId }: { tripId: string }) {
           <label className="field"><span className="lbl">Sponsor name (if any)</span><input name="sponsorName" /></label>
           <label className="field"><span className="lbl">Relation to sponsor</span><input name="sponsorRelation" placeholder="e.g. father, spouse" /></label>
         </div>
-        <label className="field"><span className="lbl">Previous Schengen visas?</span><input name="prevSchengen" placeholder="No — or e.g. France 2023" /></label>
+        <label className="field"><span className="lbl">Previous Schengen visas?</span><input name="prevSchengen" value={prevVisa} onChange={(e) => setPrevVisa(e.target.value)} placeholder="No — or e.g. France 2023" /></label>
+        {hasPrevVisa && (
+          <label className="field" style={{ background: "var(--accent-bg)", borderRadius: 10, padding: "10px 12px" }}>
+            <span className="flex" style={{ gap: 8, cursor: "pointer" }}>
+              <input type="checkbox" name="wantsLongTerm" value="yes" style={{ width: 16, height: 16 }} />
+              <span className="small">I would like to apply for a <b>long-term multiple-entry visa</b> (you’ve held a Schengen visa before, so you may qualify). <b>Note:</b> this needs travel insurance valid for <b>1 year</b>.</span>
+            </span>
+          </label>
+        )}
+        <label className="field"><span className="lbl">Travelling alone or with someone?</span><input name="travellingWith" placeholder="e.g. alone — or with spouse & 2 children / with a tour group" /></label>
         <label className="field"><span className="lbl">Anything else</span><input name="notes" placeholder="optional" /></label>
       </Section>
 

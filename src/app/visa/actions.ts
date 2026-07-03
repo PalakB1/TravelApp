@@ -44,6 +44,8 @@ export async function submitVisaApplicant(_prev: VisaResult | undefined, formDat
       sponsorName: str(formData.get("sponsorName")),
       sponsorRelation: str(formData.get("sponsorRelation")),
       prevSchengen: str(formData.get("prevSchengen")),
+      wantsLongTerm: String(formData.get("wantsLongTerm")) === "yes",
+      travellingWith: str(formData.get("travellingWith")),
       travelHistory: str(formData.get("travelHistory")),
       dependents: str(formData.get("dependents")),
       investments: str(formData.get("investments")),

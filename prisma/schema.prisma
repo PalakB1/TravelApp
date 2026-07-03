@@ -53,6 +53,8 @@ model VisaApplicant {
   sponsorName     String?
   sponsorRelation String?
   prevSchengen    String? // "no" or details (kept for back-compat)
+  wantsLongTerm   Boolean   @default(false) // requesting a long-term multiple-entry visa (only if prior Schengen)
+  travellingWith  String? // "alone" or names of companions
   travelHistory   String? // past international travel — strengthens ties
   dependents      String? // family staying home — ties to home
   investments     String? // property, FDs, MFs — financial roots
