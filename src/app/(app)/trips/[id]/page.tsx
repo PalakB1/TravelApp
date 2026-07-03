@@ -629,17 +629,17 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
             <div className="empty small">No visa forms filled yet.</div>
           ) : (
             <table className="t">
-              <thead><tr><th>Applicant</th><th>Passport</th><th>Occupation</th><th>Submitted</th><th></th></tr></thead>
+              <thead><tr><th>Applicant</th><th>Passport</th><th>Status</th><th>Submitted</th><th></th></tr></thead>
               <tbody>
                 {trip.visaApplicants.map((v) => (
                   <tr key={v.id}>
-                    <td style={{ fontWeight: 500 }}>{v.fullName}</td>
+                    <td style={{ fontWeight: 500 }}><Link className="row-link" href={`/visas/${v.id}`}>{v.fullName}</Link></td>
                     <td className="muted small">{v.passportNo || "—"}</td>
-                    <td className="muted small">{v.occupation || "—"}</td>
+                    <td>{statusBadge(v.status)}</td>
                     <td className="muted small">{fmtDate(v.createdAt)}</td>
                     <td className="num">
                       <span className="flex" style={{ justifyContent: "flex-end", gap: 6 }}>
-                        <a className="btn sm" href={`/visa/result/${v.id}`} target="_blank" rel="noopener">Letter & checklist ↗</a>
+                        <Link className="btn sm" href={`/visas/${v.id}`}>Details & letter →</Link>
                         <form action={deleteVisaApplicant}><input type="hidden" name="id" value={v.id} /><button className="sm danger" type="submit" aria-label="Delete">✕</button></form>
                       </span>
                     </td>

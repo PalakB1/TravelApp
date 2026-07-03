@@ -59,6 +59,8 @@ model VisaApplicant {
   dependents      String? // family staying home — ties to home
   investments     String? // property, FDs, MFs — financial roots
   notes           String?
+  status          String    @default("collecting") // collecting | ready | appointment | submitted | approved | rejected
+  appointmentAt   DateTime? // VFS appointment date/time
   createdAt       DateTime  @default(now())
 }
 

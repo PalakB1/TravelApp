@@ -11,6 +11,7 @@ const links = [
   { href: "/customers", label: "Customers", icon: "users" },
   { href: "/bookings", label: "Bookings", icon: "ticket" },
   { href: "/payments", label: "Payments", icon: "wallet" },
+  { href: "/visas", label: "Visa desk", icon: "passport" },
   { href: "/tax", label: "GST / Tax", icon: "receipt" },
 ];
 
@@ -24,6 +25,7 @@ function Icon({ name }: { name: string }) {
     receipt: <><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z" /><line x1="8" y1="8" x2="16" y2="8" /><line x1="8" y1="12" x2="16" y2="12" /></>,
     wallet: <><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2" /><path d="M21 12a2 2 0 0 0-2-2h-4a2 2 0 0 0 0 4h4a2 2 0 0 0 2-2z" /></>,
     bed: <><path d="M2 4v16" /><path d="M2 8h18a2 2 0 0 1 2 2v10" /><path d="M2 17h20" /><path d="M6 8v9" /></>,
+    passport: <><rect x="4" y="2" width="16" height="20" rx="2" /><circle cx="12" cy="10" r="3" /><path d="M9 17h6" /></>,
   };
   return <svg {...common}>{paths[name]}</svg>;
 }
