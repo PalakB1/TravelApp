@@ -835,6 +835,15 @@ export async function approvePendingPayment(formData: FormData) {
   refresh();
 }
 
+export async function deleteVisaApplicant(formData: FormData) {
+  await guard();
+  const id = String(formData.get("id"));
+  const v = await prisma.visaApplicant.findUnique({ where: { id }, select: { fullName: true } });
+  await prisma.visaApplicant.delete({ where: { id } });
+  if (v) await logActivity("trip", "deleted", `Deleted visa form — ${v.fullName}`);
+  refresh();
+}
+
 export async function rejectPendingPayment(formData: FormData) {
   await guard();
   const id = String(formData.get("id"));

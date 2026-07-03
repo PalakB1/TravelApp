@@ -11,6 +11,7 @@ import {
   addHotelBooking, updateHotelBooking, deleteHotelBooking,
   addCar, updateCar, deleteCar,
   addInclusion, updateInclusion, deleteInclusion,
+  deleteVisaApplicant,
   duplicateTrip, updateTripRooms,
 } from "../../data-actions";
 import ImportItinerary from "@/components/ImportItinerary";
@@ -636,7 +637,12 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                     <td className="muted small">{v.passportNo || "—"}</td>
                     <td className="muted small">{v.occupation || "—"}</td>
                     <td className="muted small">{fmtDate(v.createdAt)}</td>
-                    <td className="num"><a className="btn sm" href={`/visa/result/${v.id}`} target="_blank" rel="noopener">Letter & checklist ↗</a></td>
+                    <td className="num">
+                      <span className="flex" style={{ justifyContent: "flex-end", gap: 6 }}>
+                        <a className="btn sm" href={`/visa/result/${v.id}`} target="_blank" rel="noopener">Letter & checklist ↗</a>
+                        <form action={deleteVisaApplicant}><input type="hidden" name="id" value={v.id} /><button className="sm danger" type="submit" aria-label="Delete">✕</button></form>
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
