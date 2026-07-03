@@ -15,6 +15,16 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default function VisaForm({ tripId }: { tripId: string }) {
   const [state, action, pending] = useActionState<VisaResult | undefined, FormData>(submitVisaApplicant, undefined);
 
+  if (state?.ok) {
+    return (
+      <div className="empty-cta" style={{ borderColor: "var(--success)", marginTop: 18 }}>
+        <span className="emoji">✅</span>
+        <div className="t">Details submitted</div>
+        <div className="d">{state.message}</div>
+      </div>
+    );
+  }
+
   return (
     <form action={action}>
       <input type="hidden" name="tripId" value={tripId} />

@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 
@@ -51,6 +50,7 @@ export async function submitVisaApplicant(_prev: VisaResult | undefined, formDat
       notes: str(formData.get("notes")),
     },
   });
+  void a;
   revalidatePath("/", "layout");
-  redirect(`/visa/result/${a.id}`);
+  return { ok: true, message: "Thank you! Your details have been submitted to our travel team. We’ll prepare your visa cover letter and document list and get back to you." };
 }
