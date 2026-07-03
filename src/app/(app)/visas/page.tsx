@@ -37,15 +37,17 @@ export default async function VisasPage({ searchParams }: { searchParams: Promis
           <h1>Visa desk</h1>
           <p className="sub">{applicants.length} visa form{applicants.length === 1 ? "" : "s"}{selectedTrip ? ` for ${selectedTrip.name}` : " across upcoming trips"}</p>
         </div>
-        <VisaTripFilter trips={trips} selected={tripId || ""} />
       </div>
 
-      {selectedTrip && (
-        <div className="card">
-          <div className="small" style={{ fontWeight: 600, marginBottom: 6 }}>🔗 Share this visa form with every traveller on {selectedTrip.name}</div>
-          <CopyLink path={`/visa/${selectedTrip.id}`} label="Copy link" waText={`Please fill your visa details for ${selectedTrip.name} here:`} />
+      <div className="card" style={{ background: "var(--accent-bg)", borderColor: "transparent" }}>
+        <div className="card-title">🔗 Visa form link <span className="small muted">pick a trip, then share the link with its travellers</span></div>
+        <div className="flex" style={{ gap: 12, flexWrap: "wrap" }}>
+          <VisaTripFilter trips={trips} selected={tripId || ""} />
+          {selectedTrip
+            ? <CopyLink path={`/visa/${selectedTrip.id}`} label="Copy link" waText={`Please fill your visa details for ${selectedTrip.name} here:`} />
+            : <span className="small muted">Choose a trip above to get its form link.</span>}
         </div>
-      )}
+      </div>
 
       <div className="card" style={{ padding: 0 }}>
         {applicants.length === 0 ? (
