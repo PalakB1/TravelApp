@@ -277,6 +277,15 @@ details.add > summary:hover { background: #e4e1ff; transform: translateY(-1px); 
 .log-row:last-child { border-bottom: none; }
 .log-row:hover { background: var(--surface-2); }
 
+/* Printable document sheet (visa cover letter / checklist) */
+.sheet { padding: 38px 44px; color: #1b1c2b; }
+@media print {
+  .no-print, .sidebar, .mobile-topbar { display: none !important; }
+  html, body { background: #fff !important; }
+  .card, .sheet { box-shadow: none !important; border: none !important; border-radius: 0 !important; }
+  .main { padding: 0 !important; }
+}
+
 /* Inclusion check toggle */
 .incl-toggle { width: 24px; height: 24px; padding: 0; justify-content: center; border-radius: 7px;
   border: 1.5px solid var(--border-strong); background: var(--surface); color: #fff; font-size: 14px; font-weight: 700; }

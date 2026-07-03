@@ -16,6 +16,7 @@ import {
 import ImportItinerary from "@/components/ImportItinerary";
 import CloseDetails from "@/components/CloseDetails";
 import AutoFill from "@/components/AutoFill";
+import CopyLink from "@/components/CopyLink";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
       itinerary: { orderBy: { order: "asc" }, include: { hotels: { orderBy: { createdAt: "asc" } } } },
       cars: { orderBy: { createdAt: "asc" } },
       inclusions: { orderBy: { createdAt: "asc" } },
+      visaApplicants: { orderBy: { createdAt: "desc" } },
       bookings: { include: { variant: true, payments: true, travellers: true }, orderBy: { createdAt: "desc" } },
     },
   });
@@ -607,6 +609,39 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
               </form>
             </div>
           </details>
+        </div>
+      </details>
+
+      {/* VISA */}
+      <details className="section">
+        <summary>
+          <span className="sec-title">Schengen visa forms</span>
+          <span className="sec-hi" style={{ marginLeft: "auto", marginRight: 12 }}>{trip.visaApplicants.length} submitted</span>
+        </summary>
+        <div className="sec-body">
+          <div className="form-box" style={{ marginBottom: 14 }}>
+            <div className="small" style={{ fontWeight: 600, marginBottom: 6 }}>🔗 Visa form link — share with every traveller on this trip</div>
+            <CopyLink path={`/visa/${trip.id}`} label="Copy link" waText={`Please fill your visa details for ${trip.name} here:`} />
+            <p className="small muted" style={{ margin: "8px 0 0" }}>Each traveller fills it once; they instantly get a cover letter + document checklist (print/PDF), and a submission appears below.</p>
+          </div>
+          {trip.visaApplicants.length === 0 ? (
+            <div className="empty small">No visa forms filled yet.</div>
+          ) : (
+            <table className="t">
+              <thead><tr><th>Applicant</th><th>Passport</th><th>Occupation</th><th>Submitted</th><th></th></tr></thead>
+              <tbody>
+                {trip.visaApplicants.map((v) => (
+                  <tr key={v.id}>
+                    <td style={{ fontWeight: 500 }}>{v.fullName}</td>
+                    <td className="muted small">{v.passportNo || "—"}</td>
+                    <td className="muted small">{v.occupation || "—"}</td>
+                    <td className="muted small">{fmtDate(v.createdAt)}</td>
+                    <td className="num"><a className="btn sm" href={`/visa/result/${v.id}`} target="_blank" rel="noopener">Letter & checklist ↗</a></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </details>
 

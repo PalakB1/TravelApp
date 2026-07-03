@@ -1,0 +1,80 @@
+"use client";
+
+import { useActionState } from "react";
+import { submitVisaApplicant, type VisaResult } from "../actions";
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginTop: 18 }}>
+      <div className="small" style={{ fontWeight: 700, color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.03em", marginBottom: 8 }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+
+export default function VisaForm({ tripId }: { tripId: string }) {
+  const [state, action, pending] = useActionState<VisaResult | undefined, FormData>(submitVisaApplicant, undefined);
+
+  return (
+    <form action={action}>
+      <input type="hidden" name="tripId" value={tripId} />
+
+      <Section title="You (as in passport)">
+        <label className="field"><span className="lbl">Full name</span><input name="fullName" placeholder="As printed in passport" required /></label>
+        <div className="row-3">
+          <label className="field"><span className="lbl">Date of birth</span><input name="dob" type="date" /></label>
+          <label className="field"><span className="lbl">Place of birth</span><input name="placeOfBirth" placeholder="City" /></label>
+          <label className="field"><span className="lbl">Nationality</span><input name="nationality" defaultValue="Indian" /></label>
+        </div>
+        <label className="field" style={{ maxWidth: 240 }}><span className="lbl">Marital status</span>
+          <select name="maritalStatus" defaultValue=""><option value="">Select…</option><option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option></select>
+        </label>
+      </Section>
+
+      <Section title="Passport">
+        <div className="row-3">
+          <label className="field"><span className="lbl">Passport number</span><input name="passportNo" /></label>
+          <label className="field"><span className="lbl">Date of issue</span><input name="passportIssue" type="date" /></label>
+          <label className="field"><span className="lbl">Date of expiry</span><input name="passportExpiry" type="date" /></label>
+        </div>
+        <label className="field" style={{ maxWidth: 240 }}><span className="lbl">Place of issue</span><input name="passportPlace" placeholder="City" /></label>
+      </Section>
+
+      <Section title="Contact">
+        <label className="field"><span className="lbl">Residential address</span><input name="address" placeholder="House / street / area" /></label>
+        <div className="row-3">
+          <label className="field"><span className="lbl">City</span><input name="city" /></label>
+          <label className="field"><span className="lbl">PIN code</span><input name="pin" /></label>
+          <label className="field"><span className="lbl">Phone</span><input name="phone" /></label>
+        </div>
+        <label className="field"><span className="lbl">Email</span><input name="email" type="email" /></label>
+      </Section>
+
+      <Section title="Work & income">
+        <div className="row-3">
+          <label className="field"><span className="lbl">Occupation</span><input name="occupation" placeholder="e.g. Software Engineer, Business owner, Student" /></label>
+          <label className="field"><span className="lbl">Employer / business</span><input name="employer" placeholder="Company name (or self-employed)" /></label>
+          <label className="field"><span className="lbl">Monthly / annual income</span><input name="income" placeholder="e.g. ₹1,20,000 / month" /></label>
+        </div>
+        <label className="field"><span className="lbl">Employer / business address</span><input name="employerAddress" /></label>
+      </Section>
+
+      <Section title="Funding & history">
+        <div className="row-3">
+          <label className="field"><span className="lbl">Who is paying?</span>
+            <select name="funding" defaultValue="self"><option value="self">Myself</option><option value="sponsor">A sponsor</option></select>
+          </label>
+          <label className="field"><span className="lbl">Sponsor name (if any)</span><input name="sponsorName" /></label>
+          <label className="field"><span className="lbl">Relation to sponsor</span><input name="sponsorRelation" placeholder="e.g. father, spouse" /></label>
+        </div>
+        <label className="field"><span className="lbl">Previous Schengen visas?</span><input name="prevSchengen" placeholder="No — or e.g. France 2023" /></label>
+        <label className="field"><span className="lbl">Anything else</span><input name="notes" placeholder="optional" /></label>
+      </Section>
+
+      {state && !state.ok && <p className="small" style={{ color: "var(--danger)", margin: "12px 0 0" }}>{state.message}</p>}
+      <button className="primary" type="submit" disabled={pending} style={{ width: "100%", justifyContent: "center", marginTop: 18 }}>
+        {pending ? "Generating…" : "Generate my cover letter & checklist"}
+      </button>
+    </form>
+  );
+}

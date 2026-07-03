@@ -23,6 +23,38 @@ model ActivityLog {
   @@index([category, createdAt])
 }
 
+// A Schengen visa applicant who filled the trip's public visa form. Used to
+// generate a cover letter + document checklist (trip dates/hotels merged in).
+model VisaApplicant {
+  id              String    @id @default(cuid())
+  tripId          String
+  trip            Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  fullName        String
+  dob             DateTime?
+  placeOfBirth    String?
+  nationality     String?   @default("Indian")
+  maritalStatus   String?
+  passportNo      String?
+  passportIssue   DateTime?
+  passportExpiry  DateTime?
+  passportPlace   String?
+  address         String?
+  city            String?
+  pin             String?
+  phone           String?
+  email           String?
+  occupation      String?
+  employer        String?
+  employerAddress String?
+  income          String?
+  funding         String?   @default("self") // self | sponsor
+  sponsorName     String?
+  sponsorRelation String?
+  prevSchengen    String? // "no" or details
+  notes           String?
+  createdAt       DateTime  @default(now())
+}
+
 // Login accounts (you + your husband)
 model User {
   id           String   @id @default(cuid())
@@ -52,6 +84,7 @@ model Trip {
   vendorBookings VendorBooking[]
   itinerary     Night[]
   cars          Car[]
+  visaApplicants VisaApplicant[]
 }
 
 // One night/stop of a self-drive itinerary: a date + where the group sleeps.
