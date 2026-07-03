@@ -121,13 +121,14 @@ export function visaChecklist(a: ApplicantLite): { title: string; items: Checkli
     { label: "Confirmed round-trip flight reservation" },
     { label: "Confirmed hotel bookings / day-by-day itinerary", note: "provided by us from your trip" },
     { label: "This cover letter (signed)" },
-    { label: "Personal bank statements", note: "last 6 months, bank-stamped, showing sufficient balance" },
+    { label: "Personal bank statements", note: "last 6 months — must be original and STAMPED & SIGNED by the bank, showing sufficient balance" },
   ];
 
   let work: ChecklistItem[];
   if (a.funding === "sponsor") {
     work = [
-      { label: "Sponsor’s bank statements (6 months) + signed sponsorship letter" },
+      { label: "Sponsor’s bank statements (6 months)", note: "must be STAMPED & SIGNED by the bank" },
+      { label: "Signed sponsorship / affidavit letter from sponsor" },
       { label: "Sponsor’s ITR / income proof" },
       { label: "Proof of relationship with sponsor" },
     ];
@@ -135,7 +136,7 @@ export function visaChecklist(a: ApplicantLite): { title: string; items: Checkli
     work = [
       { label: "GST registration certificate", note: a.gstNo ? `GST no. ${a.gstNo}` : undefined },
       { label: "Certificate of incorporation / partnership deed / MSME or Shop & Establishment registration" },
-      { label: "Company / business bank statements", note: "last 6–12 months, stamped" },
+      { label: "Company / business bank statements", note: "last 6–12 months — must be STAMPED & SIGNED by the bank" },
       { label: "Business Income Tax Returns (last 2–3 years)" },
       { label: "Personal Income Tax Returns (last 2–3 years)" },
       { label: "Proof of business address / office ownership or rent agreement" },
@@ -144,7 +145,7 @@ export function visaChecklist(a: ApplicantLite): { title: string; items: Checkli
     work = [
       { label: "Bonafide / enrolment letter from your institution" },
       { label: "No-objection certificate (NOC) from the institution" },
-      { label: "Sponsor’s (parent) ITR + bank statements + sponsorship letter" },
+      { label: "Sponsor’s (parent) ITR + bank statements (bank-stamped) + sponsorship letter" },
     ];
   } else if (type === "retired") {
     work = [
@@ -153,7 +154,7 @@ export function visaChecklist(a: ApplicantLite): { title: string; items: Checkli
     ];
   } else if (type === "homemaker") {
     work = [
-      { label: "Spouse’s sponsorship letter + ITR + bank statements" },
+      { label: "Spouse’s sponsorship letter + ITR + bank statements (bank-stamped)" },
       { label: "Marriage certificate" },
     ];
   } else {
