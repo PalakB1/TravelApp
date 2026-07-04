@@ -6,7 +6,13 @@ const secret = new TextEncoder().encode(
   process.env.AUTH_SECRET || "dev-insecure-secret-change-me"
 );
 
-export type Session = { userId: string; email: string; name: string };
+export type Session = {
+  userId: string;
+  email: string;
+  name: string;
+  orgId: string | null;
+  isPlatformAdmin: boolean;
+};
 
 export async function createSession(user: Session) {
   const token = await new SignJWT({ ...user })
@@ -31,7 +37,13 @@ export async function getSession(): Promise<Session | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret);
-    return { userId: String(payload.userId), email: String(payload.email), name: String(payload.name) };
+    return {
+      userId: String(payload.userId),
+      email: String(payload.email),
+      name: String(payload.name),
+      orgId: payload.orgId ? String(payload.orgId) : null,
+      isPlatformAdmin: Boolean(payload.isPlatformAdmin),
+    };
   } catch {
     return null;
   }

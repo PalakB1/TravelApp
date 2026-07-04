@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { logout } from "@/app/(app)/actions";
+import { logout, exitOrgAction } from "@/app/(app)/actions";
 
 const links = [
   { href: "/", label: "Dashboard", icon: "grid" },
@@ -26,11 +26,12 @@ function Icon({ name }: { name: string }) {
     wallet: <><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2" /><path d="M21 12a2 2 0 0 0-2-2h-4a2 2 0 0 0 0 4h4a2 2 0 0 0 2-2z" /></>,
     bed: <><path d="M2 4v16" /><path d="M2 8h18a2 2 0 0 1 2 2v10" /><path d="M2 17h20" /><path d="M6 8v9" /></>,
     passport: <><rect x="4" y="2" width="16" height="20" rx="2" /><circle cx="12" cy="10" r="3" /><path d="M9 17h6" /></>,
+    shield: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></>,
   };
   return <svg {...common}>{paths[name]}</svg>;
 }
 
-export default function Sidebar({ name }: { name: string }) {
+export default function Sidebar({ name, isPlatformAdmin = false, actingOrgId = null }: { name: string; isPlatformAdmin?: boolean; actingOrgId?: string | null }) {
   const path = usePathname();
   const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
 
@@ -42,6 +43,13 @@ export default function Sidebar({ name }: { name: string }) {
         <div className="brand">
           <span className="dot">✦</span> Trip Desk
         </div>
+        {actingOrgId && (
+          <form action={exitOrgAction} style={{ margin: "0 0 10px" }}>
+            <button className="sm" style={{ width: "100%", justifyContent: "center", background: "var(--accent-bg)", borderColor: "transparent" }} type="submit" title="Return to the platform admin console">
+              👁️ Viewing a client · Exit
+            </button>
+          </form>
+        )}
         <nav className="nav">
           {links.map((l) => (
             <Link key={l.href} href={l.href} className={isActive(l.href) ? "active" : ""}>
@@ -49,6 +57,12 @@ export default function Sidebar({ name }: { name: string }) {
               {l.label}
             </Link>
           ))}
+          {isPlatformAdmin && (
+            <Link href="/admin" className={isActive("/admin") ? "active" : ""}>
+              <Icon name="shield" />
+              Platform admin
+            </Link>
+          )}
         </nav>
         <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
           <p className="small muted" style={{ padding: "0 11px 8px" }}>Signed in as {name}</p>
@@ -70,6 +84,17 @@ export default function Sidebar({ name }: { name: string }) {
                 {l.label}
               </Link>
             ))}
+            {isPlatformAdmin && (
+              <Link href="/admin" onClick={closeMenu} className={isActive("/admin") ? "active" : ""}>
+                <Icon name="shield" />
+                Platform admin
+              </Link>
+            )}
+            {actingOrgId && (
+              <form action={exitOrgAction} style={{ borderTop: "1px solid var(--border)", marginTop: 4, paddingTop: 6 }}>
+                <button className="sm" style={{ width: "100%", justifyContent: "center" }} type="submit">👁️ Viewing a client · Exit</button>
+              </form>
+            )}
             <form action={logout} style={{ borderTop: "1px solid var(--border)", marginTop: 4, paddingTop: 6 }}>
               <button className="sm" style={{ width: "100%", justifyContent: "center" }} type="submit">Sign out</button>
             </form>

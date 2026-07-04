@@ -18,6 +18,12 @@ export async function login(_prev: { error?: string } | undefined, formData: For
     return { error: "Wrong email or password." };
   }
 
-  await createSession({ userId: user.id, email: user.email, name: user.name });
+  await createSession({
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    orgId: user.orgId,
+    isPlatformAdmin: user.isPlatformAdmin,
+  });
   redirect("/");
 }
