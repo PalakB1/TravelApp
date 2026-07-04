@@ -10,10 +10,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// An organization = one travel company using the platform. Every trip, customer,
+// booking, payment and visa record is scoped to exactly one org (data isolation).
+// New orgs self-serve sign up in status "pending" and stay dark until approved.
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  status    String   @default("pending") // pending | approved | rejected | suspended
+  createdAt DateTime @default(now())
+
+  users        User[]
+  trips        Trip[]
+  customers    Customer[]
+  activityLogs ActivityLog[]
+}
+
 // Activity log — a running history of what was added / changed / deleted,
 // grouped by category so each menu (Hotels, Bookings, …) can show its own feed.
 model ActivityLog {
   id        String   @id @default(cuid())
+  orgId     String? // owning organization (backfilled to the default org)
+  org       Organization? @relation(fields: [orgId], references: [id])
   createdAt DateTime @default(now())
   category  String // hotel | booking | customer | payment | trip | car
   action    String // added | updated | deleted | status
@@ -21,6 +38,7 @@ model ActivityLog {
   href      String? // optional link target (e.g. /trips/abc)
 
   @@index([category, createdAt])
+  @@index([orgId])
 }
 
 // A Schengen visa applicant who filled the trip's public visa form. Used to
@@ -64,18 +82,26 @@ model VisaApplicant {
   createdAt       DateTime  @default(now())
 }
 
-// Login accounts (you + your husband)
+// Login accounts. Each user belongs to one organization (equal access within it).
+// isPlatformAdmin = the platform owner (you) who approves orgs and can navigate in.
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String
-  passwordHash String
-  createdAt    DateTime @default(now())
+  id              String   @id @default(cuid())
+  orgId           String? // owning organization (null only for the platform admin)
+  org             Organization? @relation(fields: [orgId], references: [id])
+  isPlatformAdmin Boolean  @default(false)
+  email           String   @unique
+  name            String
+  passwordHash    String
+  createdAt       DateTime @default(now())
+
+  @@index([orgId])
 }
 
 // A trip = a packaged departure you sell
 model Trip {
   id            String          @id @default(cuid())
+  orgId         String? // owning organization (backfilled to the default org)
+  org           Organization?   @relation(fields: [orgId], references: [id])
   name          String
   destination   String
   nights        Int             @default(0)
@@ -94,6 +120,8 @@ model Trip {
   itinerary     Night[]
   cars          Car[]
   visaApplicants VisaApplicant[]
+
+  @@index([orgId])
 }
 
 // One night/stop of a self-drive itinerary: a date + where the group sleeps.
@@ -200,12 +228,16 @@ model BookingInclusion {
 // A person who books — reused across trips so you can see their full history.
 model Customer {
   id        String    @id @default(cuid())
+  orgId     String? // owning organization (backfilled to the default org)
+  org       Organization? @relation(fields: [orgId], references: [id])
   name      String
   phone     String?
   email     String?
   notes     String?
   createdAt DateTime  @default(now())
   bookings  Booking[]
+
+  @@index([orgId])
 }
 
 // A customer booking on a trip
