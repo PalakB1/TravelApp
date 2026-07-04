@@ -197,9 +197,13 @@ export function visaChecklist(a: ApplicantLite): { title: string; items: Checkli
   }
   // Only require marital proof where it's genuinely needed: married AND travelling
   // with the spouse (spouse-as-sponsor is already covered in the sponsor section).
+  const ms = (a.maritalStatus || "").toLowerCase();
   const withSpouse = /\b(spouse|husband|wife|partner)\b/i.test(a.travellingWith || "");
-  if ((a.maritalStatus || "").toLowerCase() === "married" && withSpouse && a.funding !== "sponsor") {
+  if (ms === "married" && withSpouse && a.funding !== "sponsor") {
     conditional.push({ label: "Marriage certificate", note: "you're travelling with your spouse" });
+  }
+  if (ms === "separated") {
+    conditional.push({ label: "Proof of separation", note: "legal separation document / court order" });
   }
 
   const groups = [
