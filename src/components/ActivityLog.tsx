@@ -7,7 +7,7 @@ function fmtWhen(d: Date) {
 }
 const ACTION_BADGE: Record<string, string> = { added: "green", updated: "amber", deleted: "red", status: "violet" };
 
-type Log = { id: string; createdAt: Date; action: string; summary: string; href: string | null };
+type Log = { id: string; createdAt: Date; action: string; summary: string; href: string | null; userName: string | null; actingAdmin: boolean };
 
 // A per-category history feed. Best-effort: if the table doesn't exist yet
 // (before the migration deploys), it renders empty instead of crashing.
@@ -44,7 +44,9 @@ export default async function ActivityLog({ category, title = "Activity log", li
                     <span className={`badge ${ACTION_BADGE[l.action] || "gray"}`} style={{ marginRight: 8 }}>{l.action}</span>
                     {l.summary}
                   </span>
-                  <span className="small muted" style={{ whiteSpace: "nowrap" }}>{fmtWhen(l.createdAt)}</span>
+                  <span className="small muted" style={{ whiteSpace: "nowrap" }}>
+                    {l.userName ? <>{l.actingAdmin && <span className="badge violet" style={{ marginRight: 6 }}>admin</span>}{l.userName} · </> : ""}{fmtWhen(l.createdAt)}
+                  </span>
                 </div>
               );
               return l.href ? <Link key={l.id} href={l.href} className="log-row">{row}</Link> : <div key={l.id} className="log-row">{row}</div>;

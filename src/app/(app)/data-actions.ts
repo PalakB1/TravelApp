@@ -25,11 +25,24 @@ const ownBooking = (orgId: string, id: string) => prisma.booking.findFirst({ whe
 const ownNight = (orgId: string, id: string) => prisma.night.findFirst({ where: { id, trip: { orgId } }, select: { id: true } });
 
 // Best-effort activity logging — never let a logging failure break a real action.
-async function logActivity(orgId: string, category: string, action: string, summary: string, href?: string | null) {
+// Records WHO did it (and whether it was a platform admin acting inside the org).
+export async function logActivity(orgId: string, category: string, action: string, summary: string, href?: string | null) {
   try {
-    await prisma.activityLog.create({ data: { orgId, category, action, summary, href: href || null } });
+    const ctx = await getOrgContext();
+    await prisma.activityLog.create({
+      data: {
+        orgId,
+        category,
+        action,
+        summary,
+        href: href || null,
+        userId: ctx?.session.userId ?? null,
+        userName: ctx?.session.name ?? null,
+        actingAdmin: ctx?.actingOrgId ? true : false,
+      },
+    });
   } catch {
-    /* table may not exist yet (pre-migration) — ignore */
+    /* table/columns may not exist yet (pre-migration) — ignore */
   }
 }
 

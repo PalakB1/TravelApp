@@ -28,14 +28,17 @@ model Organization {
 // Activity log — a running history of what was added / changed / deleted,
 // grouped by category so each menu (Hotels, Bookings, …) can show its own feed.
 model ActivityLog {
-  id        String   @id @default(cuid())
-  orgId     String? // owning organization (backfilled to the default org)
-  org       Organization? @relation(fields: [orgId], references: [id])
-  createdAt DateTime @default(now())
-  category  String // hotel | booking | customer | payment | trip | car
-  action    String // added | updated | deleted | status
-  summary   String // human-readable line
-  href      String? // optional link target (e.g. /trips/abc)
+  id          String        @id @default(cuid())
+  orgId       String? // owning organization (backfilled to the default org)
+  org         Organization? @relation(fields: [orgId], references: [id])
+  createdAt   DateTime      @default(now())
+  category    String // hotel | booking | customer | payment | trip | car | team | admin
+  action      String // added | updated | deleted | status | entered | exited
+  summary     String // human-readable line
+  href        String? // optional link target (e.g. /trips/abc)
+  userId      String? // who performed it (denormalised — kept even if the user is later removed)
+  userName    String? // snapshot of the actor's name
+  actingAdmin Boolean       @default(false) // true when a platform admin did it while inside this org
 
   @@index([category, createdAt])
   @@index([orgId])

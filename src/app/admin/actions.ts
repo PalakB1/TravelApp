@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { enterOrg } from "@/lib/org";
+import { logActivity } from "@/app/(app)/data-actions";
 
 async function requirePlatformAdmin() {
   const session = await getSession();
@@ -38,5 +39,6 @@ export async function enterOrgAction(formData: FormData) {
   const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { id: true } });
   if (!org) throw new Error("Organization not found");
   await enterOrg(orgId);
+  await logActivity(orgId, "admin", "entered", "Platform admin entered this workspace");
   redirect("/dashboard");
 }
