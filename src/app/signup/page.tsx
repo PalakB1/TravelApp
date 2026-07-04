@@ -1,14 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import Script from "next/script";
 import { useActionState } from "react";
 import { signup } from "./actions";
+
+// Public Cloudflare Turnstile site key (safe to ship to the browser).
+const TURNSTILE_SITE_KEY = "0x4AAAAAADvpHod-6yzR28OY";
 
 export default function SignupPage() {
   const [state, formAction, pending] = useActionState(signup, undefined);
 
   return (
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20 }}>
+      <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
       <div className="card" style={{ width: 400, maxWidth: "100%" }}>
         <div className="brand" style={{ paddingLeft: 0 }}>
           <span className="dot">✦</span> Trip Desk
@@ -33,6 +38,7 @@ export default function SignupPage() {
             <span className="lbl">Password</span>
             <input name="password" type="password" placeholder="at least 6 characters" autoComplete="new-password" />
           </label>
+          <div className="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY} data-theme="auto" style={{ marginBottom: 12 }} />
           {state?.error && (
             <p className="small" style={{ color: "var(--danger)", margin: "0 0 12px" }}>{state.error}</p>
           )}

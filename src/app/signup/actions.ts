@@ -5,6 +5,25 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { createSession } from "@/lib/auth";
 
+// Verify the Cloudflare Turnstile token server-side. If no secret is configured
+// (e.g. local dev without the env var) we skip the check so signup still works.
+async function verifyTurnstile(token: string): Promise<boolean> {
+  const secret = process.env.TURNSTILE_SECRET_KEY;
+  if (!secret) return true;
+  if (!token) return false;
+  try {
+    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ secret, response: token }),
+    });
+    const data = (await res.json()) as { success?: boolean };
+    return !!data.success;
+  } catch {
+    return false;
+  }
+}
+
 export async function signup(_prev: { error?: string } | undefined, formData: FormData) {
   const company = String(formData.get("company") || "").trim();
   const name = String(formData.get("name") || "").trim();
@@ -16,6 +35,9 @@ export async function signup(_prev: { error?: string } | undefined, formData: Fo
   }
   if (password.length < 6) {
     return { error: "Password must be at least 6 characters." };
+  }
+  if (!(await verifyTurnstile(String(formData.get("cf-turnstile-response") || "")))) {
+    return { error: "Please complete the “I’m human” check and try again." };
   }
 
   const existing = await prisma.user.findUnique({ where: { email } });
