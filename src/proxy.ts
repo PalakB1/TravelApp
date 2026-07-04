@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyToken } from "@/lib/auth";
 
-const PUBLIC_PATHS = ["/login", "/signup", "/pay", "/join", "/visa"];
+// "/" is the public marketing landing. /admin/login is the separate admin door.
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/admin/login", "/pay", "/join", "/visa"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -11,10 +12,10 @@ export async function proxy(request: NextRequest) {
   const token = request.cookies.get("session")?.value;
   const valid = await verifyToken(token);
 
-  // Logged-in users skip the login page
+  // Logged-in users skip the sign-in / sign-up pages and go to their dashboard.
   if (isPublic) {
-    if (valid && pathname === "/login") {
-      return NextResponse.redirect(new URL("/", request.url));
+    if (valid && (pathname === "/login" || pathname === "/signup")) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
     }
     return NextResponse.next();
   }

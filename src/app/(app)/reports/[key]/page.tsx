@@ -60,7 +60,7 @@ export default async function Report({ params }: { params: Promise<{ key: string
     <>
       <div className="page-head">
         <div>
-          <div className="small muted"><Link href="/" style={{ color: "var(--text-2)" }}>← Dashboard</Link></div>
+          <div className="small muted"><Link href="/dashboard" style={{ color: "var(--text-2)" }}>← Dashboard</Link></div>
           <h1 style={{ marginTop: 6 }}>{meta.title}</h1>
           <p className="sub">{meta.blurb}</p>
         </div>

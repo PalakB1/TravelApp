@@ -38,5 +38,5 @@ export async function enterOrgAction(formData: FormData) {
   const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { id: true } });
   if (!org) throw new Error("Organization not found");
   await enterOrg(orgId);
-  redirect("/");
+  redirect("/dashboard");
 }

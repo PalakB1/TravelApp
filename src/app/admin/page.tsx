@@ -20,7 +20,7 @@ function fmt(d: Date) {
 export default async function AdminPage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (!session.isPlatformAdmin) redirect("/");
+  if (!session.isPlatformAdmin) redirect("/dashboard");
 
   const orgs = await prisma.organization.findMany({
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
@@ -40,7 +40,7 @@ export default async function AdminPage() {
           <h1>🛡️ Platform admin</h1>
           <p className="sub">{orgs.length} organization{orgs.length === 1 ? "" : "s"} · {pending.length} awaiting approval</p>
         </div>
-        <Link className="btn" href="/">← Back to my dashboard</Link>
+        <Link className="btn" href="/dashboard">← Back to my dashboard</Link>
       </div>
 
       {pending.length > 0 && (

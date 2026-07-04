@@ -5,7 +5,7 @@ import Link from "next/link";
 import { logout, exitOrgAction } from "@/app/(app)/actions";
 
 const links = [
-  { href: "/", label: "Dashboard", icon: "grid" },
+  { href: "/dashboard", label: "Dashboard", icon: "grid" },
   { href: "/trips", label: "Trips", icon: "map" },
   { href: "/hotels", label: "Hotels", icon: "bed" },
   { href: "/customers", label: "Customers", icon: "users" },
@@ -33,7 +33,7 @@ function Icon({ name }: { name: string }) {
 
 export default function Sidebar({ name, isPlatformAdmin = false, actingOrgId = null }: { name: string; isPlatformAdmin?: boolean; actingOrgId?: string | null }) {
   const path = usePathname();
-  const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
+  const isActive = (href: string) => (href === "/dashboard" ? path === "/dashboard" : path.startsWith(href));
 
   const closeMenu = (e: React.MouseEvent) => (e.currentTarget as HTMLElement).closest("details")?.removeAttribute("open");
 
@@ -74,7 +74,7 @@ export default function Sidebar({ name, isPlatformAdmin = false, actingOrgId = n
 
       {/* Mobile top bar — the sidebar is hidden on small screens */}
       <header className="mobile-topbar">
-        <Link href="/" className="brand" style={{ padding: 0, fontSize: 16 }}><span className="dot">✦</span> Trip Desk</Link>
+        <Link href="/dashboard" className="brand" style={{ padding: 0, fontSize: 16 }}><span className="dot">✦</span> Trip Desk</Link>
         <details className="mobile-menu">
           <summary className="btn sm" style={{ listStyle: "none", cursor: "pointer" }}>☰ Menu</summary>
           <nav className="mobile-nav">

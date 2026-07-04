@@ -43,5 +43,5 @@ export async function signup(_prev: { error?: string } | undefined, formData: Fo
     orgId: org.id,
     isPlatformAdmin: false,
   });
-  redirect("/");
+  redirect("/dashboard");
 }

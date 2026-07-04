@@ -11,7 +11,7 @@ export default function NotFound() {
         <p className="muted small" style={{ marginBottom: 18 }}>
           The link you followed may be old. Everything is still here — head back to the dashboard and open it fresh.
         </p>
-        <Link className="btn primary" href="/" style={{ justifyContent: "center" }}>Go to dashboard</Link>
+        <Link className="btn primary" href="/dashboard" style={{ justifyContent: "center" }}>Go to dashboard</Link>
       </div>
     </div>
   );
