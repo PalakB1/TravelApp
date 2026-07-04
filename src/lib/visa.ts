@@ -195,8 +195,15 @@ export function visaChecklist(a: ApplicantLite): { title: string; items: Checkli
     conditional.push({ label: "Notarised parental consent", note: "from the non-travelling parent if travelling with one parent; from BOTH parents if travelling alone (or court order if one parent has sole custody)" });
     conditional.push({ label: "Photocopies of both parents' passports / photo IDs (or the minor's birth certificate)" });
   }
-  if ((a.maritalStatus || "").toLowerCase() === "married" && a.funding !== "sponsor") {
-    conditional.push({ label: "Marriage certificate", note: "recommended — required if visiting/travelling with spouse" });
+  const ms = (a.maritalStatus || "").toLowerCase();
+  if (ms === "married" && a.funding !== "sponsor") {
+    conditional.push({ label: "Marriage certificate", note: "recommended — required if travelling with your spouse or visiting a spouse in Iceland" });
+  } else if (ms === "divorced") {
+    conditional.push({ label: "Divorce decree / certificate", note: "needed if your name changed after divorce, or if you have custody of a minor travelling with you" });
+  } else if (ms === "separated") {
+    conditional.push({ label: "Legal separation document", note: "if legally separated and it affects your name or custody of a travelling minor" });
+  } else if (ms === "widowed") {
+    conditional.push({ label: "Spouse's death certificate", note: "if it affects your name, your source of funds, or custody of a travelling minor" });
   }
 
   const groups = [

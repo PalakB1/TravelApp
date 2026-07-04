@@ -39,7 +39,7 @@ export default function VisaForm({ tripId }: { tripId: string }) {
           <label className="field"><span className="lbl">Nationality</span><input name="nationality" defaultValue="Indian" /></label>
         </div>
         <label className="field" style={{ maxWidth: 240 }}><span className="lbl">Marital status</span>
-          <select name="maritalStatus" defaultValue=""><option value="">Select…</option><option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option></select>
+          <select name="maritalStatus" defaultValue=""><option value="">Select…</option><option>Single</option><option>Married</option><option>Separated</option><option>Divorced</option><option>Widowed</option></select>
         </label>
       </Section>
 
