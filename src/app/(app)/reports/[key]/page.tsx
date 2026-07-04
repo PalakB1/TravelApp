@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { requireOrgId } from "@/lib/org";
 import {
   tripFinancials, bookingRevenue, bookingTotal, bookingPaid, bookingBalance,
   isActive, isNightGap, holdExpiringSoon, vendorCost, nightBookedRooms,
@@ -31,8 +32,10 @@ export default async function Report({ params }: { params: Promise<{ key: string
   if (!KEYS.includes(key as Key)) notFound();
   const k = key as Key;
   const meta = META[k];
+  const orgId = await requireOrgId();
 
   const trips = await prisma.trip.findMany({
+    where: { orgId },
     include: {
       itinerary: { include: { hotels: true } },
       cars: true,
@@ -41,7 +44,7 @@ export default async function Report({ params }: { params: Promise<{ key: string
     },
     orderBy: [{ departureDate: "asc" }, { createdAt: "desc" }],
   });
-  const customers = await prisma.customer.findMany({ select: { name: true, phone: true }, orderBy: { name: "asc" } });
+  const customers = await prisma.customer.findMany({ where: { orgId }, select: { name: true, phone: true }, orderBy: { name: "asc" } });
   const phoneMap: Record<string, { phone?: string | null }> = {};
   for (const c of customers) if (c.phone) phoneMap[c.name.trim().toLowerCase()] = { phone: c.phone };
 

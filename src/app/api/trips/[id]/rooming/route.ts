@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { requireOrgId } from "@/lib/org";
 import { pricePerRoom } from "@/lib/calc";
 
 function d(date: Date | null) {
@@ -11,9 +12,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const session = await getSession();
   if (!session) return new Response("Unauthorized", { status: 401 });
 
+  let orgId: string;
+  try {
+    orgId = await requireOrgId();
+  } catch {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
   const { id } = await params;
-  const trip = await prisma.trip.findUnique({
-    where: { id },
+  const trip = await prisma.trip.findFirst({
+    where: { id, orgId },
     include: { itinerary: { orderBy: { order: "asc" }, include: { hotels: true } } },
   });
   if (!trip) return new Response("Not found", { status: 404 });

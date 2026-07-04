@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { requireOrgId } from "@/lib/org";
 import { bookingTotal, bookingPaid, bookingBalance, isActive } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import TableSearch from "@/components/TableSearch";
@@ -8,7 +9,9 @@ import ActivityLog from "@/components/ActivityLog";
 export const dynamic = "force-dynamic";
 
 export default async function CustomersPage() {
+  const orgId = await requireOrgId();
   const customers = await prisma.customer.findMany({
+    where: { orgId },
     include: { bookings: { include: { variant: true, payments: true, trip: true } } },
     orderBy: { name: "asc" },
   });

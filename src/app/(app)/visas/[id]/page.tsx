@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { requireOrgId } from "@/lib/org";
 import { visaCoverLetter, visaChecklist } from "@/lib/visa";
 import { updateVisaApplicant, deleteVisaApplicant } from "../../data-actions";
 import PrintButton from "@/components/PrintButton";
@@ -26,8 +27,9 @@ function Field({ label, value }: { label: string; value?: string | null }) {
 
 export default async function VisaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const a = await prisma.visaApplicant.findUnique({
-    where: { id },
+  const orgId = await requireOrgId();
+  const a = await prisma.visaApplicant.findFirst({
+    where: { id, trip: { orgId } },
     include: { trip: { include: { itinerary: { orderBy: { order: "asc" }, include: { hotels: true } } } } },
   });
   if (!a) notFound();

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getOrgContext } from "@/lib/org";
 import { parseCommand } from "@/lib/chat";
 import { matchCustomer } from "./data-actions";
 import { bookingBalance, bookingTotal } from "@/lib/calc";
@@ -11,8 +11,9 @@ import { formatINR } from "@/lib/money";
 export type ChatResult = { ok: boolean; message: string };
 
 export async function interpretCommand(text: string): Promise<ChatResult> {
-  const session = await getSession();
-  if (!session) return { ok: false, message: "Please sign in again." };
+  const ctx = await getOrgContext();
+  if (!ctx || !ctx.orgId) return { ok: false, message: "Please sign in again." };
+  const orgId = ctx.orgId;
 
   const cmd = parseCommand(text);
 
@@ -25,6 +26,7 @@ export async function interpretCommand(text: string): Promise<ChatResult> {
     if (cmd.kind === "trip") {
       const trip = await prisma.trip.create({
         data: {
+          orgId,
           name: cmd.name,
           destination: cmd.destination ?? "",
           nights: cmd.nights ?? 0,
@@ -42,7 +44,7 @@ export async function interpretCommand(text: string): Promise<ChatResult> {
     // ---- Log a payment ----
     if (cmd.kind === "payment") {
       const booking = await prisma.booking.findFirst({
-        where: { customerName: { contains: cmd.customer, mode: "insensitive" }, status: { not: "cancelled" } },
+        where: { trip: { orgId }, customerName: { contains: cmd.customer, mode: "insensitive" }, status: { not: "cancelled" } },
         orderBy: { createdAt: "desc" },
         include: { variant: true, payments: true, trip: true },
       });
@@ -70,6 +72,7 @@ export async function interpretCommand(text: string): Promise<ChatResult> {
       if (cmd.tripQuery) {
         trip = await prisma.trip.findFirst({
           where: {
+            orgId,
             OR: [
               { name: { contains: cmd.tripQuery, mode: "insensitive" } },
               { destination: { contains: cmd.tripQuery, mode: "insensitive" } },
@@ -78,7 +81,7 @@ export async function interpretCommand(text: string): Promise<ChatResult> {
           include: { variants: true },
         });
       } else {
-        const all = await prisma.trip.findMany({ include: { variants: true }, take: 2 });
+        const all = await prisma.trip.findMany({ where: { orgId }, include: { variants: true }, take: 2 });
         if (all.length === 1) trip = all[0];
       }
       if (!trip) {
@@ -96,8 +99,8 @@ export async function interpretCommand(text: string): Promise<ChatResult> {
       }
       if (!variant && trip.variants.length === 1) variant = trip.variants[0];
 
-      const existingCust = await matchCustomer(cmd.customer);
-      const customer = existingCust ?? (await prisma.customer.create({ data: { name: cmd.customer.trim(), phone: cmd.phone ?? undefined } }));
+      const existingCust = await matchCustomer(orgId, cmd.customer);
+      const customer = existingCust ?? (await prisma.customer.create({ data: { orgId, name: cmd.customer.trim(), phone: cmd.phone ?? undefined } }));
 
       const booking = await prisma.booking.create({
         data: {

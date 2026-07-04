@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { requireOrgId } from "@/lib/org";
 import { bookingTotal, bookingPaid, bookingBalance, isActive } from "@/lib/calc";
 import { formatINR, formatINRShort } from "@/lib/money";
 import TableSearch from "@/components/TableSearch";
@@ -14,15 +15,19 @@ function fmtDate(d: Date) {
 }
 
 export default async function PaymentsPage() {
+  const orgId = await requireOrgId();
   const bookings = await prisma.booking.findMany({
+    where: { trip: { orgId } },
     include: { trip: true, variant: true, payments: true },
   });
   const recent = await prisma.payment.findMany({
+    where: { booking: { trip: { orgId } } },
     take: 25,
     orderBy: { date: "desc" },
     include: { booking: { include: { trip: true } } },
   });
   const pending = await prisma.pendingPayment.findMany({
+    where: { booking: { trip: { orgId } } },
     orderBy: { createdAt: "desc" },
     include: { booking: { include: { trip: true } } },
   });

@@ -3,52 +3,62 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getOrgContext } from "@/lib/org";
 import { parseAmount, formatINR } from "@/lib/money";
 
-async function guard() {
-  const s = await getSession();
-  if (!s) redirect("/login");
+// Every mutation runs through guard(), which returns the EFFECTIVE org id. All
+// reads/writes below are scoped to it so one org can never touch another's data.
+async function guard(): Promise<string> {
+  const ctx = await getOrgContext();
+  if (!ctx || !ctx.orgId) redirect("/login");
+  return ctx.orgId;
 }
 
 function refresh() {
   revalidatePath("/", "layout");
 }
 
+// Ownership checks — return the row only if it belongs to this org, else null.
+// Child records (booking/night/car/…) are scoped through their trip.
+const ownTrip = (orgId: string, id: string) => prisma.trip.findFirst({ where: { id, orgId }, select: { id: true } });
+const ownBooking = (orgId: string, id: string) => prisma.booking.findFirst({ where: { id, trip: { orgId } }, select: { id: true } });
+const ownNight = (orgId: string, id: string) => prisma.night.findFirst({ where: { id, trip: { orgId } }, select: { id: true } });
+
 // Best-effort activity logging — never let a logging failure break a real action.
-async function logActivity(category: string, action: string, summary: string, href?: string | null) {
+async function logActivity(orgId: string, category: string, action: string, summary: string, href?: string | null) {
   try {
-    await prisma.activityLog.create({ data: { category, action, summary, href: href || null } });
+    await prisma.activityLog.create({ data: { orgId, category, action, summary, href: href || null } });
   } catch {
     /* table may not exist yet (pre-migration) — ignore */
   }
 }
 
-// Match an existing customer by name (case-insensitive) or create one.
-// SQLite's `=` is case-sensitive, so we fall back to a scan to avoid duplicates.
-export async function matchCustomer(name: string) {
+// Match an existing customer (in this org) by name (case-insensitive) or return null.
+export async function matchCustomer(orgId: string, name: string) {
   const trimmed = name.trim();
-  const exact = await prisma.customer.findFirst({ where: { name: trimmed } });
+  const exact = await prisma.customer.findFirst({ where: { orgId, name: trimmed } });
   if (exact) return exact;
-  const all = await prisma.customer.findMany();
+  const all = await prisma.customer.findMany({ where: { orgId } });
   return all.find((c) => c.name.trim().toLowerCase() === trimmed.toLowerCase()) ?? null;
 }
 
-async function findOrCreateCustomer(name: string, phone: string | null) {
-  const existing = await matchCustomer(name);
+async function findOrCreateCustomer(orgId: string, name: string, phone: string | null) {
+  const existing = await matchCustomer(orgId, name);
   if (existing) {
     if (phone && !existing.phone) {
       return prisma.customer.update({ where: { id: existing.id }, data: { phone } });
     }
     return existing;
   }
-  return prisma.customer.create({ data: { name: name.trim(), phone: phone || undefined } });
+  return prisma.customer.create({ data: { orgId, name: name.trim(), phone: phone || undefined } });
 }
 
 export async function updateCustomer(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const id = String(formData.get("id"));
   const name = String(formData.get("name") || "").trim();
+  const owned = await prisma.customer.findFirst({ where: { id, orgId }, select: { id: true } });
+  if (!owned) return;
   const updated = await prisma.customer.update({
     where: { id },
     data: {
@@ -66,12 +76,12 @@ export async function updateCustomer(formData: FormData) {
 }
 
 export async function createCustomer(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const name = String(formData.get("name") || "").trim();
   if (!name) return;
   const phone = String(formData.get("phone") || "").trim() || null;
   const email = String(formData.get("email") || "").trim() || null;
-  const existing = await matchCustomer(name);
+  const existing = await matchCustomer(orgId, name);
   if (existing) {
     await prisma.customer.update({
       where: { id: existing.id },
@@ -80,27 +90,28 @@ export async function createCustomer(formData: FormData) {
     refresh();
     redirect(`/customers/${existing.id}`);
   }
-  const c = await prisma.customer.create({ data: { name, phone, email } });
-  await logActivity("customer", "added", `Added customer ${c.name}${phone ? ` · ${phone}` : ""}`, `/customers/${c.id}`);
+  const c = await prisma.customer.create({ data: { orgId, name, phone, email } });
+  await logActivity(orgId, "customer", "added", `Added customer ${c.name}${phone ? ` · ${phone}` : ""}`, `/customers/${c.id}`);
   refresh();
   redirect(`/customers/${c.id}`);
 }
 
 export async function deleteCustomer(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const id = String(formData.get("id"));
-  const cust = await prisma.customer.findUnique({ where: { id }, select: { name: true } });
+  const cust = await prisma.customer.findFirst({ where: { id, orgId }, select: { name: true } });
+  if (!cust) return;
   // Unlink any bookings (keep their history + denormalised name), then remove the customer.
   await prisma.booking.updateMany({ where: { customerId: id }, data: { customerId: null } });
   await prisma.customer.delete({ where: { id } });
-  await logActivity("customer", "deleted", `Deleted customer ${cust?.name ?? ""}`.trim());
+  await logActivity(orgId, "customer", "deleted", `Deleted customer ${cust?.name ?? ""}`.trim());
   refresh();
   redirect("/customers");
 }
 
 // ---- Trips ----
 export async function createTrip(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const name = String(formData.get("name") || "").trim();
   const destination = String(formData.get("destination") || "").trim();
   if (!name) return;
@@ -108,6 +119,7 @@ export async function createTrip(formData: FormData) {
   const endStr = String(formData.get("endDate") || "");
   const trip = await prisma.trip.create({
     data: {
+      orgId,
       name,
       destination,
       nights: Number(formData.get("nights")) || 0,
@@ -119,25 +131,26 @@ export async function createTrip(formData: FormData) {
       notes: String(formData.get("notes") || "") || null,
     },
   });
-  await logActivity("trip", "added", `Created trip “${trip.name}”`, `/trips/${trip.id}`);
+  await logActivity(orgId, "trip", "added", `Created trip “${trip.name}”`, `/trips/${trip.id}`);
   refresh();
   redirect(`/trips/${trip.id}`);
 }
 
 export async function deleteTrip(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const id = String(formData.get("id"));
-  const trip = await prisma.trip.findUnique({ where: { id }, select: { name: true } });
+  const trip = await prisma.trip.findFirst({ where: { id, orgId }, select: { name: true } });
+  if (!trip) return;
   await prisma.trip.delete({ where: { id } });
-  await logActivity("trip", "deleted", `Deleted trip “${trip?.name ?? "trip"}”`);
+  await logActivity(orgId, "trip", "deleted", `Deleted trip “${trip?.name ?? "trip"}”`);
   refresh();
   redirect("/trips");
 }
 
 export async function updateTripRooms(formData: FormData) {
-  await guard();
-  await prisma.trip.update({
-    where: { id: String(formData.get("id")) },
+  const orgId = await guard();
+  await prisma.trip.updateMany({
+    where: { id: String(formData.get("id")), orgId },
     data: { maxPerRoom: Math.max(1, Number(formData.get("maxPerRoom")) || 3) },
   });
   refresh();
@@ -145,13 +158,13 @@ export async function updateTripRooms(formData: FormData) {
 
 // Clone a trip's itinerary/cars/pricing onto fresh dates. Bookings are NOT copied.
 export async function duplicateTrip(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const sourceId = String(formData.get("id"));
   const newName = String(formData.get("name") || "").trim();
   const newDeparture = toDate(formData.get("departureDate"));
 
-  const src = await prisma.trip.findUnique({
-    where: { id: sourceId },
+  const src = await prisma.trip.findFirst({
+    where: { id: sourceId, orgId },
     include: { itinerary: { orderBy: { order: "asc" }, include: { hotels: true } }, cars: true, variants: true, inclusions: true, vendorBookings: true },
   });
   if (!src) return;
@@ -168,6 +181,7 @@ export async function duplicateTrip(formData: FormData) {
 
   const created = await prisma.trip.create({
     data: {
+      orgId,
       name: newName || `${src.name} (copy)`,
       destination: src.destination,
       nights: src.nights,
@@ -193,17 +207,17 @@ export async function duplicateTrip(formData: FormData) {
     },
   });
 
-  await logActivity("trip", "added", `Copied “${src.name}” → “${created.name}”`, `/trips/${created.id}`);
+  await logActivity(orgId, "trip", "added", `Copied “${src.name}” → “${created.name}”`, `/trips/${created.id}`);
   refresh();
   redirect(`/trips/${created.id}`);
 }
 
 // ---- Variants ----
 export async function addVariant(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const tripId = String(formData.get("tripId"));
   const name = String(formData.get("name") || "").trim();
-  if (!name) return;
+  if (!name || !(await ownTrip(orgId, tripId))) return;
   await prisma.variant.create({
     data: {
       tripId,
@@ -216,17 +230,17 @@ export async function addVariant(formData: FormData) {
 }
 
 export async function deleteVariant(formData: FormData) {
-  await guard();
-  await prisma.variant.delete({ where: { id: String(formData.get("id")) } });
+  const orgId = await guard();
+  await prisma.variant.deleteMany({ where: { id: String(formData.get("id")), trip: { orgId } } });
   refresh();
 }
 
 // ---- Inclusions (trip activities/extras) ----
 export async function addInclusion(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const tripId = String(formData.get("tripId"));
   const name = String(formData.get("name") || "").trim();
-  if (!tripId || !name) return;
+  if (!tripId || !name || !(await ownTrip(orgId, tripId))) return;
   const isDefault = String(formData.get("isDefault")) === "yes";
   await prisma.inclusion.create({
     data: {
@@ -238,14 +252,15 @@ export async function addInclusion(formData: FormData) {
       taxable: String(formData.get("taxable")) === "yes",
     },
   });
-  await logActivity("inclusion", "added", `Inclusion “${name}”${isDefault ? " (default)" : ""}`, `/trips/${tripId}`);
+  await logActivity(orgId, "inclusion", "added", `Inclusion “${name}”${isDefault ? " (default)" : ""}`, `/trips/${tripId}`);
   refresh();
 }
 
 export async function updateInclusion(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const id = String(formData.get("id"));
   const isDefault = String(formData.get("isDefault")) === "yes";
+  if (!(await prisma.inclusion.findFirst({ where: { id, trip: { orgId } }, select: { id: true } }))) return;
   await prisma.inclusion.update({
     where: { id },
     data: {
@@ -260,8 +275,8 @@ export async function updateInclusion(formData: FormData) {
 }
 
 export async function deleteInclusion(formData: FormData) {
-  await guard();
-  await prisma.inclusion.delete({ where: { id: String(formData.get("id")) } });
+  const orgId = await guard();
+  await prisma.inclusion.deleteMany({ where: { id: String(formData.get("id")), trip: { orgId } } });
   refresh();
 }
 
@@ -277,14 +292,14 @@ async function recomputeBookingInclusions(bookingId: string) {
 // Tick / untick an inclusion for a booking. On tick, the current price + date are
 // snapshotted; on untick the selection is removed. Customer balance/cost recompute.
 export async function toggleBookingInclusion(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const bookingId = String(formData.get("bookingId"));
   const inclusionId = String(formData.get("inclusionId"));
   const on = String(formData.get("on")) === "1";
-  if (!bookingId || !inclusionId) return;
+  if (!bookingId || !inclusionId || !(await ownBooking(orgId, bookingId))) return;
 
   if (on) {
-    const incl = await prisma.inclusion.findUnique({ where: { id: inclusionId } });
+    const incl = await prisma.inclusion.findFirst({ where: { id: inclusionId, trip: { orgId } } });
     if (incl) {
       const existing = await prisma.bookingInclusion.findFirst({ where: { bookingId, inclusionId } });
       if (!existing) {
@@ -305,10 +320,10 @@ export async function toggleBookingInclusion(formData: FormData) {
 
 // ---- Vendor bookings (hotels, cars...) ----
 export async function addVendorBooking(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const tripId = String(formData.get("tripId"));
   const vendorName = String(formData.get("vendorName") || "").trim();
-  if (!vendorName) return;
+  if (!vendorName || !(await ownTrip(orgId, tripId))) return;
   const dateStr = String(formData.get("date") || "");
   const actualStr = String(formData.get("actualCost") || "").trim();
   await prisma.vendorBooking.create({
@@ -329,10 +344,10 @@ export async function addVendorBooking(formData: FormData) {
 
 // Update an extra — set its status, planned cost, and actual (post-trip) cost.
 export async function updateVendorBooking(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const actualStr = String(formData.get("actualCost") || "").trim();
-  await prisma.vendorBooking.update({
-    where: { id: String(formData.get("id")) },
+  await prisma.vendorBooking.updateMany({
+    where: { id: String(formData.get("id")), trip: { orgId } },
     data: {
       status: String(formData.get("status")),
       cost: parseAmount(String(formData.get("cost"))),
@@ -343,20 +358,20 @@ export async function updateVendorBooking(formData: FormData) {
 }
 
 export async function deleteVendorBooking(formData: FormData) {
-  await guard();
-  await prisma.vendorBooking.delete({ where: { id: String(formData.get("id")) } });
+  const orgId = await guard();
+  await prisma.vendorBooking.deleteMany({ where: { id: String(formData.get("id")), trip: { orgId } } });
   refresh();
 }
 
 // ---- Bookings ----
 export async function addBooking(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const tripId = String(formData.get("tripId"));
   const customerName = String(formData.get("customerName") || "").trim();
-  if (!tripId || !customerName) return;
+  if (!tripId || !customerName || !(await ownTrip(orgId, tripId))) return;
   const variantId = String(formData.get("variantId") || "") || null;
   const phone = String(formData.get("customerPhone") || "") || null;
-  const customer = await findOrCreateCustomer(customerName, phone);
+  const customer = await findOrCreateCustomer(orgId, customerName, phone);
   const booking = await prisma.booking.create({
     include: { trip: { select: { name: true } } },
     data: {
@@ -391,7 +406,7 @@ export async function addBooking(formData: FormData) {
     });
     await recomputeBookingInclusions(booking.id);
   }
-  await logActivity("booking", "added", `New booking — ${booking.customerName} · ${booking.pax} pax · ${booking.trip.name}`, `/bookings/${booking.id}`);
+  await logActivity(orgId, "booking", "added", `New booking — ${booking.customerName} · ${booking.pax} pax · ${booking.trip.name}`, `/bookings/${booking.id}`);
   refresh();
 }
 
@@ -405,8 +420,9 @@ function tcsRateFrom(v: FormDataEntryValue | null): number {
 }
 
 export async function updateBookingInvoice(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const id = String(formData.get("id"));
+  if (!(await ownBooking(orgId, id))) return;
   await prisma.booking.update({
     where: { id },
     data: {
@@ -429,20 +445,22 @@ export async function updateBookingInvoice(formData: FormData) {
 }
 
 export async function setBookingStatus(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const id = String(formData.get("id"));
   const status = String(formData.get("status"));
+  if (!(await ownBooking(orgId, id))) return;
   const b = await prisma.booking.update({ where: { id }, data: { status } });
-  await logActivity("booking", "status", `${b.customerName} → ${status}`, `/bookings/${id}`);
+  await logActivity(orgId, "booking", "status", `${b.customerName} → ${status}`, `/bookings/${id}`);
   refresh();
 }
 
 export async function deleteBooking(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const id = String(formData.get("id"));
-  const b = await prisma.booking.findUnique({ where: { id }, select: { customerName: true } });
+  const b = await prisma.booking.findFirst({ where: { id, trip: { orgId } }, select: { customerName: true } });
+  if (!b) return;
   await prisma.booking.delete({ where: { id } });
-  await logActivity("booking", "deleted", `Deleted booking — ${b?.customerName ?? ""}`.trim());
+  await logActivity(orgId, "booking", "deleted", `Deleted booking — ${b?.customerName ?? ""}`.trim());
   refresh();
 }
 
@@ -453,10 +471,10 @@ function toDate(v: FormDataEntryValue | null): Date | null {
 }
 
 export async function addNight(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const tripId = String(formData.get("tripId"));
   const location = String(formData.get("location") || "").trim();
-  if (!tripId || !location) return;
+  if (!tripId || !location || !(await ownTrip(orgId, tripId))) return;
   const extra = String(formData.get("extra")) === "yes";
   const date = toDate(formData.get("date"));
   const existing = await prisma.night.findMany({ where: { tripId }, select: { order: true, date: true } });
@@ -494,10 +512,10 @@ export async function addNight(formData: FormData) {
 }
 
 export async function updateNight(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const id = String(formData.get("id"));
-  await prisma.night.update({
-    where: { id },
+  await prisma.night.updateMany({
+    where: { id, trip: { orgId } },
     data: {
       location: String(formData.get("location") || "").trim() || undefined,
       date: toDate(formData.get("date")),
@@ -508,17 +526,17 @@ export async function updateNight(formData: FormData) {
 }
 
 export async function deleteNight(formData: FormData) {
-  await guard();
-  await prisma.night.delete({ where: { id: String(formData.get("id")) } });
+  const orgId = await guard();
+  await prisma.night.deleteMany({ where: { id: String(formData.get("id")), trip: { orgId } } });
   refresh();
 }
 
 // ---- Hotel bookings (a night can have several) ----
 export async function addHotelBooking(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const nightId = String(formData.get("nightId"));
   const hotelName = String(formData.get("hotelName") || "").trim();
-  if (!nightId || !hotelName) return;
+  if (!nightId || !hotelName || !(await ownNight(orgId, nightId))) return;
   const rooms = Number(formData.get("rooms")) || 0;
   const cost = parseAmount(String(formData.get("cost")));
   await prisma.hotelBooking.create({
@@ -535,7 +553,7 @@ export async function addHotelBooking(formData: FormData) {
     },
   });
   const night = await prisma.night.findUnique({ where: { id: nightId }, include: { trip: { select: { id: true, name: true } } } });
-  await logActivity("hotel", "added", `Added “${hotelName}” · ${rooms} room${rooms === 1 ? "" : "s"} · ${formatINR(cost)}${night ? ` — ${night.location} (${night.trip.name})` : ""}`, night ? `/trips/${night.trip.id}` : null);
+  await logActivity(orgId, "hotel", "added", `Added “${hotelName}” · ${rooms} room${rooms === 1 ? "" : "s"} · ${formatINR(cost)}${night ? ` — ${night.location} (${night.trip.name})` : ""}`, night ? `/trips/${night.trip.id}` : null);
   refresh();
 }
 
@@ -544,11 +562,11 @@ export async function addHotelBooking(formData: FormData) {
 // Dates outside the existing itinerary are added as new nights, labelled
 // "Day X−n" (before the trip) or "Day Y+n" (after it).
 export async function addHotelStay(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const tripId = String(formData.get("tripId"));
   const hotelName = String(formData.get("hotelName") || "").trim();
   const checkInStr = String(formData.get("checkIn") || "");
-  if (!tripId || !hotelName || !checkInStr) return;
+  if (!tripId || !hotelName || !checkInStr || !(await ownTrip(orgId, tripId))) return;
 
   const DAY = 864e5;
   const startOfDay = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
@@ -607,14 +625,16 @@ export async function addHotelStay(formData: FormData) {
       data: { nightId: night.id, hotelName, rooms, cost: perNight + (i === 0 ? remainder : 0), status, holdUntil, source },
     });
   }
-  await logActivity("hotel", "added", `Booked “${hotelName}” for ${nights} night${nights === 1 ? "" : "s"} · ${formatINR(totalCost)} — ${trip.name}`, `/trips/${tripId}`);
+  await logActivity(orgId, "hotel", "added", `Booked “${hotelName}” for ${nights} night${nights === 1 ? "" : "s"} · ${formatINR(totalCost)} — ${trip.name}`, `/trips/${tripId}`);
   refresh();
 }
 
 export async function updateHotelBooking(formData: FormData) {
-  await guard();
+  const orgId = await guard();
+  const id = String(formData.get("id"));
+  if (!(await prisma.hotelBooking.findFirst({ where: { id, night: { trip: { orgId } } }, select: { id: true } }))) return;
   const updated = await prisma.hotelBooking.update({
-    where: { id: String(formData.get("id")) },
+    where: { id },
     include: { night: { include: { trip: { select: { id: true } } } } },
     data: {
       hotelName: String(formData.get("hotelName") || "").trim() || undefined,
@@ -627,24 +647,25 @@ export async function updateHotelBooking(formData: FormData) {
       notes: String(formData.get("notes") || "") || null,
     },
   });
-  await logActivity("hotel", "updated", `Updated “${updated.hotelName}” · ${updated.rooms} rooms · ${formatINR(updated.cost)} · ${updated.status}`, `/trips/${updated.night.trip.id}`);
+  await logActivity(orgId, "hotel", "updated", `Updated “${updated.hotelName}” · ${updated.rooms} rooms · ${formatINR(updated.cost)} · ${updated.status}`, `/trips/${updated.night.trip.id}`);
   refresh();
 }
 
 export async function deleteHotelBooking(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const id = String(formData.get("id"));
-  const h = await prisma.hotelBooking.findUnique({ where: { id }, include: { night: { select: { location: true } } } });
+  const h = await prisma.hotelBooking.findFirst({ where: { id, night: { trip: { orgId } } }, include: { night: { select: { location: true } } } });
+  if (!h) return;
   await prisma.hotelBooking.delete({ where: { id } });
-  await logActivity("hotel", "deleted", `Deleted “${h?.hotelName ?? "hotel"}”${h?.night ? ` — ${h.night.location}` : ""}`);
+  await logActivity(orgId, "hotel", "deleted", `Deleted “${h?.hotelName ?? "hotel"}”${h?.night ? ` — ${h.night.location}` : ""}`);
   refresh();
 }
 
 // ---- Cars ----
 export async function addCar(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const tripId = String(formData.get("tripId"));
-  if (!tripId) return;
+  if (!tripId || !(await ownTrip(orgId, tripId))) return;
   const count = await prisma.car.count({ where: { tripId } });
   const car = await prisma.car.create({
     include: { trip: { select: { name: true } } },
@@ -666,13 +687,14 @@ export async function addCar(formData: FormData) {
       confirmationNo: String(formData.get("confirmationNo") || "") || null,
     },
   });
-  await logActivity("car", "added", `Added ${car.label}${car.carType ? ` · ${car.carType}` : ""} — ${car.trip.name}`, `/trips/${tripId}`);
+  await logActivity(orgId, "car", "added", `Added ${car.label}${car.carType ? ` · ${car.carType}` : ""} — ${car.trip.name}`, `/trips/${tripId}`);
   refresh();
 }
 
 export async function updateCar(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const id = String(formData.get("id"));
+  if (!(await prisma.car.findFirst({ where: { id, trip: { orgId } }, select: { id: true } }))) return;
   const car = await prisma.car.update({
     where: { id },
     include: { trip: { select: { name: true } } },
@@ -690,26 +712,27 @@ export async function updateCar(formData: FormData) {
       confirmationNo: String(formData.get("confirmationNo") || "") || null,
     },
   });
-  await logActivity("car", "updated", `Updated ${car.label} — ${car.trip.name}`, `/trips/${car.tripId}`);
+  await logActivity(orgId, "car", "updated", `Updated ${car.label} — ${car.trip.name}`, `/trips/${car.tripId}`);
   refresh();
 }
 
 export async function deleteCar(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const id = String(formData.get("id"));
-  const car = await prisma.car.findUnique({ where: { id }, select: { label: true, tripId: true } });
+  const car = await prisma.car.findFirst({ where: { id, trip: { orgId } }, select: { label: true, tripId: true } });
+  if (!car) return;
   await prisma.car.delete({ where: { id } });
-  await logActivity("car", "deleted", `Removed ${car?.label ?? "car"}`, car ? `/trips/${car.tripId}` : null);
+  await logActivity(orgId, "car", "deleted", `Removed ${car?.label ?? "car"}`, car ? `/trips/${car.tripId}` : null);
   refresh();
 }
 
 // ---- GST/TCS remittance ----
 export async function setTaxRemitted(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const id = String(formData.get("id"));
   const remit = String(formData.get("remit")) === "1";
-  await prisma.booking.update({
-    where: { id },
+  await prisma.booking.updateMany({
+    where: { id, trip: { orgId } },
     data: {
       taxRemitted: remit,
       taxRemittedOn: remit ? new Date() : null,
@@ -721,12 +744,12 @@ export async function setTaxRemitted(formData: FormData) {
 
 // Tag the selected bookings as remitted (when you pay the government for a period).
 export async function markTaxRemittedBulk(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const ids = formData.getAll("ids").map(String).filter(Boolean);
   if (ids.length === 0) return;
   const dateStr = String(formData.get("date") || "");
   await prisma.booking.updateMany({
-    where: { id: { in: ids } },
+    where: { id: { in: ids }, trip: { orgId } },
     data: {
       taxRemitted: true,
       taxRemittedOn: dateStr ? new Date(dateStr) : new Date(),
@@ -744,10 +767,10 @@ async function recomputeTravellerExtra(bookingId: string) {
 }
 
 export async function addTraveller(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const bookingId = String(formData.get("bookingId"));
   const name = String(formData.get("name") || "").trim();
-  if (!bookingId || !name) return;
+  if (!bookingId || !name || !(await ownBooking(orgId, bookingId))) return;
   const ageStr = String(formData.get("age") || "").trim();
   await prisma.traveller.create({
     data: {
@@ -762,10 +785,12 @@ export async function addTraveller(formData: FormData) {
 }
 
 export async function updateTraveller(formData: FormData) {
-  await guard();
+  const orgId = await guard();
+  const id = String(formData.get("id"));
+  if (!(await prisma.traveller.findFirst({ where: { id, booking: { trip: { orgId } } }, select: { id: true } }))) return;
   const ageStr = String(formData.get("age") || "").trim();
   const tr = await prisma.traveller.update({
-    where: { id: String(formData.get("id")) },
+    where: { id },
     data: {
       name: String(formData.get("name") || "").trim() || undefined,
       age: ageStr ? Number(ageStr) || null : null,
@@ -778,18 +803,21 @@ export async function updateTraveller(formData: FormData) {
 }
 
 export async function deleteTraveller(formData: FormData) {
-  await guard();
-  const tr = await prisma.traveller.delete({ where: { id: String(formData.get("id")) } });
+  const orgId = await guard();
+  const id = String(formData.get("id"));
+  const found = await prisma.traveller.findFirst({ where: { id, booking: { trip: { orgId } } }, select: { id: true } });
+  if (!found) return;
+  const tr = await prisma.traveller.delete({ where: { id } });
   await recomputeTravellerExtra(tr.bookingId);
   refresh();
 }
 
 // ---- Payments ----
 export async function addPayment(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const bookingId = String(formData.get("bookingId"));
   const amount = parseAmount(String(formData.get("amount")));
-  if (!bookingId || amount <= 0) return;
+  if (!bookingId || amount <= 0 || !(await ownBooking(orgId, bookingId))) return;
   const dateStr = String(formData.get("date") || "");
   const mode = String(formData.get("mode") || "upi");
   const payment = await prisma.payment.create({
@@ -802,24 +830,25 @@ export async function addPayment(formData: FormData) {
       date: dateStr ? new Date(dateStr) : new Date(),
     },
   });
-  await logActivity("payment", "added", `${payment.booking.customerName} paid ${formatINR(amount)} (${mode})`, `/bookings/${payment.booking.id}`);
+  await logActivity(orgId, "payment", "added", `${payment.booking.customerName} paid ${formatINR(amount)} (${mode})`, `/bookings/${payment.booking.id}`);
   refresh();
 }
 
 export async function deletePayment(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const id = String(formData.get("id"));
-  const p = await prisma.payment.findUnique({ where: { id }, include: { booking: { select: { customerName: true } } } });
+  const p = await prisma.payment.findFirst({ where: { id, booking: { trip: { orgId } } }, include: { booking: { select: { customerName: true } } } });
+  if (!p) return;
   await prisma.payment.delete({ where: { id } });
-  await logActivity("payment", "deleted", p ? `Removed ${formatINR(p.amount)} payment — ${p.booking.customerName}` : "Removed a payment");
+  await logActivity(orgId, "payment", "deleted", p ? `Removed ${formatINR(p.amount)} payment — ${p.booking.customerName}` : "Removed a payment");
   refresh();
 }
 
 // ---- Customer-submitted payments (public link) approval ----
 export async function approvePendingPayment(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const id = String(formData.get("id"));
-  const p = await prisma.pendingPayment.findUnique({ where: { id }, include: { booking: { select: { id: true, customerName: true } } } });
+  const p = await prisma.pendingPayment.findFirst({ where: { id, booking: { trip: { orgId } } }, include: { booking: { select: { id: true, customerName: true } } } });
   if (!p) return;
   await prisma.payment.create({
     data: {
@@ -831,15 +860,15 @@ export async function approvePendingPayment(formData: FormData) {
     },
   });
   await prisma.pendingPayment.delete({ where: { id } });
-  await logActivity("payment", "added", `Approved ${formatINR(p.amount)} (${p.mode}) — ${p.booking.customerName}`, `/bookings/${p.booking.id}`);
+  await logActivity(orgId, "payment", "added", `Approved ${formatINR(p.amount)} (${p.mode}) — ${p.booking.customerName}`, `/bookings/${p.booking.id}`);
   refresh();
 }
 
 export async function updateVisaApplicant(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const id = String(formData.get("id"));
-  await prisma.visaApplicant.update({
-    where: { id },
+  await prisma.visaApplicant.updateMany({
+    where: { id, trip: { orgId } },
     data: {
       status: String(formData.get("status") || "collecting"),
       appointmentAt: toDate(formData.get("appointmentAt")),
@@ -849,19 +878,21 @@ export async function updateVisaApplicant(formData: FormData) {
 }
 
 export async function deleteVisaApplicant(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const id = String(formData.get("id"));
-  const v = await prisma.visaApplicant.findUnique({ where: { id }, select: { fullName: true } });
+  const v = await prisma.visaApplicant.findFirst({ where: { id, trip: { orgId } }, select: { fullName: true } });
+  if (!v) return;
   await prisma.visaApplicant.delete({ where: { id } });
-  if (v) await logActivity("trip", "deleted", `Deleted visa form — ${v.fullName}`);
+  if (v) await logActivity(orgId, "trip", "deleted", `Deleted visa form — ${v.fullName}`);
   refresh();
 }
 
 export async function rejectPendingPayment(formData: FormData) {
-  await guard();
+  const orgId = await guard();
   const id = String(formData.get("id"));
-  const p = await prisma.pendingPayment.findUnique({ where: { id }, include: { booking: { select: { customerName: true } } } });
+  const p = await prisma.pendingPayment.findFirst({ where: { id, booking: { trip: { orgId } } }, include: { booking: { select: { customerName: true } } } });
+  if (!p) return;
   await prisma.pendingPayment.delete({ where: { id } });
-  if (p) await logActivity("payment", "deleted", `Rejected self-reported ${formatINR(p.amount)} — ${p.booking.customerName}`);
+  if (p) await logActivity(orgId, "payment", "deleted", `Rejected self-reported ${formatINR(p.amount)} — ${p.booking.customerName}`);
   refresh();
 }

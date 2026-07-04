@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { requireOrgId } from "@/lib/org";
 import { tripFinancials, bookingBalance, bookingPaid, bookingTotal, bookingRevenue, bookingTax, isActive, isNightGap, holdExpiringSoon } from "@/lib/calc";
 import { formatINR, formatINRShort } from "@/lib/money";
 import QuickEntry from "@/components/QuickEntry";
@@ -13,7 +14,9 @@ function fmtDate(d: Date | null) {
 }
 
 export default async function Dashboard() {
+  const orgId = await requireOrgId();
   const trips = await prisma.trip.findMany({
+    where: { orgId },
     include: {
       itinerary: { include: { hotels: true } },
       cars: true,
@@ -95,6 +98,7 @@ export default async function Dashboard() {
 
   // top customers by outstanding, with their trips
   const customers = await prisma.customer.findMany({
+    where: { orgId },
     include: { bookings: { include: { variant: true, payments: true, trip: true } } },
   });
   const customerRows = customers
@@ -124,6 +128,7 @@ export default async function Dashboard() {
 
   // recent payments for an activity feel
   const recentPayments = await prisma.payment.findMany({
+    where: { booking: { trip: { orgId } } },
     take: 6,
     orderBy: { date: "desc" },
     include: { booking: { include: { trip: true } } },

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { requireOrgId } from "@/lib/org";
 import { bookingTotal, bookingPaid, bookingBalance, isActive } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import { updateCustomer, deleteCustomer } from "../../data-actions";
@@ -18,8 +19,9 @@ function statusBadge(s: string) {
 
 export default async function CustomerDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const c = await prisma.customer.findUnique({
-    where: { id },
+  const orgId = await requireOrgId();
+  const c = await prisma.customer.findFirst({
+    where: { id, orgId },
     include: { bookings: { include: { trip: true, variant: true, payments: true }, orderBy: { createdAt: "desc" } } },
   });
   if (!c) notFound();

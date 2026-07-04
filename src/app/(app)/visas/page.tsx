@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { requireOrgId } from "@/lib/org";
 import VisaTripFilter from "@/components/VisaTripFilter";
 import CopyLink from "@/components/CopyLink";
 
@@ -15,17 +16,18 @@ const STATUS: Record<string, string> = { collecting: "gray", ready: "sky", appoi
 
 export default async function VisasPage({ searchParams }: { searchParams: Promise<{ trip?: string }> }) {
   const { trip: tripId } = await searchParams;
+  const orgId = await requireOrgId();
   const cutoff = new Date(Date.now() - 864e5);
 
   const trips = await prisma.trip.findMany({
-    where: { OR: [{ departureDate: null }, { departureDate: { gte: cutoff } }] },
+    where: { orgId, OR: [{ departureDate: null }, { departureDate: { gte: cutoff } }] },
     orderBy: [{ departureDate: "asc" }],
     select: { id: true, name: true },
   });
-  const selectedTrip = tripId ? trips.find((t) => t.id === tripId) || (await prisma.trip.findUnique({ where: { id: tripId }, select: { id: true, name: true } })) : null;
+  const selectedTrip = tripId ? trips.find((t) => t.id === tripId) || (await prisma.trip.findFirst({ where: { id: tripId, orgId }, select: { id: true, name: true } })) : null;
 
   const applicants = await prisma.visaApplicant.findMany({
-    where: tripId ? { tripId } : {},
+    where: tripId ? { tripId, trip: { orgId } } : { trip: { orgId } },
     orderBy: { createdAt: "desc" },
     include: { trip: { select: { name: true } } },
   });

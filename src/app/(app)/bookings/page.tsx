@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { requireOrgId } from "@/lib/org";
 import { bookingTotal, bookingPaid, bookingBalance } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import TableSearch from "@/components/TableSearch";
@@ -13,7 +14,9 @@ function statusBadge(s: string) {
 }
 
 export default async function BookingsPage() {
+  const orgId = await requireOrgId();
   const bookings = await prisma.booking.findMany({
+    where: { trip: { orgId } },
     include: { trip: true, variant: true, payments: true },
     orderBy: { createdAt: "desc" },
   });

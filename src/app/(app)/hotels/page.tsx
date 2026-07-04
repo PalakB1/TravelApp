@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { requireOrgId } from "@/lib/org";
 import { pricePerRoom } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import TableSearch from "@/components/TableSearch";
@@ -21,7 +22,9 @@ function stayRange(d: Date | null) {
 }
 
 export default async function HotelsPage() {
+  const orgId = await requireOrgId();
   const hotels = await prisma.hotelBooking.findMany({
+    where: { night: { trip: { orgId } } },
     include: { night: { include: { trip: true } } },
   });
   hotels.sort((a, b) => (a.night.date ? +a.night.date : 0) - (b.night.date ? +b.night.date : 0));

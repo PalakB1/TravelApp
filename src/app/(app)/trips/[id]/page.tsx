@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { requireOrgId } from "@/lib/org";
 import { tripFinancials, bookingTotal, bookingPaid, bookingBalance, isNightGap, holdExpiringSoon, carCost, pricePerRoom, nightCost, nightBookedRooms, carPassengerSeats } from "@/lib/calc";
 import { formatINR, formatINRShort } from "@/lib/money";
 import {
@@ -51,8 +52,9 @@ function Prog({ label, done, total, color, money, unit }: { label: string; done:
 
 export default async function TripDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const trip = await prisma.trip.findUnique({
-    where: { id },
+  const orgId = await requireOrgId();
+  const trip = await prisma.trip.findFirst({
+    where: { id, orgId },
     include: {
       variants: { orderBy: { sellPrice: "desc" } },
       vendorBookings: { orderBy: { createdAt: "asc" } },
@@ -68,20 +70,20 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
   const f = tripFinancials({ bookings: trip.bookings, nights: trip.itinerary, cars: trip.cars, vendorBookings: trip.vendorBookings, maxPerRoom: trip.maxPerRoom });
 
   // hotel names already used, for the "pick or type new" dropdown
-  const known = await prisma.hotelBooking.findMany({ distinct: ["hotelName"], select: { hotelName: true }, orderBy: { hotelName: "asc" } });
-  const customers = await prisma.customer.findMany({ select: { name: true, phone: true }, orderBy: { name: "asc" } });
+  const known = await prisma.hotelBooking.findMany({ where: { night: { trip: { orgId } } }, distinct: ["hotelName"], select: { hotelName: true }, orderBy: { hotelName: "asc" } });
+  const customers = await prisma.customer.findMany({ where: { orgId }, select: { name: true, phone: true }, orderBy: { name: "asc" } });
   const customerPhoneMap: Record<string, { phone?: string | null }> = {};
   for (const c of customers) if (c.phone) customerPhoneMap[c.name.trim().toLowerCase()] = { phone: c.phone };
 
   // Distinct "booked / held on" sources used before (Booking.com, Agoda, a vendor…) — pick or type new.
   const [hotelSources, carSources] = await Promise.all([
-    prisma.hotelBooking.findMany({ where: { source: { not: null } }, distinct: ["source"], select: { source: true } }),
-    prisma.car.findMany({ where: { source: { not: null } }, distinct: ["source"], select: { source: true } }),
+    prisma.hotelBooking.findMany({ where: { source: { not: null }, night: { trip: { orgId } } }, distinct: ["source"], select: { source: true } }),
+    prisma.car.findMany({ where: { source: { not: null }, trip: { orgId } }, distinct: ["source"], select: { source: true } }),
   ]);
   const sources = [...new Set([...hotelSources, ...carSources].map((s) => (s.source || "").trim()).filter(Boolean))].sort();
 
   // Car "catalog" — every car type used before, so picking it re-fills seats/price/driver cost.
-  const pastCars = await prisma.car.findMany({ where: { carType: { not: null } }, orderBy: { createdAt: "desc" }, select: { carType: true, seats: true, rentalCost: true, driverCost: true, vendor: true } });
+  const pastCars = await prisma.car.findMany({ where: { carType: { not: null }, trip: { orgId } }, orderBy: { createdAt: "desc" }, select: { carType: true, seats: true, rentalCost: true, driverCost: true, vendor: true } });
   const carCatalog: Record<string, { seats?: number; rentalCost?: number; driverCost?: number; vendor?: string | null }> = {};
   const carTypes: string[] = [];
   for (const c of pastCars) {

@@ -3,7 +3,7 @@
 import * as XLSX from "xlsx";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getOrgContext } from "@/lib/org";
 import { parseAmount } from "@/lib/money";
 
 export type ImportResult = { ok: boolean; message: string };
@@ -30,12 +30,15 @@ function toDate(v: unknown): Date | null {
 }
 
 export async function importItinerary(formData: FormData): Promise<ImportResult> {
-  const session = await getSession();
-  if (!session) return { ok: false, message: "Please sign in again." };
+  const ctx = await getOrgContext();
+  if (!ctx || !ctx.orgId) return { ok: false, message: "Please sign in again." };
 
   const tripId = String(formData.get("tripId") || "");
   const file = formData.get("file");
   if (!tripId) return { ok: false, message: "Missing trip." };
+  // Only import into a trip that belongs to the current org.
+  const ownsTrip = await prisma.trip.findFirst({ where: { id: tripId, orgId: ctx.orgId }, select: { id: true } });
+  if (!ownsTrip) return { ok: false, message: "Trip not found." };
   if (!(file instanceof File) || file.size === 0) return { ok: false, message: "Choose an Excel file first." };
 
   try {

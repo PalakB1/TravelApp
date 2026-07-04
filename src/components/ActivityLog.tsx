@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { requireOrgId } from "@/lib/org";
 
 function fmtWhen(d: Date) {
   return d.toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true });
@@ -13,8 +14,9 @@ type Log = { id: string; createdAt: Date; action: string; summary: string; href:
 export default async function ActivityLog({ category, title = "Activity log", limit = 40 }: { category: string | string[]; title?: string; limit?: number }) {
   let logs: Log[] = [];
   try {
+    const orgId = await requireOrgId();
     logs = await prisma.activityLog.findMany({
-      where: { category: Array.isArray(category) ? { in: category } : category },
+      where: { orgId, category: Array.isArray(category) ? { in: category } : category },
       orderBy: { createdAt: "desc" },
       take: limit,
     });
