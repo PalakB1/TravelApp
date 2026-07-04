@@ -27,6 +27,7 @@ function Icon({ name }: { name: string }) {
     bed: <><path d="M2 4v16" /><path d="M2 8h18a2 2 0 0 1 2 2v10" /><path d="M2 17h20" /><path d="M6 8v9" /></>,
     passport: <><rect x="4" y="2" width="16" height="20" rx="2" /><circle cx="12" cy="10" r="3" /><path d="M9 17h6" /></>,
     shield: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></>,
+    gear: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H2a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 3.6 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H8a1.65 1.65 0 0 0 1-1.51V2a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V8a1.65 1.65 0 0 0 1.51 1H22a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>,
   };
   return <svg {...common}>{paths[name]}</svg>;
 }
@@ -66,6 +67,7 @@ export default function Sidebar({ name, isPlatformAdmin = false, actingOrgId = n
         </nav>
         <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
           <p className="small muted" style={{ padding: "0 11px 8px" }}>Signed in as {name}</p>
+          <Link href="/settings" className="sm" style={{ display: "flex", width: "100%", justifyContent: "center", marginBottom: 6 }}>Settings</Link>
           <form action={logout}>
             <button className="sm" style={{ width: "100%", justifyContent: "center" }} type="submit">Sign out</button>
           </form>
@@ -95,6 +97,10 @@ export default function Sidebar({ name, isPlatformAdmin = false, actingOrgId = n
                 <button className="sm" style={{ width: "100%", justifyContent: "center" }} type="submit">👁️ Viewing a client · Exit</button>
               </form>
             )}
+            <Link href="/settings" onClick={closeMenu} className={isActive("/settings") ? "active" : ""} style={{ borderTop: "1px solid var(--border)", marginTop: 4, paddingTop: 6 }}>
+              <Icon name="gear" />
+              Settings
+            </Link>
             <form action={logout} style={{ borderTop: "1px solid var(--border)", marginTop: 4, paddingTop: 6 }}>
               <button className="sm" style={{ width: "100%", justifyContent: "center" }} type="submit">Sign out</button>
             </form>

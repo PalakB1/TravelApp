@@ -40,7 +40,10 @@ export default async function AdminPage() {
           <h1>🛡️ Platform admin</h1>
           <p className="sub">{orgs.length} organization{orgs.length === 1 ? "" : "s"} · {pending.length} awaiting approval</p>
         </div>
-        <Link className="btn" href="/dashboard">← Back to my dashboard</Link>
+        <div className="flex" style={{ gap: 8 }}>
+          <Link className="btn" href="/settings">Change password</Link>
+          <Link className="btn" href="/dashboard">← Back to my dashboard</Link>
+        </div>
       </div>
 
       {pending.length > 0 && (
