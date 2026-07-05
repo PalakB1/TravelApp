@@ -5,12 +5,12 @@ import { useEffect, useState } from "react";
 import s from "./landing.module.css";
 
 const FEATURES = [
-  { icon: "🗺", title: "Trips & itineraries", body: "Build night-by-night self-drive routes, flag hotel gaps, track holds before they expire, and manage your car fleet with per-driver costs.", wide: true },
+  { icon: "🗺", title: "Trips & itineraries", body: "Build night-by-night group routes — or fully bespoke, per-client trips. Flag hotel gaps, track holds before they expire, and manage your car fleet with per-driver costs.", wide: true },
   { icon: "🧾", title: "Bookings as invoices", body: "Land / visa / flight line items with automatic GST + TCS, discounts and per-traveller extras — the maths matches your accountant’s sheet." },
   { icon: "◈", title: "Payments & collections", body: "Log installments, see who owes what, and let customers self-report payments via a shareable link you approve." },
   { icon: "⌖", title: "Visa desk", body: "Send travellers one form; get back a tailored cover letter and document checklist — Schengen or any country — with appointment tracking." },
   { icon: "▚", title: "Live profit analytics", body: "Revenue, cost, profit, margin and outstanding — recomputed instantly across every trip, with charts that actually mean something." },
-  { icon: "❖", title: "Group tours or fully bespoke", body: "Sell packaged group departures or build a custom trip for one client — flights, hotels, transfers, visas, à la carte. One desk runs both.", wide: true },
+  { icon: "🔒", title: "Your clients stay your clients", body: "Your customer list, pricing and margins are sealed to your agency — never visible to any other agency on the platform. Your team sees everything; outsiders, nothing.", wide: true },
 ];
 const LEGS = [
   { n: "01", title: "Chart your workspace", body: "Sign up with your agency name. We review it and switch it on — usually within hours." },
