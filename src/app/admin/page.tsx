@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { approveOrg, rejectOrg, suspendOrg, enterOrgAction, toggleCustomTrips } from "./actions";
+import { approveOrg, rejectOrg, suspendOrg, enterOrgAction, toggleCustomTrips, setPlan } from "./actions";
+import { PLAN_LABEL, trialDaysLeft } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
 
@@ -76,12 +77,23 @@ export default async function AdminPage() {
       <h2 style={{ fontSize: 15, margin: "24px 0 10px", color: "var(--text-2)" }}>All organizations</h2>
       <div className="card" style={{ padding: 0 }}>
         <table className="t">
-          <thead><tr><th style={{ paddingLeft: 20 }}>Organization</th><th>Status</th><th>Custom trips</th><th className="num">Users</th><th className="num">Trips</th><th className="num">Customers</th><th></th></tr></thead>
+          <thead><tr><th style={{ paddingLeft: 20 }}>Organization</th><th>Status</th><th>Plan</th><th>Custom trips</th><th className="num">Users</th><th className="num">Trips</th><th className="num">Customers</th><th></th></tr></thead>
           <tbody>
             {others.map((o) => (
               <tr key={o.id}>
                 <td style={{ paddingLeft: 20 }}><b>{o.name}</b><br /><span className="small muted">{o.users[0]?.email}</span></td>
                 <td><span className={`badge ${STATUS_BADGE[o.status] || "gray"}`}>{o.status}</span></td>
+                <td>
+                  <form action={setPlan} className="flex" style={{ gap: 4 }}>
+                    <input type="hidden" name="orgId" value={o.id} />
+                    <select name="plan" defaultValue={o.plan} style={{ fontSize: 12, padding: "3px 6px" }}>
+                      <option value="trial">Trial{trialDaysLeft(o) != null ? ` (${trialDaysLeft(o)}d)` : ""}</option>
+                      <option value="pro">Pro</option>
+                      <option value="business">Business</option>
+                    </select>
+                    <button className="sm" type="submit" style={{ padding: "3px 8px" }}>Set</button>
+                  </form>
+                </td>
                 <td>
                   <form action={toggleCustomTrips}>
                     <input type="hidden" name="orgId" value={o.id} />
@@ -104,7 +116,7 @@ export default async function AdminPage() {
                 </td>
               </tr>
             ))}
-            {others.length === 0 && <tr><td colSpan={7} className="empty">No approved organizations yet.</td></tr>}
+            {others.length === 0 && <tr><td colSpan={8} className="empty">No approved organizations yet.</td></tr>}
           </tbody>
         </table>
       </div>

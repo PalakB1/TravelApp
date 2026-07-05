@@ -74,7 +74,7 @@ export default function LandingClient() {
           <div className={s.brand}><span className={s.mark}>✦</span> Trip Desk</div>
           <div className={s.navLinks}>
             <Link href="#features" className={`${s.navLink} ${s.hideSm}`}>Features</Link>
-            <Link href="#route" className={`${s.navLink} ${s.hideSm}`}>How it works</Link>
+            <Link href="/pricing" className={`${s.navLink} ${s.hideSm}`}>Pricing</Link>
             <button type="button" className={s.toggle} onClick={toggle} aria-label={dark ? "Switch to light theme" : "Switch to dark theme"} title={dark ? "Light mode" : "Dark mode"}>
               {dark ? "☀" : "☾"}
             </button>

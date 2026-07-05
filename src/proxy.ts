@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { verifyToken } from "@/lib/auth";
 
 // "/" is the public marketing landing. /admin/login is the separate admin door.
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/admin/login", "/pay", "/join", "/visa"];
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/pricing", "/admin/login", "/pay", "/join", "/visa"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

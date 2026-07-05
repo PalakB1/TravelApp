@@ -1,10 +1,28 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getOrgContext } from "@/lib/org";
 import { prisma } from "@/lib/db";
+import { isTrialExpired, trialDaysLeft } from "@/lib/billing";
 import Sidebar from "@/components/Sidebar";
 import EscToClose from "@/components/EscToClose";
 import CollapseOnSave from "@/components/CollapseOnSave";
 import { logout } from "./actions";
+
+function TrialEndedScreen({ name, orgName }: { name: string; orgName?: string }) {
+  return (
+    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20 }}>
+      <div className="card" style={{ width: 460, maxWidth: "100%", textAlign: "center" }}>
+        <div style={{ fontSize: 40, marginBottom: 8 }}>🔓</div>
+        <h1 style={{ marginBottom: 6 }}>Your free trial has ended</h1>
+        <p className="muted small">Hi {name}, {orgName || "your workspace"}’s 30-day trial is over. Your data is safe — pick a plan to pick up right where you left off.</p>
+        <div className="flex" style={{ gap: 8, justifyContent: "center", marginTop: 18, flexWrap: "wrap" }}>
+          <Link className="btn primary sm" href="/pricing">See plans</Link>
+          <form action={logout}><button className="sm" type="submit">Sign out</button></form>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function WaitingScreen({ status, name, orgName }: { status: string; name: string; orgName?: string }) {
   const rejected = status === "rejected";
@@ -37,7 +55,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!ctx) redirect("/login");
 
   const org = ctx.orgId
-    ? await prisma.organization.findUnique({ where: { id: ctx.orgId }, select: { status: true, name: true, customTripsEnabled: true } })
+    ? await prisma.organization.findUnique({ where: { id: ctx.orgId }, select: { status: true, name: true, customTripsEnabled: true, plan: true, trialEndsAt: true } })
     : null;
 
   // A normal user only gets in if their org is approved. The platform admin
@@ -45,13 +63,26 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!ctx.isPlatformAdmin && (!org || org.status !== "approved")) {
     return <WaitingScreen status={org?.status ?? "unknown"} name={ctx.session.name} orgName={org?.name} />;
   }
+  // Trial ended and no paid plan → soft-lock until they upgrade (admin exempt).
+  if (!ctx.isPlatformAdmin && org && isTrialExpired(org)) {
+    return <TrialEndedScreen name={ctx.session.name} orgName={org.name} />;
+  }
+  const daysLeft = org ? trialDaysLeft(org) : null;
 
   return (
     <div className="app">
       <EscToClose />
       <CollapseOnSave />
       <Sidebar name={ctx.session.name} isPlatformAdmin={ctx.isPlatformAdmin} actingOrgId={ctx.actingOrgId} customTrips={org?.customTripsEnabled ?? false} />
-      <main className="main">{children}</main>
+      <main className="main">
+        {daysLeft != null && (
+          <Link href="/pricing" className="between" style={{ display: "flex", background: daysLeft <= 5 ? "var(--warning-bg)" : "var(--accent-bg)", borderRadius: 10, padding: "9px 14px", marginBottom: 14, fontSize: 13.5 }}>
+            <span>✨ <b>{daysLeft} day{daysLeft === 1 ? "" : "s"}</b> left in your free trial{daysLeft <= 5 ? " — don’t lose access to your data" : ""}.</span>
+            <span style={{ color: "var(--accent)", fontWeight: 600, whiteSpace: "nowrap" }}>See plans →</span>
+          </Link>
+        )}
+        {children}
+      </main>
     </div>
   );
 }

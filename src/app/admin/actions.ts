@@ -31,6 +31,16 @@ export async function suspendOrg(formData: FormData) {
   await setOrgStatus(String(formData.get("orgId")), "suspended");
 }
 
+// Set an org's billing plan (manual billing lever until Razorpay is connected).
+export async function setPlan(formData: FormData) {
+  await requirePlatformAdmin();
+  const orgId = String(formData.get("orgId"));
+  const plan = String(formData.get("plan"));
+  if (!["trial", "pro", "business"].includes(plan)) return;
+  await prisma.organization.update({ where: { id: orgId }, data: { plan } });
+  revalidatePath("/admin");
+}
+
 // Toggle the "Custom trips" module for one org (off by default).
 export async function toggleCustomTrips(formData: FormData) {
   await requirePlatformAdmin();

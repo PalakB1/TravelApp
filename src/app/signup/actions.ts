@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { createSession } from "@/lib/auth";
+import { trialEndDate } from "@/lib/billing";
 
 // Verify the Cloudflare Turnstile token server-side. If no secret is configured
 // (e.g. local dev without the env var) we skip the check so signup still works.
@@ -55,6 +56,8 @@ export async function signup(_prev: { error?: string } | undefined, formData: Fo
     data: {
       name: company,
       status: "pending",
+      plan: "trial",
+      trialEndsAt: trialEndDate(),
       legalName: s("legalName"),
       gstin: s("gstin"),
       gstAddress: s("gstAddress"),
