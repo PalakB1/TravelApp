@@ -5,6 +5,7 @@ import { tripFinancials, bookingBalance, bookingPaid, bookingTotal, bookingReven
 import { formatINR, formatINRShort } from "@/lib/money";
 import QuickEntry from "@/components/QuickEntry";
 import { Donut, HBars } from "@/components/Charts";
+import { ctRevenue, ctProfit } from "../custom-trips/lib";
 
 export const dynamic = "force-dynamic";
 
@@ -87,10 +88,18 @@ export default async function Dashboard() {
   for (const b of allActive) pkgMap.set(b.packageType, (pkgMap.get(b.packageType) || 0) + bookingRevenue(b));
   const packageMix = [...pkgMap.entries()].map(([k, v]) => ({ name: PKG[k]?.name || k, value: v, color: PKG[k]?.color || "#9094ac" }));
 
-  const revByTrip = perTrip
-    .map(({ trip, f }) => ({ label: trip.name, value: f.revenue, sub: `${f.pax} travellers${f.hiredDrivers > 0 ? ` + ${f.hiredDrivers} driver${f.hiredDrivers > 1 ? "s" : ""}` : ""} · profit ${formatINRShort(f.profit)} · ${Math.round(f.margin * 100)}%`, color: "var(--accent-grad)", href: `/trips/${trip.id}` }))
+  // Custom trips (bespoke, per-client) also count as revenue by "trip".
+  const customTrips = await prisma.customTrip.findMany({
+    where: { orgId, status: { not: "cancelled" } },
+    include: { items: true, payments: true },
+  });
+
+  const revByTrip = [
+    ...perTrip.map(({ trip, f }) => ({ label: trip.name, value: f.revenue, sub: `${f.pax} travellers${f.hiredDrivers > 0 ? ` + ${f.hiredDrivers} driver${f.hiredDrivers > 1 ? "s" : ""}` : ""} · profit ${formatINRShort(f.profit)} · ${Math.round(f.margin * 100)}%`, color: "var(--accent-grad)", href: `/trips/${trip.id}` })),
+    ...customTrips.map((ct) => ({ label: `${ct.title}`, value: ctRevenue(ct), sub: `✦ custom · ${ct.clientName} · profit ${formatINRShort(ctProfit(ct))}`, color: "linear-gradient(135deg, #0ea5e9 0%, #22d3ee 100%)", href: `/custom-trips/${ct.id}` })),
+  ]
     .sort((a, b) => b.value - a.value)
-    .slice(0, 6);
+    .slice(0, 8);
 
   const taxCollected = allActive.reduce((s, b) => s + bookingTax(b), 0);
   const taxRemitted = allActive.filter((b) => b.taxRemitted).reduce((s, b) => s + bookingTax(b), 0);
