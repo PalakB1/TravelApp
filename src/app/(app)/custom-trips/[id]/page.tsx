@@ -204,7 +204,14 @@ export default async function CustomTripDetail({ params }: { params: Promise<{ i
       <div className="card" style={{ borderColor: "var(--danger-bg)" }}>
         <div className="between">
           <span className="small muted">Deleting removes this custom trip and all its items and payments.</span>
-          <form action={deleteCustomTrip}><input type="hidden" name="id" value={t.id} /><button className="sm" type="submit" style={{ color: "var(--danger)" }}>Delete custom trip</button></form>
+          <details className="menu-pop" style={{ position: "relative" }}>
+            <summary className="sm" style={{ listStyle: "none", cursor: "pointer", color: "var(--danger)" }}>Delete custom trip</summary>
+            <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", width: 260, zIndex: 30, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, boxShadow: "0 12px 32px rgba(27,28,43,0.16)", padding: 14, textAlign: "left" }}>
+              <div style={{ fontWeight: 500, marginBottom: 6 }}>Delete “{t.title}”?</div>
+              <p className="small muted" style={{ margin: "0 0 12px" }}>This permanently removes the trip, its {t.items.length} item{t.items.length === 1 ? "" : "s"} and {t.payments.length} payment{t.payments.length === 1 ? "" : "s"}. This can’t be undone.</p>
+              <form action={deleteCustomTrip}><input type="hidden" name="id" value={t.id} /><button className="danger sm" type="submit">Yes, delete permanently</button></form>
+            </div>
+          </details>
         </div>
       </div>
     </>
