@@ -10,7 +10,7 @@ const FEATURES = [
   { icon: "◈", title: "Payments & collections", body: "Log installments, see who owes what, and let customers self-report payments via a shareable link you approve." },
   { icon: "⌖", title: "Visa desk", body: "Send travellers one form; get back a tailored cover letter and document checklist — Schengen or any country — with appointment tracking." },
   { icon: "▚", title: "Live profit analytics", body: "Revenue, cost, profit, margin and outstanding — recomputed instantly across every trip, with charts that actually mean something." },
-  { icon: "❖", title: "Multi-tenant by design", body: "Every company gets its own private, isolated workspace. Sign up, get approved, and your data is yours alone.", wide: true },
+  { icon: "❖", title: "Group tours or fully bespoke", body: "Sell packaged group departures or build a custom trip for one client — flights, hotels, transfers, visas, à la carte. One desk runs both.", wide: true },
 ];
 const LEGS = [
   { n: "01", title: "Chart your workspace", body: "Sign up with your agency name. We review it and switch it on — usually within hours." },
