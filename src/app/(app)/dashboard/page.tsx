@@ -5,6 +5,7 @@ import { tripFinancials, bookingBalance, bookingPaid, bookingTotal, bookingReven
 import { formatINR, formatINRShort } from "@/lib/money";
 import QuickEntry from "@/components/QuickEntry";
 import { Donut, HBars } from "@/components/Charts";
+import DateRangeFilter from "@/components/DateRangeFilter";
 import { ctRevenue, ctProfit } from "../custom-trips/lib";
 
 export const dynamic = "force-dynamic";
@@ -14,10 +15,24 @@ function fmtDate(d: Date | null) {
   return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
-export default async function Dashboard() {
+const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+export default async function Dashboard({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
   const orgId = await requireOrgId();
+
+  // Date-range filter — default is a rolling one-year window from today.
+  const { from: fromQ, to: toQ } = await searchParams;
+  const _now = new Date();
+  const _startToday = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate());
+  const fromStr = fromQ && !isNaN(Date.parse(fromQ)) ? fromQ : ymd(_startToday);
+  const toStr = toQ && !isNaN(Date.parse(toQ)) ? toQ : ymd(new Date(_startToday.getFullYear() + 1, _startToday.getMonth(), _startToday.getDate()));
+  const rangeFrom = new Date(fromStr + "T00:00:00");
+  const rangeTo = new Date(toStr + "T23:59:59");
+  // Undated (unscheduled) trips always show; dated ones must fall in the window.
+  const tripInRange = { OR: [{ departureDate: null }, { departureDate: { gte: rangeFrom, lte: rangeTo } }] };
+
   const trips = await prisma.trip.findMany({
-    where: { orgId },
+    where: { orgId, ...tripInRange },
     include: {
       itinerary: { include: { hotels: true } },
       cars: true,
@@ -88,18 +103,21 @@ export default async function Dashboard() {
   for (const b of allActive) pkgMap.set(b.packageType, (pkgMap.get(b.packageType) || 0) + bookingRevenue(b));
   const packageMix = [...pkgMap.entries()].map(([k, v]) => ({ name: PKG[k]?.name || k, value: v, color: PKG[k]?.color || "#9094ac" }));
 
-  // Custom trips (bespoke, per-client) also count as revenue by "trip".
+  // Custom trips (bespoke, per-client) in the same window — listed compactly below.
   const customTrips = await prisma.customTrip.findMany({
-    where: { orgId, status: { not: "cancelled" } },
+    where: { orgId, status: { not: "cancelled" }, OR: [{ startDate: null }, { startDate: { gte: rangeFrom, lte: rangeTo } }] },
     include: { items: true, payments: true },
   });
 
-  const revByTrip = [
-    ...perTrip.map(({ trip, f }) => ({ label: trip.name, value: f.revenue, sub: `${f.pax} travellers${f.hiredDrivers > 0 ? ` + ${f.hiredDrivers} driver${f.hiredDrivers > 1 ? "s" : ""}` : ""} · profit ${formatINRShort(f.profit)} · ${Math.round(f.margin * 100)}%`, color: "var(--accent-grad)", href: `/trips/${trip.id}` })),
-    ...customTrips.map((ct) => ({ label: `${ct.title}`, value: ctRevenue(ct), sub: `✦ custom · ${ct.clientName} · profit ${formatINRShort(ctProfit(ct))}`, color: "linear-gradient(135deg, #0ea5e9 0%, #22d3ee 100%)", href: `/custom-trips/${ct.id}` })),
-  ]
+  const revByTrip = perTrip
+    .map(({ trip, f }) => ({ label: trip.name, value: f.revenue, sub: `${f.pax} travellers${f.hiredDrivers > 0 ? ` + ${f.hiredDrivers} driver${f.hiredDrivers > 1 ? "s" : ""}` : ""} · profit ${formatINRShort(f.profit)} · ${Math.round(f.margin * 100)}%`, color: "var(--accent-grad)", href: `/trips/${trip.id}` }))
     .sort((a, b) => b.value - a.value)
-    .slice(0, 8);
+    .slice(0, 6);
+
+  const customTripRows = customTrips
+    .map((ct) => ({ id: ct.id, title: ct.title, clientName: ct.clientName, rev: ctRevenue(ct), profit: ctProfit(ct) }))
+    .sort((a, b) => b.rev - a.rev)
+    .slice(0, 6);
 
   const taxCollected = allActive.reduce((s, b) => s + bookingTax(b), 0);
   const taxRemitted = allActive.filter((b) => b.taxRemitted).reduce((s, b) => s + bookingTax(b), 0);
@@ -150,7 +168,10 @@ export default async function Dashboard() {
           <h1>Dashboard</h1>
           <p className="sub">{trips.length} trips · {bookingCount} bookings · {paxTotal} travellers{driversTotal > 0 ? ` + ${driversTotal} driver${driversTotal > 1 ? "s" : ""} = ${paxTotal + driversTotal} people` : ""} · {carsTotal} cars</p>
         </div>
-        <Link className="btn primary" href="/trips/new">+ New trip</Link>
+        <div className="flex" style={{ gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <DateRangeFilter from={fromStr} to={toStr} />
+          <Link className="btn primary" href="/trips/new">+ New trip</Link>
+        </div>
       </div>
 
       <div className="metrics">
@@ -201,7 +222,20 @@ export default async function Dashboard() {
           <div className="grid-2">
             <div className="card">
               <div className="card-title">Revenue by trip <span className="small muted">click a trip to open & add</span></div>
-              {revByTrip.length === 0 ? <div className="empty small">No revenue yet.</div> : <HBars rows={revByTrip} />}
+              {revByTrip.length === 0 ? <div className="empty small">No group-trip revenue in this range.</div> : <HBars rows={revByTrip} />}
+              {customTripRows.length > 0 && (
+                <div style={{ marginTop: 14, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+                  <div className="small muted" style={{ marginBottom: 8 }}>✦ Custom trips</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {customTripRows.map((ct) => (
+                      <Link key={ct.id} href={`/custom-trips/${ct.id}`} className="between" style={{ fontSize: 13.5, padding: "5px 2px", gap: 10 }}>
+                        <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>✦ {ct.title} <span className="muted">· {ct.clientName}</span></span>
+                        <span style={{ fontWeight: 500, whiteSpace: "nowrap" }}>{formatINRShort(ct.rev)} <span className="muted small">· {formatINRShort(ct.profit)} profit</span></span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="card">
               <div className="card-title">Package mix <span className="small muted">by revenue</span></div>
