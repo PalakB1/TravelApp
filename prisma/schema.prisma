@@ -14,15 +14,75 @@ datasource db {
 // booking, payment and visa record is scoped to exactly one org (data isolation).
 // New orgs self-serve sign up in status "pending" and stay dark until approved.
 model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  status    String   @default("pending") // pending | approved | rejected | suspended
-  createdAt DateTime @default(now())
+  id                 String   @id @default(cuid())
+  name               String
+  status             String   @default("pending") // pending | approved | rejected | suspended
+  customTripsEnabled Boolean  @default(false) // "Custom trips" module — off by default, toggled by platform admin
+  createdAt          DateTime @default(now())
 
   users        User[]
   trips        Trip[]
   customers    Customer[]
   activityLogs ActivityLog[]
+  customTrips  CustomTrip[]
+}
+
+// --- Custom trips module (bespoke, per-client à-la-carte itineraries) ---
+// Separate from group Trip. A client's tailor-made plan = a list of line items
+// (flight / hotel / transfer / …), each with its own cost + sell + GST toggle.
+model CustomTrip {
+  id          String    @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id])
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id])
+  clientName  String // denormalised for quick display/search
+  clientPhone String?
+  title       String    @default("Custom trip")
+  startDate   DateTime?
+  endDate     DateTime?
+  status      String    @default("enquiry") // enquiry | confirmed | travelled | cancelled
+  discount    Int       @default(0)
+  gstRate     Int       @default(5)
+  tcsRate     Int       @default(2)
+  notes       String?
+  createdAt   DateTime  @default(now())
+
+  items    CustomItem[]
+  payments CustomPayment[]
+
+  @@index([orgId])
+  @@index([customerId])
+}
+
+model CustomItem {
+  id           String     @id @default(cuid())
+  customTripId String
+  trip         CustomTrip @relation(fields: [customTripId], references: [id], onDelete: Cascade)
+  type         String     @default("other") // flight | hotel | transfer | activity | visa | insurance | rail | cruise | package | other
+  description  String
+  supplier     String?
+  date         DateTime?
+  qty          Int        @default(1)
+  cost         Int        @default(0) // your cost per unit
+  sell         Int        @default(0) // what you charge per unit
+  taxable      Boolean    @default(true) // does this line attract GST + TCS
+  notes        String?
+  createdAt    DateTime   @default(now())
+
+  @@index([customTripId])
+}
+
+model CustomPayment {
+  id           String     @id @default(cuid())
+  customTripId String
+  trip         CustomTrip @relation(fields: [customTripId], references: [id], onDelete: Cascade)
+  amount       Int
+  date         DateTime   @default(now())
+  mode         String     @default("upi")
+  note         String?
+
+  @@index([customTripId])
 }
 
 // Activity log — a running history of what was added / changed / deleted,
@@ -239,6 +299,7 @@ model Customer {
   notes     String?
   createdAt DateTime  @default(now())
   bookings  Booking[]
+  customTrips CustomTrip[]
 
   @@index([orgId])
 }

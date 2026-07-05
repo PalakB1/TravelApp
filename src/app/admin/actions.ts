@@ -31,6 +31,15 @@ export async function suspendOrg(formData: FormData) {
   await setOrgStatus(String(formData.get("orgId")), "suspended");
 }
 
+// Toggle the "Custom trips" module for one org (off by default).
+export async function toggleCustomTrips(formData: FormData) {
+  await requirePlatformAdmin();
+  const orgId = String(formData.get("orgId"));
+  const enable = String(formData.get("enable")) === "yes";
+  await prisma.organization.update({ where: { id: orgId }, data: { customTripsEnabled: enable } });
+  revalidatePath("/admin");
+}
+
 // Step into an org's dashboard to view/help. Scopes all queries to that org
 // until the admin exits (see exitOrgAction).
 export async function enterOrgAction(formData: FormData) {

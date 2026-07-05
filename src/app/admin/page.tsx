@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { approveOrg, rejectOrg, suspendOrg, enterOrgAction } from "./actions";
+import { approveOrg, rejectOrg, suspendOrg, enterOrgAction, toggleCustomTrips } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -75,12 +75,21 @@ export default async function AdminPage() {
       <h2 style={{ fontSize: 15, margin: "24px 0 10px", color: "var(--text-2)" }}>All organizations</h2>
       <div className="card" style={{ padding: 0 }}>
         <table className="t">
-          <thead><tr><th style={{ paddingLeft: 20 }}>Organization</th><th>Status</th><th className="num">Users</th><th className="num">Trips</th><th className="num">Customers</th><th></th></tr></thead>
+          <thead><tr><th style={{ paddingLeft: 20 }}>Organization</th><th>Status</th><th>Custom trips</th><th className="num">Users</th><th className="num">Trips</th><th className="num">Customers</th><th></th></tr></thead>
           <tbody>
             {others.map((o) => (
               <tr key={o.id}>
                 <td style={{ paddingLeft: 20 }}><b>{o.name}</b><br /><span className="small muted">{o.users[0]?.email}</span></td>
                 <td><span className={`badge ${STATUS_BADGE[o.status] || "gray"}`}>{o.status}</span></td>
+                <td>
+                  <form action={toggleCustomTrips}>
+                    <input type="hidden" name="orgId" value={o.id} />
+                    <input type="hidden" name="enable" value={o.customTripsEnabled ? "no" : "yes"} />
+                    <button className={`sm ${o.customTripsEnabled ? "" : ""}`} type="submit" title="Toggle the Custom trips module">
+                      {o.customTripsEnabled ? "🟢 On — turn off" : "○ Off — turn on"}
+                    </button>
+                  </form>
+                </td>
                 <td className="num">{o._count.users}</td>
                 <td className="num">{o._count.trips}</td>
                 <td className="num">{o._count.customers}</td>
@@ -94,7 +103,7 @@ export default async function AdminPage() {
                 </td>
               </tr>
             ))}
-            {others.length === 0 && <tr><td colSpan={6} className="empty">No approved organizations yet.</td></tr>}
+            {others.length === 0 && <tr><td colSpan={7} className="empty">No approved organizations yet.</td></tr>}
           </tbody>
         </table>
       </div>

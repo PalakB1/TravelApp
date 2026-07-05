@@ -29,14 +29,18 @@ function Icon({ name }: { name: string }) {
     passport: <><rect x="4" y="2" width="16" height="20" rx="2" /><circle cx="12" cy="10" r="3" /><path d="M9 17h6" /></>,
     shield: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></>,
     team: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M17 3.13a4 4 0 0 1 2 3.71" /><path d="M19 8h4" /><path d="M21 6v4" /></>,
+    compass: <><circle cx="12" cy="12" r="10" /><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" /></>,
     gear: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H2a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 3.6 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H8a1.65 1.65 0 0 0 1-1.51V2a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V8a1.65 1.65 0 0 0 1.51 1H22a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>,
   };
   return <svg {...common}>{paths[name]}</svg>;
 }
 
-export default function Sidebar({ name, isPlatformAdmin = false, actingOrgId = null }: { name: string; isPlatformAdmin?: boolean; actingOrgId?: string | null }) {
+export default function Sidebar({ name, isPlatformAdmin = false, actingOrgId = null, customTrips = false }: { name: string; isPlatformAdmin?: boolean; actingOrgId?: string | null; customTrips?: boolean }) {
   const path = usePathname();
   const isActive = (href: string) => (href === "/dashboard" ? path === "/dashboard" : path.startsWith(href));
+
+  const navLinks = [...links];
+  if (customTrips) navLinks.splice(2, 0, { href: "/custom-trips", label: "Custom trips", icon: "compass" });
 
   const closeMenu = (e: React.MouseEvent) => (e.currentTarget as HTMLElement).closest("details")?.removeAttribute("open");
 
@@ -54,7 +58,7 @@ export default function Sidebar({ name, isPlatformAdmin = false, actingOrgId = n
           </form>
         )}
         <nav className="nav">
-          {links.map((l) => (
+          {navLinks.map((l) => (
             <Link key={l.href} href={l.href} className={isActive(l.href) ? "active" : ""}>
               <Icon name={l.icon} />
               {l.label}
@@ -82,7 +86,7 @@ export default function Sidebar({ name, isPlatformAdmin = false, actingOrgId = n
         <details className="mobile-menu">
           <summary className="btn sm" style={{ listStyle: "none", cursor: "pointer" }}>☰ Menu</summary>
           <nav className="mobile-nav">
-            {links.map((l) => (
+            {navLinks.map((l) => (
               <Link key={l.href} href={l.href} onClick={closeMenu} className={isActive(l.href) ? "active" : ""}>
                 <Icon name={l.icon} />
                 {l.label}

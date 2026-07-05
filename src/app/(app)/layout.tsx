@@ -36,22 +36,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const ctx = await getOrgContext();
   if (!ctx) redirect("/login");
 
+  const org = ctx.orgId
+    ? await prisma.organization.findUnique({ where: { id: ctx.orgId }, select: { status: true, name: true, customTripsEnabled: true } })
+    : null;
+
   // A normal user only gets in if their org is approved. The platform admin
   // always gets in (they operate their own org and can enter others).
-  if (!ctx.isPlatformAdmin) {
-    const org = ctx.orgId
-      ? await prisma.organization.findUnique({ where: { id: ctx.orgId }, select: { status: true, name: true } })
-      : null;
-    if (!org || org.status !== "approved") {
-      return <WaitingScreen status={org?.status ?? "unknown"} name={ctx.session.name} orgName={org?.name} />;
-    }
+  if (!ctx.isPlatformAdmin && (!org || org.status !== "approved")) {
+    return <WaitingScreen status={org?.status ?? "unknown"} name={ctx.session.name} orgName={org?.name} />;
   }
 
   return (
     <div className="app">
       <EscToClose />
       <CollapseOnSave />
-      <Sidebar name={ctx.session.name} isPlatformAdmin={ctx.isPlatformAdmin} actingOrgId={ctx.actingOrgId} />
+      <Sidebar name={ctx.session.name} isPlatformAdmin={ctx.isPlatformAdmin} actingOrgId={ctx.actingOrgId} customTrips={org?.customTripsEnabled ?? false} />
       <main className="main">{children}</main>
     </div>
   );
