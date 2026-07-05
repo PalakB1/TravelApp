@@ -92,10 +92,13 @@ export default function LandingClient() {
           <p className={`${s.sub} ${s.up}`} style={{ animationDelay: "0.12s" }}>
             Trips, itineraries, bookings, GST/TCS invoicing, payments, visas and profit — the whole route of a group-tour business, mapped in one beautifully fast dashboard.
           </p>
-          <div className={`${s.ctaRow} ${s.up}`} style={{ animationDelay: "0.18s" }}>
-            <Link href="/signup" className={`${s.btn} ${s.primary} ${s.big}`}>Create your workspace →</Link>
+          <form action="/signup" method="get" className={`${s.emailForm} ${s.up}`} style={{ animationDelay: "0.18s" }}>
+            <div className={s.emailWrap}>
+              <input className={s.emailInput} name="email" type="email" required placeholder="you@company.com" aria-label="Your work email" />
+              <button type="submit" className={`${s.btn} ${s.primary}`}>Start free →</button>
+            </div>
             <Link href="/login" className={`${s.btn} ${s.ghost} ${s.big}`}>Sign in</Link>
-          </div>
+          </form>
           <div className={`${s.trust} ${s.up}`} style={{ animationDelay: "0.24s" }}>
             <span><b>Free</b> to start</span><span><b>Approved</b> in hours</span><span>Your data stays <b>yours</b></span>
           </div>
