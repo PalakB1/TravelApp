@@ -5,6 +5,7 @@ import { requireOrgId } from "@/lib/org";
 import { bookingTotal, bookingPaid, bookingBalance, isActive } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import { updateCustomer, deleteCustomer } from "../../data-actions";
+import Stamp from "@/components/Stamp";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
         <div>
           <div className="small muted"><Link href="/customers" style={{ color: "var(--text-2)" }}>← Customers</Link></div>
           <h1 style={{ marginTop: 6 }}>{c.name}</h1>
-          <p className="sub">{[c.phone, c.email].filter(Boolean).join(" · ") || "No contact details yet"} · Added {fmtDate(c.createdAt)}</p>
+          <p className="sub">{[c.phone, c.email].filter(Boolean).join(" · ") || "No contact details yet"} · Added <Stamp created={c.createdAt} updated={c.updatedAt} /></p>
         </div>
         <details className="menu-pop" style={{ position: "relative" }}>
           <summary className="btn sm" style={{ listStyle: "none", cursor: "pointer", color: "var(--danger)", borderColor: "var(--danger-bg)" }}>Delete customer</summary>

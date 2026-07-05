@@ -5,6 +5,7 @@ import { bookingTotal, bookingPaid, bookingBalance, isActive } from "@/lib/calc"
 import { formatINR } from "@/lib/money";
 import TableSearch from "@/components/TableSearch";
 import ActivityLog from "@/components/ActivityLog";
+import Stamp from "@/components/Stamp";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +53,7 @@ export default async function CustomersPage() {
                 <tr key={c.id}>
                   <td style={{ paddingLeft: 20 }}><Link className="row-link" href={`/customers/${c.id}`}>{c.name}</Link></td>
                   <td className="muted small">{c.phone || "—"}</td>
-                  <td className="muted small">{c.createdAt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</td>
+                  <td><Stamp created={c.createdAt} updated={c.updatedAt} /></td>
                   <td>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                       {tripNames.length ? tripNames.map((tn) => <span key={tn} className="badge accent">{tn}</span>) : <span className="muted small">—</span>}

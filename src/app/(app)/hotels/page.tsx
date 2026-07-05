@@ -5,6 +5,7 @@ import { pricePerRoom } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import TableSearch from "@/components/TableSearch";
 import ActivityLog from "@/components/ActivityLog";
+import Stamp from "@/components/Stamp";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +57,7 @@ export default async function HotelsPage() {
                 <tr>
                   <th>Hotel</th><th>Booked for (check-in → out)</th><th>Trip</th><th>Location</th>
                   <th className="num">Rooms</th><th className="num">Cost</th><th className="num">/room</th>
-                  <th>Status</th><th>Hold until</th><th>Source</th>
+                  <th>Status</th><th>Hold until</th><th>Source</th><th>Added</th>
                 </tr>
               </thead>
               <tbody>
@@ -72,6 +73,7 @@ export default async function HotelsPage() {
                     <td><span className={`badge ${h.status === "final" ? "green" : h.status === "hold" ? "amber" : "red"}`}>{h.status}</span></td>
                     <td className="muted small">{fmtDate(h.holdUntil)}</td>
                     <td className="muted small">{h.source || "—"}</td>
+                    <td><Stamp created={h.createdAt} updated={h.updatedAt} /></td>
                   </tr>
                 ))}
               </tbody>

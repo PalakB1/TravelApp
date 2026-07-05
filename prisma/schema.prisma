@@ -19,6 +19,7 @@ model Organization {
   status             String   @default("pending") // pending | approved | rejected | suspended
   customTripsEnabled Boolean  @default(false) // "Custom trips" module — off by default, toggled by platform admin
   createdAt          DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   users        User[]
   trips        Trip[]
@@ -47,6 +48,7 @@ model CustomTrip {
   tcsRate     Int       @default(2)
   notes       String?
   createdAt   DateTime  @default(now())
+  updatedAt DateTime @updatedAt
 
   items    CustomItem[]
   payments CustomPayment[]
@@ -69,6 +71,7 @@ model CustomItem {
   taxable      Boolean    @default(true) // does this line attract GST + TCS
   notes        String?
   createdAt    DateTime   @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([customTripId])
 }
@@ -92,6 +95,7 @@ model ActivityLog {
   orgId       String? // owning organization (backfilled to the default org)
   org         Organization? @relation(fields: [orgId], references: [id])
   createdAt   DateTime      @default(now())
+  updatedAt DateTime @updatedAt
   category    String // hotel | booking | customer | payment | trip | car | team | admin
   action      String // added | updated | deleted | status | entered | exited
   summary     String // human-readable line
@@ -143,6 +147,7 @@ model VisaApplicant {
   status          String    @default("collecting") // collecting | ready | appointment | submitted | approved | rejected
   appointmentAt   DateTime? // VFS appointment date/time
   createdAt       DateTime  @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Login accounts. Each user belongs to one organization (equal access within it).
@@ -156,6 +161,7 @@ model User {
   name            String
   passwordHash    String
   createdAt       DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([orgId])
 }
@@ -175,6 +181,7 @@ model Trip {
   maxPerRoom    Int             @default(2) // guests per room (double sharing), for the rooms-coverage check
   notes         String?
   createdAt     DateTime        @default(now())
+  updatedAt DateTime @updatedAt
 
   variants      Variant[]
   inclusions    Inclusion[]
@@ -200,6 +207,7 @@ model Night {
   notes     String?
   extra     Boolean        @default(false) // an add-on night outside the core itinerary (booked per customer need; no room requirement)
   createdAt DateTime       @default(now())
+  updatedAt DateTime @updatedAt
   hotels    HotelBooking[]
 }
 
@@ -217,6 +225,7 @@ model HotelBooking {
   confirmationNo String?
   notes          String?
   createdAt      DateTime  @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // A car in the trip's self-drive fleet.
@@ -240,6 +249,7 @@ model Car {
   confirmationNo String?
   notes          String?
   createdAt      DateTime  @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Price options for a trip (Deluxe, Standard, single/twin, with/without flights...)
@@ -268,6 +278,7 @@ model Inclusion {
   taxable         Boolean @default(true)   // does the charge attract GST + TCS
   perPax          Boolean @default(true)
   createdAt       DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   selections      BookingInclusion[]
 }
@@ -298,6 +309,7 @@ model Customer {
   email     String?
   notes     String?
   createdAt DateTime  @default(now())
+  updatedAt DateTime @updatedAt
   bookings  Booking[]
   customTrips CustomTrip[]
 
@@ -345,6 +357,7 @@ model Booking {
 
   status         String    @default("confirmed") // enquiry | confirmed | travelled | cancelled
   createdAt      DateTime  @default(now())
+  updatedAt DateTime @updatedAt
   payments       Payment[]
   travellers     Traveller[]
   inclusions     BookingInclusion[]
@@ -361,6 +374,7 @@ model Traveller {
   extraCharge Int      @default(0) // extra billed to this specific person (supplement, upgrade…)
   extraNote   String? // why (e.g. "single room")
   createdAt   DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Money received against a booking (advance, installments, balance)
@@ -388,6 +402,7 @@ model PendingPayment {
   payerName  String?
   note       String?
   createdAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Operational bookings YOU make for a trip — hotels, cars, flights — and what they cost
@@ -404,4 +419,5 @@ model VendorBooking {
   confirmationNo String?
   date           DateTime?
   createdAt      DateTime  @default(now())
+  updatedAt DateTime @updatedAt
 }
