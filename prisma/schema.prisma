@@ -144,6 +144,8 @@ model VisaApplicant {
   dependents      String? // family staying home — ties to home
   investments     String? // property, FDs, MFs — financial roots
   notes           String?
+  visaType        String?   @default("schengen") // schengen | generic — chosen when the link is shared
+  visaCountry     String? // country name shown on the generic template (e.g. New Zealand)
   status          String    @default("collecting") // collecting | ready | appointment | submitted | approved | rejected
   appointmentAt   DateTime? // VFS appointment date/time
   createdAt       DateTime  @default(now())

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireOrgId } from "@/lib/org";
-import { visaCoverLetter, visaChecklist } from "@/lib/visa";
+import { visaCoverLetter, visaChecklist, visaLabel } from "@/lib/visa";
 import { updateVisaApplicant, deleteVisaApplicant } from "../../data-actions";
 import PrintButton from "@/components/PrintButton";
 
@@ -42,7 +42,7 @@ export default async function VisaDetailPage({ params }: { params: Promise<{ id:
       <div className="page-head no-print">
         <div>
           <div className="small muted"><Link href="/visas" style={{ color: "var(--text-2)" }}>← Visa desk</Link></div>
-          <h1 style={{ marginTop: 6 }}>{a.fullName}</h1>
+          <h1 style={{ marginTop: 6 }}>{a.fullName} <span className="badge accent" style={{ verticalAlign: "middle" }}>{visaLabel(a)}</span></h1>
           <p className="sub">Visa application · {a.trip.name}</p>
         </div>
         <div className="flex" style={{ gap: 8 }}>
@@ -80,7 +80,7 @@ export default async function VisaDetailPage({ params }: { params: Promise<{ id:
 
       {/* ALL DETAILS — to transcribe into the Schengen application form */}
       <div className="card no-print">
-        <div className="card-title">All details <span className="small muted">everything the applicant entered — for filling the Schengen form</span></div>
+        <div className="card-title">All details <span className="small muted">everything the applicant entered — for filling the visa form</span></div>
         <div className="grid-2">
           <div>
             <Field label="Full name (passport)" value={a.fullName} />

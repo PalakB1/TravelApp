@@ -51,6 +51,8 @@ export async function submitVisaApplicant(_prev: VisaResult | undefined, formDat
       dependents: str(formData.get("dependents")),
       investments: str(formData.get("investments")),
       notes: str(formData.get("notes")),
+      visaType: str(formData.get("visaType")) || "schengen",
+      visaCountry: str(formData.get("visaCountry")),
     },
   });
   revalidatePath("/", "layout");

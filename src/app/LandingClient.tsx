@@ -8,7 +8,7 @@ const FEATURES = [
   { icon: "🗺", title: "Trips & itineraries", body: "Build night-by-night self-drive routes, flag hotel gaps, track holds before they expire, and manage your car fleet with per-driver costs.", wide: true },
   { icon: "🧾", title: "Bookings as invoices", body: "Land / visa / flight line items with automatic GST + TCS, discounts and per-traveller extras — the maths matches your accountant’s sheet." },
   { icon: "◈", title: "Payments & collections", body: "Log installments, see who owes what, and let customers self-report payments via a shareable link you approve." },
-  { icon: "⌖", title: "Visa desk", body: "Send travellers one form; get back a tailored Schengen cover letter and document checklist, with appointment tracking." },
+  { icon: "⌖", title: "Visa desk", body: "Send travellers one form; get back a tailored cover letter and document checklist — Schengen or any country — with appointment tracking." },
   { icon: "▚", title: "Live profit analytics", body: "Revenue, cost, profit, margin and outstanding — recomputed instantly across every trip, with charts that actually mean something." },
   { icon: "❖", title: "Multi-tenant by design", body: "Every company gets its own private, isolated workspace. Sign up, get approved, and your data is yours alone.", wide: true },
 ];

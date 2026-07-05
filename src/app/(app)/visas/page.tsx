@@ -2,7 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireOrgId } from "@/lib/org";
 import VisaTripFilter from "@/components/VisaTripFilter";
-import CopyLink from "@/components/CopyLink";
+import VisaLinkBuilder from "@/components/VisaLinkBuilder";
+import { visaLabel } from "@/lib/visa";
 
 export const dynamic = "force-dynamic";
 
@@ -42,11 +43,11 @@ export default async function VisasPage({ searchParams }: { searchParams: Promis
       </div>
 
       <div className="card" style={{ background: "var(--accent-bg)", borderColor: "transparent" }}>
-        <div className="card-title">🔗 Visa form link <span className="small muted">pick a trip, then share the link with its travellers</span></div>
-        <div className="flex" style={{ gap: 12, flexWrap: "wrap" }}>
+        <div className="card-title">🔗 Visa form link <span className="small muted">pick a trip &amp; visa type, then share the link with its travellers</span></div>
+        <div style={{ display: "grid", gap: 12 }}>
           <VisaTripFilter trips={trips} selected={tripId || ""} />
           {selectedTrip
-            ? <CopyLink path={`/visa/${selectedTrip.id}`} label="Copy link" waText={`Please fill your visa details for ${selectedTrip.name} here:`} />
+            ? <VisaLinkBuilder tripId={selectedTrip.id} tripName={selectedTrip.name} />
             : <span className="small muted">Choose a trip above to get its form link.</span>}
         </div>
       </div>
@@ -58,13 +59,14 @@ export default async function VisasPage({ searchParams }: { searchParams: Promis
           <table className="t">
             <thead>
               <tr>
-                <th style={{ paddingLeft: 20 }}>Applicant</th><th>Trip</th><th>Submitted</th><th>Appointment</th><th>Status</th><th></th>
+                <th style={{ paddingLeft: 20 }}>Applicant</th><th>Visa</th><th>Trip</th><th>Submitted</th><th>Appointment</th><th>Status</th><th></th>
               </tr>
             </thead>
             <tbody>
               {applicants.map((a) => (
                 <tr key={a.id}>
                   <td style={{ paddingLeft: 20 }}><Link className="row-link" href={`/visas/${a.id}`}>{a.fullName}</Link></td>
+                  <td><span className="badge accent">{visaLabel(a)}</span></td>
                   <td className="muted small">{a.trip.name}</td>
                   <td className="muted small">{fmt(a.createdAt)}</td>
                   <td className="muted small">{fmtDT(a.appointmentAt)}</td>

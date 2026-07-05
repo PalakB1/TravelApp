@@ -12,10 +12,11 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-export default function VisaForm({ tripId }: { tripId: string }) {
+export default function VisaForm({ tripId, visaType = "schengen", visaCountry = "" }: { tripId: string; visaType?: string; visaCountry?: string }) {
   const [state, action, pending] = useActionState<VisaResult | undefined, FormData>(submitVisaApplicant, undefined);
   const [prevVisa, setPrevVisa] = useState("");
   const hasPrevVisa = prevVisa.trim() !== "" && prevVisa.trim().toLowerCase() !== "no";
+  const schengen = visaType === "schengen";
 
   if (state?.ok) {
     return (
@@ -30,6 +31,8 @@ export default function VisaForm({ tripId }: { tripId: string }) {
   return (
     <form action={action}>
       <input type="hidden" name="tripId" value={tripId} />
+      <input type="hidden" name="visaType" value={visaType} />
+      <input type="hidden" name="visaCountry" value={visaCountry} />
 
       <Section title="You (as in passport)">
         <label className="field"><span className="lbl">Full name</span><input name="fullName" placeholder="As printed in passport" required /></label>
@@ -91,7 +94,7 @@ export default function VisaForm({ tripId }: { tripId: string }) {
         <label className="field"><span className="lbl">Past international travel</span><input name="travelHistory" placeholder="e.g. UK 2019, Singapore 2022, Dubai 2023 — or None" /></label>
       </Section>
 
-      <Section title="Funding & Schengen history">
+      <Section title={schengen ? "Funding & Schengen history" : "Funding & travel"}>
         <div className="row-3">
           <label className="field"><span className="lbl">Who is paying?</span>
             <select name="funding" defaultValue="self"><option value="self">Myself</option><option value="sponsor">A sponsor</option></select>
@@ -99,14 +102,18 @@ export default function VisaForm({ tripId }: { tripId: string }) {
           <label className="field"><span className="lbl">Sponsor name (if any)</span><input name="sponsorName" /></label>
           <label className="field"><span className="lbl">Relation to sponsor</span><input name="sponsorRelation" placeholder="e.g. father, spouse" /></label>
         </div>
-        <label className="field"><span className="lbl">Previous Schengen visas?</span><input name="prevSchengen" value={prevVisa} onChange={(e) => setPrevVisa(e.target.value)} placeholder="No — or e.g. France 2023" /></label>
-        {hasPrevVisa && (
-          <label className="field" style={{ background: "var(--accent-bg)", borderRadius: 10, padding: "10px 12px" }}>
-            <span className="flex" style={{ gap: 8, cursor: "pointer" }}>
-              <input type="checkbox" name="wantsLongTerm" value="yes" style={{ width: 16, height: 16 }} />
-              <span className="small">I would like to apply for a <b>long-term multiple-entry visa</b> (you’ve held a Schengen visa before, so you may qualify). <b>Note:</b> this needs travel insurance valid for <b>1 year</b>.</span>
-            </span>
-          </label>
+        {schengen && (
+          <>
+            <label className="field"><span className="lbl">Previous Schengen visas?</span><input name="prevSchengen" value={prevVisa} onChange={(e) => setPrevVisa(e.target.value)} placeholder="No — or e.g. France 2023" /></label>
+            {hasPrevVisa && (
+              <label className="field" style={{ background: "var(--accent-bg)", borderRadius: 10, padding: "10px 12px" }}>
+                <span className="flex" style={{ gap: 8, cursor: "pointer" }}>
+                  <input type="checkbox" name="wantsLongTerm" value="yes" style={{ width: 16, height: 16 }} />
+                  <span className="small">I would like to apply for a <b>long-term multiple-entry visa</b> (you’ve held a Schengen visa before, so you may qualify). <b>Note:</b> this needs travel insurance valid for <b>1 year</b>.</span>
+                </span>
+              </label>
+            )}
+          </>
         )}
         <label className="field"><span className="lbl">Travelling alone or with someone?</span><input name="travellingWith" placeholder="e.g. alone — or with spouse & 2 children / with a tour group" /></label>
         <label className="field"><span className="lbl">Anything else</span><input name="notes" placeholder="optional" /></label>

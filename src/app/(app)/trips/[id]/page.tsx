@@ -18,7 +18,7 @@ import {
 import ImportItinerary from "@/components/ImportItinerary";
 import CloseDetails from "@/components/CloseDetails";
 import AutoFill from "@/components/AutoFill";
-import CopyLink from "@/components/CopyLink";
+import VisaLinkBuilder from "@/components/VisaLinkBuilder";
 
 export const dynamic = "force-dynamic";
 
@@ -618,13 +618,13 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
       {/* VISA */}
       <details className="section">
         <summary>
-          <span className="sec-title">Schengen visa forms</span>
+          <span className="sec-title">Visa forms</span>
           <span className="sec-hi" style={{ marginLeft: "auto", marginRight: 12 }}>{trip.visaApplicants.length} submitted</span>
         </summary>
         <div className="sec-body">
           <div className="form-box" style={{ marginBottom: 14 }}>
-            <div className="small" style={{ fontWeight: 600, marginBottom: 6 }}>🔗 Visa form link — share with every traveller on this trip</div>
-            <CopyLink path={`/visa/${trip.id}`} label="Copy link" waText={`Please fill your visa details for ${trip.name} here:`} />
+            <div className="small" style={{ fontWeight: 600, marginBottom: 6 }}>🔗 Visa form link — pick the visa type, then share with every traveller on this trip</div>
+            <VisaLinkBuilder tripId={trip.id} tripName={trip.name} />
             <p className="small muted" style={{ margin: "8px 0 0" }}>Each traveller fills it once; they instantly get a cover letter + document checklist (print/PDF), and a submission appears below.</p>
           </div>
           {trip.visaApplicants.length === 0 ? (
