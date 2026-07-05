@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { formatINRShort } from "@/lib/money";
-import { customOrgId, ctRevenue, ctOutstanding } from "./lib";
+import { customOrgId, ctRevenue, ctOutstanding, ctCost, ctProfit } from "./lib";
 import { createCustomTrip } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +23,13 @@ export default async function CustomTripsPage() {
   });
   const customers = await prisma.customer.findMany({ where: { orgId }, select: { name: true }, orderBy: { name: "asc" } });
 
+  const live = trips.filter((t) => t.status !== "cancelled");
+  const totRev = live.reduce((s, t) => s + ctRevenue(t), 0);
+  const totCost = live.reduce((s, t) => s + ctCost(t), 0);
+  const totProfit = live.reduce((s, t) => s + ctProfit(t), 0);
+  const totOut = live.reduce((s, t) => s + ctOutstanding(t), 0);
+  const margin = totRev > 0 ? Math.round((totProfit / totRev) * 100) : 0;
+
   return (
     <>
       <div className="page-head">
@@ -30,6 +37,13 @@ export default async function CustomTripsPage() {
           <h1>Custom trips</h1>
           <p className="sub">{trips.length} bespoke itiner{trips.length === 1 ? "y" : "ies"} · book flights, hotels or anything, per client</p>
         </div>
+      </div>
+
+      <div className="metrics">
+        <div className="metric c-emerald"><div className="label">Revenue</div><div className="value">{formatINRShort(totRev)}</div><div className="foot">across {live.length} trip{live.length === 1 ? "" : "s"}</div></div>
+        <div className="metric c-amber"><div className="label">Your cost</div><div className="value">{formatINRShort(totCost)}</div><div className="foot">all line items</div></div>
+        <div className="metric c-violet"><div className="label">Profit</div><div className="value">{formatINRShort(totProfit)}</div><div className="foot">{margin}% margin</div></div>
+        <div className={`metric ${totOut > 0 ? "c-rose" : "c-emerald"}`}><div className="label">Outstanding</div><div className="value">{formatINRShort(totOut)}</div><div className="foot">due from clients</div></div>
       </div>
 
       <div className="card" style={{ background: "var(--accent-bg)", borderColor: "transparent" }}>

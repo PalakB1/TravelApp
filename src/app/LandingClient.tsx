@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import s from "./landing.module.css";
+import { captureLead } from "./lead-actions";
 
 const FEATURES = [
   { icon: "🗺", title: "Trips & itineraries", body: "Build night-by-night group routes — or fully bespoke, per-client trips. Flag hotel gaps, track holds before they expire, and manage your car fleet with per-driver costs.", wide: true },
@@ -92,7 +93,7 @@ export default function LandingClient() {
           <p className={`${s.sub} ${s.up}`} style={{ animationDelay: "0.12s" }}>
             Trips, itineraries, bookings, GST/TCS invoicing, payments, visas and profit — the whole route of a group-tour business, mapped in one beautifully fast dashboard.
           </p>
-          <form action="/signup" method="get" className={`${s.emailForm} ${s.up}`} style={{ animationDelay: "0.18s" }}>
+          <form action={captureLead} className={`${s.emailForm} ${s.up}`} style={{ animationDelay: "0.18s" }}>
             <div className={s.emailWrap}>
               <input className={s.emailInput} name="email" type="email" required placeholder="you@company.com" aria-label="Your work email" />
               <button type="submit" className={`${s.btn} ${s.primary}`}>Start free →</button>

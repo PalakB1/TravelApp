@@ -88,6 +88,17 @@ model CustomPayment {
   @@index([customTripId])
 }
 
+// A marketing lead — an email captured on the landing page hero, even if the
+// visitor never completes signup. Platform-level (not org-scoped).
+model Lead {
+  id        String   @id @default(cuid())
+  email     String
+  source    String?  @default("landing")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 // Activity log — a running history of what was added / changed / deleted,
 // grouped by category so each menu (Hotels, Bookings, …) can show its own feed.
 model ActivityLog {

@@ -32,6 +32,7 @@ export default async function AdminPage() {
 
   const pending = orgs.filter((o) => o.status === "pending");
   const others = orgs.filter((o) => o.status !== "pending");
+  const leads = await prisma.lead.findMany({ orderBy: { createdAt: "desc" }, take: 100 });
 
   return (
     <div style={{ maxWidth: 960, margin: "0 auto", padding: "28px 20px 60px" }}>
@@ -106,6 +107,26 @@ export default async function AdminPage() {
             {others.length === 0 && <tr><td colSpan={7} className="empty">No approved organizations yet.</td></tr>}
           </tbody>
         </table>
+      </div>
+
+      <h2 style={{ fontSize: 15, margin: "24px 0 10px", color: "var(--text-2)" }}>Signup interest <span className="small muted">emails captured on the landing page</span></h2>
+      <div className="card" style={{ padding: 0 }}>
+        {leads.length === 0 ? (
+          <div className="empty">No leads yet.</div>
+        ) : (
+          <table className="t">
+            <thead><tr><th style={{ paddingLeft: 20 }}>Email</th><th>Source</th><th>When</th></tr></thead>
+            <tbody>
+              {leads.map((l) => (
+                <tr key={l.id}>
+                  <td style={{ paddingLeft: 20 }}>{l.email}</td>
+                  <td className="muted small">{l.source || "—"}</td>
+                  <td className="muted small">{l.createdAt.toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true })}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

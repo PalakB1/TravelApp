@@ -6,7 +6,7 @@ import {
   customOrgId, ITEM_TYPES, ITEM_ICON, ITEM_LABEL,
   ctRevenue, ctCost, ctProfit, ctTaxable, ctGst, ctTcs, ctItemsNonTax, ctTotal, ctPaid, ctOutstanding,
 } from "../lib";
-import { addItem, deleteItem, addPayment, deletePayment, updateCustomTrip, deleteCustomTrip } from "../actions";
+import { addItem, updateItem, deleteItem, addPayment, deletePayment, updateCustomTrip, deleteCustomTrip } from "../actions";
 import StatusPicker from "../StatusPicker";
 
 export const dynamic = "force-dynamic";
@@ -68,7 +68,34 @@ export default async function CustomTripDetail({ params }: { params: Promise<{ i
                 <td>{i.taxable ? <span className="badge sky">GST</span> : <span className="badge gray">no tax</span>}</td>
                 <td className="num" style={{ fontWeight: 500 }}>{formatINR(i.sell * i.qty)}</td>
                 <td className="num">
-                  <form action={deleteItem}><input type="hidden" name="id" value={i.id} /><button className="sm" type="submit">✕</button></form>
+                  <div className="flex" style={{ gap: 6, justifyContent: "flex-end" }}>
+                    <details className="menu-pop" style={{ position: "relative" }}>
+                      <summary className="sm" style={{ listStyle: "none", cursor: "pointer" }}>Edit</summary>
+                      <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", width: 300, maxWidth: "80vw", zIndex: 30, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, boxShadow: "0 12px 32px rgba(27,28,43,0.16)", padding: 14, textAlign: "left" }}>
+                        <form action={updateItem}>
+                          <input type="hidden" name="id" value={i.id} />
+                          <label className="field"><span className="lbl">Type</span>
+                            <select name="type" defaultValue={i.type}>{ITEM_TYPES.map((x) => <option key={x.value} value={x.value}>{x.icon} {x.label}</option>)}</select>
+                          </label>
+                          <label className="field"><span className="lbl">Description</span><input name="description" defaultValue={i.description} /></label>
+                          <div className="row-2">
+                            <label className="field"><span className="lbl">Supplier</span><input name="supplier" defaultValue={i.supplier || ""} /></label>
+                            <label className="field"><span className="lbl">Date</span><input name="date" type="date" defaultValue={d(i.date)} /></label>
+                          </div>
+                          <div className="row-3">
+                            <label className="field"><span className="lbl">Qty</span><input name="qty" type="number" min="1" defaultValue={i.qty} /></label>
+                            <label className="field"><span className="lbl">Cost</span><input name="cost" defaultValue={i.cost || ""} /></label>
+                            <label className="field"><span className="lbl">Sell</span><input name="sell" defaultValue={i.sell || ""} /></label>
+                          </div>
+                          <label className="field"><span className="lbl">GST/TCS?</span>
+                            <select name="taxable" defaultValue={i.taxable ? "yes" : "no"}><option value="yes">Yes — taxable</option><option value="no">No tax</option></select>
+                          </label>
+                          <button className="primary sm" type="submit">Save item</button>
+                        </form>
+                      </div>
+                    </details>
+                    <form action={deleteItem}><input type="hidden" name="id" value={i.id} /><button className="sm" type="submit">✕</button></form>
+                  </div>
                 </td>
               </tr>
             ))}

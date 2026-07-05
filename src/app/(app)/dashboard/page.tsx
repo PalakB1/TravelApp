@@ -6,7 +6,7 @@ import { formatINR, formatINRShort } from "@/lib/money";
 import QuickEntry from "@/components/QuickEntry";
 import { Donut, HBars } from "@/components/Charts";
 import DateRangeFilter from "@/components/DateRangeFilter";
-import { ctRevenue, ctProfit } from "../custom-trips/lib";
+import { ctRevenue, ctProfit, ctCost, ctOutstanding, ctTax, ctTotal, ctPaid } from "../custom-trips/lib";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +65,22 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     taxCollectedAll += f.taxCollected;
     return { trip: t, f };
   });
+
+  // Custom trips (bespoke, per-client) in the same window — folded into the totals.
+  const customTrips = await prisma.customTrip.findMany({
+    where: { orgId, status: { not: "cancelled" }, OR: [{ startDate: null }, { startDate: { gte: rangeFrom, lte: rangeTo } }] },
+    include: { items: true, payments: true },
+  });
+  const custRevenue = customTrips.reduce((s, ct) => s + ctRevenue(ct), 0);
+  const custCost = customTrips.reduce((s, ct) => s + ctCost(ct), 0);
+  const custOut = customTrips.reduce((s, ct) => s + ctOutstanding(ct), 0);
+  const custTax = customTrips.reduce((s, ct) => s + ctTax(ct), 0);
+  const custBilled = customTrips.reduce((s, ct) => s + ctTotal(ct), 0);
+  const custPaid = customTrips.reduce((s, ct) => s + ctPaid(ct), 0);
+  revenue += custRevenue;
+  cost += custCost;
+  outstanding += custOut;
+
   const profit = revenue - cost;
   const margin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
 
@@ -91,8 +107,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
   // ---- Chart data ----
   const allActive = trips.flatMap((t) => t.bookings).filter((b) => isActive(b.status));
-  const totalPaid = allActive.reduce((s, b) => s + bookingPaid(b), 0);
-  const totalInvoiced = allActive.reduce((s, b) => s + bookingTotal(b), 0);
+  const totalPaid = allActive.reduce((s, b) => s + bookingPaid(b), 0) + custPaid;
+  const totalInvoiced = allActive.reduce((s, b) => s + bookingTotal(b), 0) + custBilled;
 
   const PKG: Record<string, { name: string; color: string }> = {
     land: { name: "Land only", color: "#0ea5e9" },
@@ -102,12 +118,6 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const pkgMap = new Map<string, number>();
   for (const b of allActive) pkgMap.set(b.packageType, (pkgMap.get(b.packageType) || 0) + bookingRevenue(b));
   const packageMix = [...pkgMap.entries()].map(([k, v]) => ({ name: PKG[k]?.name || k, value: v, color: PKG[k]?.color || "#9094ac" }));
-
-  // Custom trips (bespoke, per-client) in the same window — listed compactly below.
-  const customTrips = await prisma.customTrip.findMany({
-    where: { orgId, status: { not: "cancelled" }, OR: [{ startDate: null }, { startDate: { gte: rangeFrom, lte: rangeTo } }] },
-    include: { items: true, payments: true },
-  });
 
   const revByTrip = perTrip
     .map(({ trip, f }) => ({ label: trip.name, value: f.revenue, sub: `${f.pax} travellers${f.hiredDrivers > 0 ? ` + ${f.hiredDrivers} driver${f.hiredDrivers > 1 ? "s" : ""}` : ""} · profit ${formatINRShort(f.profit)} · ${Math.round(f.margin * 100)}%`, color: "var(--accent-grad)", href: `/trips/${trip.id}` }))
@@ -119,7 +129,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     .sort((a, b) => b.rev - a.rev)
     .slice(0, 6);
 
-  const taxCollected = allActive.reduce((s, b) => s + bookingTax(b), 0);
+  const taxCollected = allActive.reduce((s, b) => s + bookingTax(b), 0) + custTax;
   const taxRemitted = allActive.filter((b) => b.taxRemitted).reduce((s, b) => s + bookingTax(b), 0);
   const taxPending = taxCollected - taxRemitted;
 
