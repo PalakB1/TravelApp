@@ -38,6 +38,21 @@ export default function SignupForm({ defaultEmail = "" }: { defaultEmail?: strin
             <span className="lbl">Password</span>
             <input name="password" type="password" placeholder="at least 6 characters" autoComplete="new-password" />
           </label>
+
+          <details style={{ margin: "4px 0 14px" }}>
+            <summary className="small muted" style={{ cursor: "pointer" }}>Business &amp; GST details (optional — for invoices, editable later)</summary>
+            <div style={{ marginTop: 10 }}>
+              <label className="field"><span className="lbl">Legal business name</span><input name="legalName" placeholder="e.g. Nordic Self-Drive Tours Pvt Ltd" /></label>
+              <label className="field"><span className="lbl">GSTIN</span><input name="gstin" placeholder="15-digit GSTIN" /></label>
+              <label className="field"><span className="lbl">Registered address</span><input name="gstAddress" placeholder="As on GST registration" /></label>
+              <div className="row-2">
+                <label className="field"><span className="lbl">State</span><input name="gstState" placeholder="e.g. Maharashtra" /></label>
+                <label className="field"><span className="lbl">State code</span><input name="gstStateCode" placeholder="e.g. 27" /></label>
+              </div>
+              <p className="small muted" style={{ margin: 0 }}>You can skip this and add it anytime under Settings → Business &amp; GST details.</p>
+            </div>
+          </details>
+
           <div className="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY} data-theme="auto" style={{ marginBottom: 12 }} />
           {state?.error && (
             <p className="small" style={{ color: "var(--danger)", margin: "0 0 12px" }}>{state.error}</p>

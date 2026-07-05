@@ -18,6 +18,14 @@ model Organization {
   name               String
   status             String   @default("pending") // pending | approved | rejected | suspended
   customTripsEnabled Boolean  @default(false) // "Custom trips" module — off by default, toggled by platform admin
+  // Business / GST profile — printed on tax invoices (filled in Settings).
+  legalName          String?
+  gstin              String?
+  gstAddress         String?
+  gstState           String?
+  gstStateCode       String?
+  sacCode            String?  @default("998555") // SAC for tour-operator services
+  invoiceNote        String?
   createdAt          DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -86,6 +94,16 @@ model CustomPayment {
   note         String?
 
   @@index([customTripId])
+}
+
+// Gapless invoice serial counter, one row per org per financial year.
+model InvoiceSeq {
+  id     String @id @default(cuid())
+  orgId  String
+  fy     String // "2026-27"
+  lastNo Int    @default(0)
+
+  @@unique([orgId, fy])
 }
 
 // A marketing lead — an email captured on the landing page hero, even if the
@@ -355,6 +373,10 @@ model Booking {
   discount       Int       @default(0)
   discountReason String?
   notes          String? // free-text remarks (e.g. "1 night less", "Perlan paid extra")
+
+  // GST tax-invoice number (gapless, per-org, per-financial-year) once generated
+  invoiceNo      String?
+  invoiceDate    DateTime?
 
   // GST + TCS remittance to the government
   taxRemitted    Boolean   @default(false)

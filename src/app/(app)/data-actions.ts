@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getOrgContext } from "@/lib/org";
 import { parseAmount, formatINR } from "@/lib/money";
+import { financialYear } from "@/lib/invoice";
 
 // Every mutation runs through guard(), which returns the EFFECTIVE org id. All
 // reads/writes below are scoped to it so one org can never touch another's data.
@@ -16,6 +17,28 @@ async function guard(): Promise<string> {
 
 function refresh() {
   revalidatePath("/", "layout");
+}
+
+// Assign a gapless, per-org, per-FY tax-invoice number to a booking (once).
+export async function generateInvoice(formData: FormData) {
+  const orgId = await guard();
+  const id = String(formData.get("id"));
+  const booking = await prisma.booking.findFirst({ where: { id, trip: { orgId } }, select: { id: true, invoiceNo: true } });
+  if (!booking || booking.invoiceNo) { refresh(); return; }
+  const now = new Date();
+  const fy = financialYear(now);
+  const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { name: true, legalName: true } });
+  const prefix = (org?.legalName || org?.name || "INV").replace(/[^A-Za-z]/g, "").slice(0, 4).toUpperCase() || "INV";
+  const seq = await prisma.invoiceSeq.upsert({
+    where: { orgId_fy: { orgId, fy } },
+    create: { orgId, fy, lastNo: 1 },
+    update: { lastNo: { increment: 1 } },
+    select: { lastNo: true },
+  });
+  const invoiceNo = `${prefix}/${fy}/${String(seq.lastNo).padStart(4, "0")}`;
+  await prisma.booking.update({ where: { id }, data: { invoiceNo, invoiceDate: now } });
+  await logActivity(orgId, "booking", "status", `Generated tax invoice ${invoiceNo}`, `/invoice/${id}`);
+  refresh();
 }
 
 // Ownership checks — return the row only if it belongs to this org, else null.

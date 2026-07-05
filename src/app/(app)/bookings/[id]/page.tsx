@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireOrgId } from "@/lib/org";
 import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookingTotal, bookingPaid, bookingBalance, bookingInclTaxCharge, bookingInclNonTaxCharge, bookingInclusionCost } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
-import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion } from "../../data-actions";
+import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, generateInvoice } from "../../data-actions";
 import AutoFill from "@/components/AutoFill";
 import CopyLink from "@/components/CopyLink";
 
@@ -71,10 +71,15 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
             {b.customerId ? <> · <Link href={`/customers/${b.customerId}`} style={{ color: "var(--accent)" }}>View customer</Link></> : null}
           </p>
         </div>
-        <form action={deleteBooking}>
-          <input type="hidden" name="id" value={b.id} />
-          <button className="danger sm" type="submit">Delete booking</button>
-        </form>
+        <div className="flex" style={{ gap: 8, flexWrap: "wrap" }}>
+          {b.invoiceNo
+            ? <Link className="btn sm" href={`/invoice/${b.id}`}>🧾 Invoice {b.invoiceNo}</Link>
+            : <form action={generateInvoice}><input type="hidden" name="id" value={b.id} /><button className="btn sm" type="submit">🧾 Generate GST invoice</button></form>}
+          <form action={deleteBooking}>
+            <input type="hidden" name="id" value={b.id} />
+            <button className="danger sm" type="submit">Delete booking</button>
+          </form>
+        </div>
       </div>
 
       <div className="metrics">

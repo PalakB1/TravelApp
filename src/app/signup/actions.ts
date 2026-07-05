@@ -47,11 +47,19 @@ export async function signup(_prev: { error?: string } | undefined, formData: Fo
 
   const passwordHash = await bcrypt.hash(password, 10);
 
+  const s = (k: string) => String(formData.get(k) || "").trim() || null;
+
   // New org starts in "pending" — it can't enter the app until an admin approves.
+  // Business/GST details are optional here and fully editable later in Settings.
   const org = await prisma.organization.create({
     data: {
       name: company,
       status: "pending",
+      legalName: s("legalName"),
+      gstin: s("gstin"),
+      gstAddress: s("gstAddress"),
+      gstState: s("gstState"),
+      gstStateCode: s("gstStateCode"),
       users: { create: { name, email, passwordHash } },
     },
     include: { users: true },
