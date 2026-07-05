@@ -6,6 +6,8 @@ import { bookingTotal, bookingPaid, bookingBalance, isActive } from "@/lib/calc"
 import { formatINR } from "@/lib/money";
 import { updateCustomer, deleteCustomer } from "../../data-actions";
 import Stamp from "@/components/Stamp";
+import { formatINRShort } from "@/lib/money";
+import { ctRevenue, ctOutstanding } from "../../custom-trips/lib";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +25,10 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
   const orgId = await requireOrgId();
   const c = await prisma.customer.findFirst({
     where: { id, orgId },
-    include: { bookings: { include: { trip: true, variant: true, payments: true }, orderBy: { createdAt: "desc" } } },
+    include: {
+      bookings: { include: { trip: true, variant: true, payments: true }, orderBy: { createdAt: "desc" } },
+      customTrips: { include: { items: true, payments: true }, orderBy: { createdAt: "desc" } },
+    },
   });
   if (!c) notFound();
 
@@ -59,7 +64,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
       </div>
 
       <div className="metrics">
-        <div className="metric c-sky"><div className="label">Trips</div><div className="value">{trips}</div><div className="foot">{active.length} bookings</div></div>
+        <div className="metric c-sky"><div className="label">Trips</div><div className="value">{trips + c.customTrips.length}</div><div className="foot">{active.length} booking{active.length === 1 ? "" : "s"}{c.customTrips.length ? ` · ${c.customTrips.length} custom` : ""}</div></div>
         <div className="metric c-violet"><div className="label">Invoiced</div><div className="value">{formatINR(invoiced)}</div></div>
         <div className="metric c-emerald"><div className="label">Paid</div><div className="value">{formatINR(paid)}</div></div>
         <div className={`metric ${outstanding > 0 ? "c-rose" : "c-emerald"}`}><div className="label">Outstanding</div><div className="value">{formatINR(outstanding)}</div></div>
@@ -91,6 +96,29 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
           </table>
         )}
       </div>
+
+      {c.customTrips.length > 0 && (
+        <div className="card">
+          <div className="card-title">Custom trips <span className="small muted">bespoke itineraries for this client</span></div>
+          <table className="t">
+            <thead><tr><th>Trip</th><th>Dates</th><th>Status</th><th className="num">Revenue</th><th className="num">Outstanding</th></tr></thead>
+            <tbody>
+              {c.customTrips.map((ct) => {
+                const out = ctOutstanding(ct);
+                return (
+                  <tr key={ct.id}>
+                    <td><Link className="row-link" href={`/custom-trips/${ct.id}`}>{ct.title}</Link></td>
+                    <td className="muted small">{fmtDate(ct.startDate)}{ct.endDate ? ` – ${fmtDate(ct.endDate)}` : ""}</td>
+                    <td>{statusBadge(ct.status)}</td>
+                    <td className="num">{formatINRShort(ctRevenue(ct))}</td>
+                    <td className="num">{out > 0 ? <span className="badge amber">{formatINRShort(out)}</span> : <span className="badge green">clear</span>}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="card">
         <div className="card-title">Contact details</div>

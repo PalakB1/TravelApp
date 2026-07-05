@@ -55,7 +55,7 @@ export async function matchCustomer(orgId: string, name: string) {
   return all.find((c) => c.name.trim().toLowerCase() === trimmed.toLowerCase()) ?? null;
 }
 
-async function findOrCreateCustomer(orgId: string, name: string, phone: string | null) {
+export async function findOrCreateCustomer(orgId: string, name: string, phone: string | null) {
   const existing = await matchCustomer(orgId, name);
   if (existing) {
     if (phone && !existing.phone) {

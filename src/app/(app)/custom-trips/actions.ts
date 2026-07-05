@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { parseAmount } from "@/lib/money";
-import { logActivity } from "../data-actions";
+import { logActivity, findOrCreateCustomer } from "../data-actions";
 import { customOrgId } from "./lib";
 
 function toDate(v: FormDataEntryValue | null): Date | null {
@@ -28,23 +28,36 @@ export async function createCustomTrip(formData: FormData) {
   const title = String(formData.get("title") || "").trim() || "Custom trip";
   if (!clientName) return;
 
-  // Link to an existing customer by name if there is one (same directory as trips).
-  const match = await prisma.customer.findFirst({ where: { orgId, name: { equals: clientName, mode: "insensitive" } }, select: { id: true, phone: true } });
+  // Find-or-CREATE the customer so they show up in the Customers directory —
+  // same shared directory as group trips (one client, all their trips).
+  const phone = String(formData.get("clientPhone") || "").trim() || null;
+  const customer = await findOrCreateCustomer(orgId, clientName, phone);
 
   const ct = await prisma.customTrip.create({
     data: {
       orgId,
-      clientName,
-      clientPhone: match?.phone || String(formData.get("clientPhone") || "").trim() || null,
-      customerId: match?.id || null,
+      clientName: customer.name,
+      clientPhone: customer.phone || phone,
+      customerId: customer.id,
       title,
       startDate: toDate(formData.get("startDate")),
       endDate: toDate(formData.get("endDate")),
     },
   });
-  await logActivity(orgId, "custom", "added", `New custom trip “${title}” for ${clientName}`, `/custom-trips/${ct.id}`);
+  await logActivity(orgId, "custom", "added", `New custom trip “${title}” for ${customer.name}`, `/custom-trips/${ct.id}`);
   refresh();
   redirect(`/custom-trips/${ct.id}`);
+}
+
+// Quick status change from the detail header (auto-saves).
+export async function setCustomTripStatus(formData: FormData) {
+  const orgId = await customOrgId();
+  if (!orgId) return;
+  const id = String(formData.get("id"));
+  if (!(await own(orgId, id))) return;
+  await prisma.customTrip.update({ where: { id }, data: { status: String(formData.get("status") || "enquiry") } });
+  await logActivity(orgId, "custom", "status", `Custom trip marked ${formData.get("status")}`, `/custom-trips/${id}`);
+  refresh();
 }
 
 export async function updateCustomTrip(formData: FormData) {
@@ -52,12 +65,17 @@ export async function updateCustomTrip(formData: FormData) {
   if (!orgId) return;
   const id = String(formData.get("id"));
   if (!(await own(orgId, id))) return;
+  // Keep the customer directory in sync — re-link (or create) on rename.
+  const clientName = String(formData.get("clientName") || "").trim() || "Client";
+  const phone = String(formData.get("clientPhone") || "").trim() || null;
+  const customer = await findOrCreateCustomer(orgId, clientName, phone);
   await prisma.customTrip.update({
     where: { id },
     data: {
       title: String(formData.get("title") || "").trim() || "Custom trip",
-      clientName: String(formData.get("clientName") || "").trim() || "Client",
-      clientPhone: String(formData.get("clientPhone") || "").trim() || null,
+      clientName: customer.name,
+      clientPhone: customer.phone || phone,
+      customerId: customer.id,
       status: String(formData.get("status") || "enquiry"),
       startDate: toDate(formData.get("startDate")),
       endDate: toDate(formData.get("endDate")),

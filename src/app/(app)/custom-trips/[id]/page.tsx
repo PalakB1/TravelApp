@@ -3,14 +3,14 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { formatINR, formatINRShort } from "@/lib/money";
 import {
-  customOrgId, ITEM_TYPES, ITEM_ICON, ITEM_LABEL, CT_STATUS,
+  customOrgId, ITEM_TYPES, ITEM_ICON, ITEM_LABEL,
   ctRevenue, ctCost, ctProfit, ctTaxable, ctGst, ctTcs, ctItemsNonTax, ctTotal, ctPaid, ctOutstanding,
 } from "../lib";
 import { addItem, deleteItem, addPayment, deletePayment, updateCustomTrip, deleteCustomTrip } from "../actions";
+import StatusPicker from "../StatusPicker";
 
 export const dynamic = "force-dynamic";
 
-const STATUS: Record<string, string> = { enquiry: "gray", confirmed: "sky", travelled: "green", cancelled: "rose" };
 function d(v: Date | null) { return v ? new Date(v).toISOString().slice(0, 10) : ""; }
 function fmt(v: Date | null) { return v ? new Date(v).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"; }
 
@@ -34,8 +34,11 @@ export default async function CustomTripDetail({ params }: { params: Promise<{ i
       <div className="page-head">
         <div>
           <div className="small muted"><Link href="/custom-trips" style={{ color: "var(--text-2)" }}>← Custom trips</Link></div>
-          <h1 style={{ marginTop: 6 }}>{t.title} <span className={`badge ${STATUS[t.status] || "gray"}`} style={{ verticalAlign: "middle" }}>{t.status}</span></h1>
-          <p className="sub">{t.clientName}{t.clientPhone ? ` · ${t.clientPhone}` : ""} · {fmt(t.startDate)}{t.endDate ? ` – ${fmt(t.endDate)}` : ""}</p>
+          <h1 style={{ marginTop: 6 }}>{t.title}</h1>
+          <p className="sub">
+            {t.customerId ? <Link className="row-link" href={`/customers/${t.customerId}`}>{t.clientName}</Link> : t.clientName}{t.clientPhone ? ` · ${t.clientPhone}` : ""} · {fmt(t.startDate)}{t.endDate ? ` – ${fmt(t.endDate)}` : ""}
+            <span style={{ marginLeft: 10 }}><StatusPicker id={t.id} status={t.status} /></span>
+          </p>
         </div>
       </div>
 
@@ -154,10 +157,12 @@ export default async function CustomTripDetail({ params }: { params: Promise<{ i
             <label className="field"><span className="lbl">Client name</span><input name="clientName" defaultValue={t.clientName} /></label>
             <label className="field"><span className="lbl">Phone</span><input name="clientPhone" defaultValue={t.clientPhone || ""} /></label>
           </div>
+          {/* Status is changed from the header picker; keep it here so Save doesn't reset it. */}
+          <input type="hidden" name="status" value={t.status} />
           <div className="row-3">
-            <label className="field"><span className="lbl">Status</span><select name="status" defaultValue={t.status}>{CT_STATUS.map((s) => <option key={s}>{s}</option>)}</select></label>
             <label className="field"><span className="lbl">Start</span><input name="startDate" type="date" defaultValue={d(t.startDate)} /></label>
             <label className="field"><span className="lbl">End</span><input name="endDate" type="date" defaultValue={d(t.endDate)} /></label>
+            <div className="field" />
           </div>
           <div className="row-3">
             <label className="field"><span className="lbl">Discount (₹)</span><input name="discount" defaultValue={t.discount || ""} placeholder="0" /></label>
