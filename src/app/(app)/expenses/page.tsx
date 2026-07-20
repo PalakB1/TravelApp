@@ -96,12 +96,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
         <div className="card-title">Add a spend <span className="small muted">tag it to a trip or leave it general · attach the invoice if you have it</span></div>
         <form action={addExpense}>
           <div className="row-3">
-            <label className="field"><span className="lbl">Amount</span><input name="amount" placeholder="12000 or 12k" required /></label>
-            <label className="field"><span className="lbl">Paid to (vendor)</span><input name="payee" placeholder="Hotel Kviknes / Blue Car Rental…" /></label>
-            <label className="field"><span className="lbl">Date</span><input name="date" type="date" /></label>
-          </div>
-          <div className="row-3">
-            <label className="field"><span className="lbl">Assign to</span>
+            <label className="field"><span className="lbl">Which trip?</span>
               <select name="target" defaultValue={filter && tripIdSet.has(filter) ? `trip:${filter}` : ""}>
                 <option value="">General / no trip</option>
                 {trips.map((t) => {
@@ -116,16 +111,21 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                 })}
               </select>
             </label>
-            <label className="field"><span className="lbl">Category</span>
+            <label className="field"><span className="lbl">Expense type</span>
               <select name="category" defaultValue="misc">
                 {CATS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </label>
+            <label className="field"><span className="lbl">Amount</span><input name="amount" placeholder="12000 or 12k" required /></label>
+          </div>
+          <div className="row-3">
+            <label className="field"><span className="lbl">Paid to (vendor)</span><input name="payee" placeholder="Hotel Kviknes / Blue Car Rental…" /></label>
             <label className="field"><span className="lbl">Payment mode</span>
               <select name="paymentMode" defaultValue="bank">
                 <option value="bank">Bank transfer</option><option value="upi">UPI</option><option value="card">Card</option><option value="cash">Cash</option><option value="other">Other</option>
               </select>
             </label>
+            <label className="field"><span className="lbl">Date</span><input name="date" type="date" /></label>
           </div>
           <div className="row-3">
             <label className="field"><span className="lbl">Status</span>

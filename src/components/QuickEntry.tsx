@@ -69,23 +69,23 @@ export default function QuickEntry({ payable, trips, customerNames, sources }: P
       {action === "expense" && (
         <form action={addExpense} key="expense">
           <div className="row-3">
-            <label className="field"><span className="lbl">Amount spent</span><input name="amount" placeholder="12000 or 12k" required /></label>
-            <label className="field"><span className="lbl">Paid to (vendor)</span><input name="payee" placeholder="Hotel · car · guide…" /></label>
-            <label className="field"><span className="lbl">Date</span><input name="date" type="date" defaultValue={today} /></label>
-          </div>
-          <div className="row-3">
-            <label className="field"><span className="lbl">Assign to</span>
+            <label className="field"><span className="lbl">Which trip?</span>
               <select name="target" defaultValue="">
                 <option value="">General / no trip</option>
                 {trips.map((t) => <option key={t.id} value={`trip:${t.id}`}>{t.name}</option>)}
               </select>
             </label>
-            <label className="field"><span className="lbl">Category</span>
+            <label className="field"><span className="lbl">Expense type</span>
               <select name="category" defaultValue="misc">{EXP_CATS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
             </label>
+            <label className="field"><span className="lbl">Amount spent</span><input name="amount" placeholder="12000 or 12k" required /></label>
+          </div>
+          <div className="row-3">
+            <label className="field"><span className="lbl">Paid to (vendor)</span><input name="payee" placeholder="Hotel · car · guide…" /></label>
             <label className="field"><span className="lbl">Mode</span>
               <select name="paymentMode" defaultValue="bank"><option value="bank">Bank transfer</option><option value="upi">UPI</option><option value="card">Card</option><option value="cash">Cash</option><option value="other">Other</option></select>
             </label>
+            <label className="field"><span className="lbl">Date</span><input name="date" type="date" defaultValue={today} /></label>
           </div>
           <div className="row">
             <label className="field"><span className="lbl">Notes</span><input name="notes" placeholder="3 nights · advance / balance…" /></label>
