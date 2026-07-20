@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { bookingTotal, bookingPaid, bookingBalance } from "@/lib/calc";
+import { bookingTotal } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import { amountInWords } from "@/lib/invoice";
 import PrintButton from "@/components/PrintButton";
@@ -23,8 +23,10 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
   const org = b.trip.org;
   const agency = org?.legalName || org?.name || "Trip Desk";
   const total = bookingTotal(b);
-  const paidToDate = bookingPaid(b);
-  const balance = bookingBalance(b);
+  // As of THIS receipt's date — so an older receipt isn't polluted by later payments.
+  const asOf = new Date(p.date).getTime();
+  const receivedToDate = b.payments.filter((x) => new Date(x.date).getTime() <= asOf).reduce((s, x) => s + x.amount, 0);
+  const balance = total - receivedToDate;
 
   const Row = ({ l, v, strong }: { l: string; v: string; strong?: boolean }) => (
     <div className="between" style={{ padding: "7px 0", borderBottom: "1px solid var(--border)", fontWeight: strong ? 600 : 400 }}>
@@ -69,8 +71,8 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
 
           <div style={{ background: "var(--surface-2)", borderRadius: 10, padding: 12 }}>
             <div className="between small"><span className="muted">Total invoiced</span><span>{formatINR(total)}</span></div>
-            <div className="between small" style={{ marginTop: 4 }}><span className="muted">Total received to date</span><span>{formatINR(paidToDate)}</span></div>
-            <div className="between" style={{ marginTop: 6, fontWeight: 600 }}><span>Balance outstanding</span><span>{formatINR(balance)}</span></div>
+            <div className="between small" style={{ marginTop: 4 }}><span className="muted">Received up to {fmt(p.date)}</span><span>{formatINR(receivedToDate)}</span></div>
+            <div className="between" style={{ marginTop: 6, fontWeight: 600 }}><span>Balance as on {fmt(p.date)}</span><span>{formatINR(balance)}</span></div>
           </div>
 
           <p className="small muted" style={{ marginTop: 16, textAlign: "center" }}>

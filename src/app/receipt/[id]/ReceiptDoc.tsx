@@ -16,6 +16,7 @@ export type ReceiptProps = {
   total: string;
   paidToDate: string;
   balance: string;
+  asOf: string;
 };
 
 const s = StyleSheet.create({
@@ -62,8 +63,8 @@ export default function ReceiptDoc(p: ReceiptProps) {
 
         <View style={s.box}>
           <View style={s.boxRow}><Text style={s.label}>Total invoiced</Text><Text>{p.total}</Text></View>
-          <View style={s.boxRow}><Text style={s.label}>Total received to date</Text><Text>{p.paidToDate}</Text></View>
-          <View style={[s.boxRow, { marginBottom: 0 }]}><Text style={s.bold}>Balance outstanding</Text><Text style={s.bold}>{p.balance}</Text></View>
+          <View style={s.boxRow}><Text style={s.label}>Received up to {p.asOf}</Text><Text>{p.paidToDate}</Text></View>
+          <View style={[s.boxRow, { marginBottom: 0 }]}><Text style={s.bold}>Balance as on {p.asOf}</Text><Text style={s.bold}>{p.balance}</Text></View>
         </View>
 
         <Text style={s.footer}>Thank you for your payment. This is a computer-generated receipt and does not require a signature.</Text>

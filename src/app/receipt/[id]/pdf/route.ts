@@ -1,7 +1,7 @@
 import React from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { prisma } from "@/lib/db";
-import { bookingTotal, bookingPaid, bookingBalance } from "@/lib/calc";
+import { bookingTotal } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import { amountInWords } from "@/lib/invoice";
 import ReceiptDoc from "../ReceiptDoc";
@@ -20,6 +20,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const b = p.booking;
   const org = b.trip.org;
   const receiptNo = `RCPT-${p.id.slice(-6).toUpperCase()}`;
+  // Received total as of THIS receipt's date (not today's running total).
+  const asOfMs = new Date(p.date).getTime();
+  const receivedToDate = b.payments.filter((x) => new Date(x.date).getTime() <= asOfMs).reduce((s, x) => s + x.amount, 0);
   // The built-in PDF fonts have no ₹ glyph, so render amounts as "Rs."
   const inr = (n: number) => formatINR(n).replace("₹", "Rs. ");
   const ascii = (s?: string | null) => (s || "").replace(/[—–]/g, "-").replace(/·/g, "-").replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/…/g, "...").replace(/[^\x00-\xff]/g, "");
@@ -37,8 +40,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       amount: inr(p.amount),
       amountWords: amountInWords(p.amount).replace(/ Rupees Only$/, ""),
       total: inr(bookingTotal(b)),
-      paidToDate: inr(bookingPaid(b)),
-      balance: inr(bookingBalance(b)),
+      paidToDate: inr(receivedToDate),
+      balance: inr(bookingTotal(b) - receivedToDate),
+      asOf: p.date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
   }) as unknown as Parameters<typeof renderToBuffer>[0];
 
   const buffer = await renderToBuffer(element);
