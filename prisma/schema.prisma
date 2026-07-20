@@ -38,6 +38,33 @@ model Organization {
   customers    Customer[]
   activityLogs ActivityLog[]
   customTrips  CustomTrip[]
+  expenses     Expense[]
+}
+
+// Costing ledger: any money YOU spend — supplier invoices, ground costs, fuel,
+// salaries, marketing, software. Optionally tagged to a trip; untagged = general
+// overhead. Each row can carry an uploaded invoice/receipt file (base64).
+model Expense {
+  id          String       @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  tripId      String? // null = general / overhead (not tied to a trip)
+  trip        Trip?        @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  date        DateTime     @default(now())
+  category    String       @default("misc") // hotel | transport | flight | guide | permit | fuel | visa | marketing | salary | office | software | tax | misc
+  payee       String? // vendor / who you paid
+  amount      Int          @default(0) // rupees
+  status      String       @default("paid") // paid | pending
+  paymentMode String? // upi | cash | bank | card | other
+  notes       String?
+  fileName    String? // original name of the uploaded invoice
+  fileType    String? // mime type
+  fileData    String? // base64 data URL of the invoice/receipt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([orgId])
+  @@index([tripId])
 }
 
 // --- Custom trips module (bespoke, per-client à-la-carte itineraries) ---
@@ -244,6 +271,7 @@ model Trip {
   visaApplicants VisaApplicant[]
   access        TripAccess[]
   pendingPayments PendingPayment[]
+  expenses      Expense[]
 
   @@index([orgId])
 }
