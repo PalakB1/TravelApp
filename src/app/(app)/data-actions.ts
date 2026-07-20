@@ -167,9 +167,9 @@ export async function deleteCustomer(formData: FormData) {
   const id = String(formData.get("id"));
   const cust = await prisma.customer.findFirst({ where: { id, orgId }, select: { name: true } });
   if (!cust) return;
-  // Unlink any bookings (keep their history + denormalised name), then remove the customer.
-  await prisma.booking.updateMany({ where: { customerId: id }, data: { customerId: null } });
-  await prisma.customer.delete({ where: { id } });
+  // Soft-delete — the contact goes to the recycle bin, bookings stay linked so a
+  // restore brings everything back intact.
+  await prisma.customer.update({ where: { id }, data: { deletedAt: new Date() } });
   await logActivity(orgId, "customer", "deleted", `Deleted customer ${cust?.name ?? ""}`.trim());
   refresh();
   redirect("/customers");
@@ -207,8 +207,13 @@ export async function deleteTrip(formData: FormData) {
   const id = String(formData.get("id"));
   const trip = await prisma.trip.findFirst({ where: { id, orgId }, select: { name: true } });
   if (!trip) return;
-  await prisma.trip.delete({ where: { id } });
-  await logActivity(orgId, "trip", "deleted", `Deleted trip “${trip?.name ?? "trip"}”`);
+  // Soft-delete: stamp the trip and cascade the SAME stamp to its live bookings +
+  // expenses so they hide from standalone lists and restore together as one unit.
+  const now = new Date();
+  await prisma.trip.update({ where: { id }, data: { deletedAt: now } });
+  await prisma.booking.updateMany({ where: { tripId: id, deletedAt: null }, data: { deletedAt: now } });
+  await prisma.expense.updateMany({ where: { tripId: id, deletedAt: null }, data: { deletedAt: now } });
+  await logActivity(orgId, "trip", "deleted", `Deleted trip “${trip?.name ?? "trip"}” (recoverable)`);
   refresh();
   redirect("/trips");
 }
@@ -525,8 +530,8 @@ export async function deleteBooking(formData: FormData) {
   const id = String(formData.get("id"));
   const b = await prisma.booking.findFirst({ where: { id, trip: { orgId } }, select: { customerName: true } });
   if (!b) return;
-  await prisma.booking.delete({ where: { id } });
-  await logActivity(orgId, "booking", "deleted", `Deleted booking — ${b?.customerName ?? ""}`.trim());
+  await prisma.booking.update({ where: { id }, data: { deletedAt: new Date() } });
+  await logActivity(orgId, "booking", "deleted", `Deleted booking — ${b?.customerName ?? ""} (recoverable)`.trim());
   refresh();
 }
 

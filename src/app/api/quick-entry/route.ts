@@ -16,7 +16,7 @@ export async function GET() {
     where: scope.tripWhere,
     orderBy: [{ departureDate: "desc" }, { createdAt: "desc" }],
     include: {
-      bookings: { include: { payments: true, variant: true } },
+      bookings: { where: { deletedAt: null }, include: { payments: true, variant: true } },
       itinerary: { select: { hotels: { select: { source: true } } } },
       cars: { select: { source: true } },
     },

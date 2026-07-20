@@ -20,7 +20,7 @@ export default async function TripsPage() {
       itinerary: { include: { hotels: true } },
       cars: true,
       vendorBookings: true,
-      bookings: { include: { variant: true, payments: true } },
+      bookings: { where: { deletedAt: null }, include: { variant: true, payments: true } },
     },
     orderBy: [{ departureDate: "asc" }, { createdAt: "desc" }],
   });

@@ -94,8 +94,8 @@ export async function deleteCustomTrip(formData: FormData) {
   const id = String(formData.get("id"));
   if (!(await own(orgId, id))) return;
   const ct = await prisma.customTrip.findUnique({ where: { id }, select: { title: true, clientName: true } });
-  await prisma.customTrip.delete({ where: { id } });
-  await logActivity(orgId, "custom", "deleted", `Deleted custom trip “${ct?.title}” for ${ct?.clientName}`);
+  await prisma.customTrip.update({ where: { id }, data: { deletedAt: new Date() } });
+  await logActivity(orgId, "custom", "deleted", `Deleted custom trip “${ct?.title}” for ${ct?.clientName} (recoverable)`);
   refresh();
   redirect("/custom-trips");
 }

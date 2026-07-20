@@ -27,7 +27,9 @@ export async function getScope(): Promise<Scope | null> {
     if (user?.tripScoped) tripIds = user.tripAccess.map((a) => a.tripId);
   }
 
-  const tripWhere = tripIds ? { orgId, id: { in: tripIds } } : { orgId };
+  // `deletedAt: null` here means every trip-scoped query (and, via `viaTrip`,
+  // every child of a trip) automatically excludes soft-deleted trips.
+  const tripWhere = tripIds ? { orgId, id: { in: tripIds }, deletedAt: null } : { orgId, deletedAt: null };
   return { orgId, userId: ctx.session.userId, tripIds, tripWhere, viaTrip: { trip: tripWhere } };
 }
 

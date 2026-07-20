@@ -29,7 +29,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
       : { id, orgId: scope.orgId },
     include: {
       // Only bookings on trips this member may see (else other trip names leak).
-      bookings: { where: scope.tripIds ? { trip: { id: { in: scope.tripIds } } } : {}, include: { trip: true, variant: true, payments: true }, orderBy: { createdAt: "desc" } },
+      bookings: { where: { deletedAt: null, ...(scope.tripIds ? { trip: { id: { in: scope.tripIds } } } : {}) }, include: { trip: true, variant: true, payments: true }, orderBy: { createdAt: "desc" } },
       customTrips: { include: { items: true, payments: true }, orderBy: { createdAt: "desc" } },
     },
   });

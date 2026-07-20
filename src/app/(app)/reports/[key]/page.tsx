@@ -40,7 +40,7 @@ export default async function Report({ params }: { params: Promise<{ key: string
       itinerary: { include: { hotels: true } },
       cars: true,
       vendorBookings: true,
-      bookings: { include: { variant: true, payments: true } },
+      bookings: { where: { deletedAt: null }, include: { variant: true, payments: true } },
     },
     orderBy: [{ departureDate: "asc" }, { createdAt: "desc" }],
   });

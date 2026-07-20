@@ -107,8 +107,8 @@ export async function deleteExpense(formData: FormData) {
   const exp = await prisma.expense.findFirst({ where, select: { id: true, amount: true, payee: true } });
   if (!exp) { revalidatePath("/expenses"); return; }
 
-  await prisma.expense.delete({ where: { id: exp.id } });
-  await logActivity(scope.orgId, "expense", "delete", `Removed ${formatINR(exp.amount)} spend${exp.payee ? " to " + exp.payee : ""}`, "/expenses");
+  await prisma.expense.update({ where: { id: exp.id }, data: { deletedAt: new Date() } });
+  await logActivity(scope.orgId, "expense", "delete", `Removed ${formatINR(exp.amount)} spend${exp.payee ? " to " + exp.payee : ""} (recoverable)`, "/expenses");
   revalidatePath("/expenses");
   revalidatePath("/", "layout");
 }

@@ -63,7 +63,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
       cars: { orderBy: { createdAt: "asc" } },
       inclusions: { orderBy: { createdAt: "asc" } },
       visaApplicants: { orderBy: { createdAt: "desc" } },
-      bookings: { include: { variant: true, payments: true, travellers: true }, orderBy: { createdAt: "desc" } },
+      bookings: { where: { deletedAt: null }, include: { variant: true, payments: true, travellers: true }, orderBy: { createdAt: "desc" } },
     },
   });
   if (!trip) notFound();

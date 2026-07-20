@@ -37,7 +37,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       itinerary: { include: { hotels: true } },
       cars: true,
       vendorBookings: true,
-      bookings: { include: { variant: true, payments: true } },
+      bookings: { where: { deletedAt: null }, include: { variant: true, payments: true } },
     },
     orderBy: [{ departureDate: "asc" }, { createdAt: "desc" }],
   });
@@ -121,7 +121,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const customers = await prisma.customer.findMany({
     where: { orgId: scope.orgId },
     // Only bookings on trips this member may see (else other trip names leak).
-    include: { bookings: { where: scope.tripIds ? { trip: { id: { in: scope.tripIds } } } : {}, include: { variant: true, payments: true, trip: true } } },
+    include: { bookings: { where: { deletedAt: null, ...(scope.tripIds ? { trip: { id: { in: scope.tripIds } } } : {}) }, include: { variant: true, payments: true, trip: true } } },
   });
   const customerRows = customers
     .map((c) => {
@@ -135,7 +135,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
   // recent payments for an activity feel
   const recentPayments = await prisma.payment.findMany({
-    where: { booking: scope.viaTrip },
+    where: { booking: { ...scope.viaTrip, deletedAt: null } },
     take: 6,
     orderBy: { date: "desc" },
     include: { booking: { include: { trip: true } } },

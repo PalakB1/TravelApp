@@ -26,6 +26,7 @@ function Icon({ name }: { name: string }) {
     coins: <><ellipse cx="8" cy="6" rx="6" ry="3" /><path d="M2 6v6c0 1.66 2.69 3 6 3s6-1.34 6-3V6" /><path d="M2 12v6c0 1.66 2.69 3 6 3 1.5 0 2.87-.28 3.9-.75" /><circle cx="17" cy="15" r="5" /></>,
     more: <><circle cx="5" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="19" cy="12" r="1.6" /></>,
     plus: <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>,
+    trash: <><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></>,
     ticket: <><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 6 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-6z" /><line x1="13" y1="7" x2="13" y2="17" /></>,
     users: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>,
     bed: <><path d="M2 4v16" /><path d="M2 8h18a2 2 0 0 1 2 2v10" /><path d="M2 17h20" /><path d="M6 8v9" /></>,
@@ -56,6 +57,7 @@ export default function BottomNav({ isPlatformAdmin = false, actingOrgId = null,
     { href: "/tax", label: "GST / Tax", icon: "receipt" },
     { href: "/team", label: "Team", icon: "team" },
     { href: "/settings", label: "Settings", icon: "gear" },
+    { href: "/trash", label: "Recycle bin", icon: "trash" },
     ...(isPlatformAdmin ? [{ href: "/admin", label: "Admin", icon: "shield" }] : []),
   ];
 

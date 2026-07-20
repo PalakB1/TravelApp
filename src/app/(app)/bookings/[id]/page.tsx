@@ -35,7 +35,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
   // Known ages from every traveller ever added, so the same person's age
   // auto-fills next time they're entered on any trip (most recent age wins).
   const knownPeople = await prisma.traveller.findMany({
-    where: { age: { not: null }, booking: scope.viaTrip },
+    where: { age: { not: null }, booking: { ...scope.viaTrip, deletedAt: null } },
     orderBy: { createdAt: "desc" },
     select: { name: true, age: true },
   });

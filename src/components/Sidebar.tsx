@@ -77,6 +77,7 @@ export default function Sidebar({ name, isPlatformAdmin = false, actingOrgId = n
         </nav>
         <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
           <p className="small muted" style={{ padding: "0 11px 8px" }}>Signed in as {name}</p>
+          <Link href="/trash" className="sm" style={{ display: "flex", width: "100%", justifyContent: "center", marginBottom: 6 }}>🗑️ Recycle bin</Link>
           <Link href="/settings" className="sm" style={{ display: "flex", width: "100%", justifyContent: "center", marginBottom: 6 }}>Settings</Link>
           <form action={logout}>
             <button className="sm" style={{ width: "100%", justifyContent: "center" }} type="submit">Sign out</button>

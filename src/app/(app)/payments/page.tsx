@@ -24,13 +24,13 @@ export default async function PaymentsPage() {
     include: { trip: true, variant: true, payments: true },
   });
   const recent = await prisma.payment.findMany({
-    where: { booking: scope.viaTrip },
+    where: { booking: { ...scope.viaTrip, deletedAt: null } },
     take: 25,
     orderBy: { date: "desc" },
     include: { booking: { include: { trip: true } } },
   });
   const pending = await prisma.pendingPayment.findMany({
-    where: { OR: [{ booking: scope.viaTrip }, { trip: scope.tripWhere }] },
+    where: { OR: [{ booking: { ...scope.viaTrip, deletedAt: null } }, { trip: scope.tripWhere }] },
     orderBy: { createdAt: "desc" },
     include: { booking: { include: { trip: true } }, trip: true },
   });

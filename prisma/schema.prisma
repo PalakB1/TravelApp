@@ -68,9 +68,11 @@ model Expense {
   fileData    String? // base64 data URL of the invoice/receipt
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime? // soft-delete: hidden everywhere, restorable from the recycle bin
 
   @@index([orgId])
   @@index([tripId])
+  @@index([deletedAt])
 }
 
 // --- Custom trips module (bespoke, per-client à-la-carte itineraries) ---
@@ -95,11 +97,13 @@ model CustomTrip {
   createdAt   DateTime  @default(now())
   updatedAt DateTime @updatedAt
 
+  deletedAt   DateTime? // soft-delete: hidden everywhere, restorable from the recycle bin
   items    CustomItem[]
   payments CustomPayment[]
 
   @@index([orgId])
   @@index([customerId])
+  @@index([deletedAt])
 }
 
 model CustomItem {
@@ -280,8 +284,10 @@ model Trip {
   access        TripAccess[]
   pendingPayments PendingPayment[]
   expenses      Expense[]
+  deletedAt     DateTime? // soft-delete: hidden everywhere, restorable from the recycle bin
 
   @@index([orgId])
+  @@index([deletedAt])
 }
 
 // One night/stop of a self-drive itinerary: a date + where the group sleeps.
@@ -404,8 +410,10 @@ model Customer {
   updatedAt DateTime @updatedAt
   bookings  Booking[]
   customTrips CustomTrip[]
+  deletedAt DateTime? // soft-delete: hidden everywhere, restorable from the recycle bin
 
   @@index([orgId])
+  @@index([deletedAt])
 }
 
 // A customer booking on a trip
@@ -458,6 +466,9 @@ model Booking {
   travellers     Traveller[]
   inclusions     BookingInclusion[]
   pendingPayments PendingPayment[]
+  deletedAt      DateTime? // soft-delete: hidden everywhere, restorable from the recycle bin
+
+  @@index([deletedAt])
 }
 
 // An individual person on a booking (a family member / party member).

@@ -17,7 +17,7 @@ export default async function CustomersPage() {
       : { orgId: scope.orgId },
     include: {
       // Only surface bookings on trips this member may see (else other trip names leak).
-      bookings: { where: scope.tripIds ? { trip: { id: { in: scope.tripIds } } } : {}, include: { variant: true, payments: true, trip: true } },
+      bookings: { where: { deletedAt: null, ...(scope.tripIds ? { trip: { id: { in: scope.tripIds } } } : {}) }, include: { variant: true, payments: true, trip: true } },
     },
     orderBy: { name: "asc" },
   });
