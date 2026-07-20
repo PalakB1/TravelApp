@@ -32,15 +32,17 @@ export default function SaveToast() {
   if (!msg) return null;
   return (
     <div
+      className="save-toast"
       aria-live="polite"
       style={{
-        position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 2000,
+        position: "fixed", bottom: 24, left: "50%", zIndex: 2000,
         background: saved ? "var(--success)" : "var(--text)", color: "#fff",
         padding: "9px 20px", borderRadius: 999, fontSize: 13.5, fontWeight: 600,
         boxShadow: "0 10px 30px rgba(0,0,0,0.28)", pointerEvents: "none",
+        transition: "background .25s ease",
       }}
     >
-      {msg}
+      {saved ? "Saved ✓" : msg}
     </div>
   );
 }

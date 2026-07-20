@@ -291,3 +291,66 @@ details.add > summary:hover { background: #e4e1ff; transform: translateY(-1px); 
   border: 1.5px solid var(--border-strong); background: var(--surface); color: #fff; font-size: 14px; font-weight: 700; }
 .incl-toggle.on { background: var(--accent-grad); border-color: transparent; box-shadow: 0 2px 6px rgba(91,80,230,0.3); }
 .incl-toggle:hover { border-color: var(--accent); }
+
+/* ============================================================
+   Design polish v2 — shared tokens, typography rhythm, elevation,
+   focus, and motion. Appended last so it harmonises everything above.
+   ============================================================ */
+:root {
+  /* Gentle ease-out used for every interaction so motion feels consistent. */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* One elevation language — soft, slightly violet-tinted to match the brand. */
+  --shadow-xs: 0 1px 2px rgba(27, 28, 43, 0.05);
+  --shadow-sm: 0 2px 10px rgba(45, 42, 110, 0.06);
+  --shadow-md: 0 10px 28px rgba(45, 42, 110, 0.10);
+  --shadow-lg: 0 20px 46px rgba(27, 28, 43, 0.17);
+  --radius-sm: 9px;
+  --radius-lg: 16px;
+}
+
+/* — Typography rhythm — */
+body { line-height: 1.5; letter-spacing: -0.005em; }
+p { line-height: 1.6; }
+h1 { letter-spacing: -0.022em; }
+h2, h3 { letter-spacing: -0.015em; }
+.page-head h1 { font-size: 24px; line-height: 1.15; }
+.page-head .sub { line-height: 1.45; }
+
+/* — One consistent elevation + radius language — */
+.card, details.section { border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+  transition: box-shadow .22s var(--ease), transform .22s var(--ease), border-color .22s var(--ease); }
+.card:hover, details.section:hover { box-shadow: var(--shadow-md); }
+.metric { border-radius: var(--radius-lg); box-shadow: var(--shadow-xs);
+  transition: box-shadow .22s var(--ease), transform .22s var(--ease); }
+a.metric:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+.form-box, details.add .form-box { border-radius: var(--radius-lg); }
+
+/* — Keyboard focus: a clean brand ring instead of the browser outline — */
+a:focus-visible, button:focus-visible, .btn:focus-visible, summary:focus-visible {
+  outline: none; box-shadow: 0 0 0 3px var(--accent-bg), 0 0 0 1px var(--accent); }
+button.primary:focus-visible, .btn.primary:focus-visible {
+  box-shadow: 0 0 0 3px var(--accent-bg), 0 0 0 1px var(--accent), 0 7px 18px rgba(91, 80, 230, 0.4); }
+
+/* — Springier interactions — */
+button, .btn { transition: background .16s var(--ease), transform .12s var(--ease), box-shadow .16s var(--ease), filter .16s var(--ease); }
+.nav a, a.up-trip, a.hbar-row, table.t tbody tr, .log-row { transition: background .16s var(--ease), color .16s var(--ease); }
+.bar > span { transition: width .55s var(--ease); }
+
+/* — Motion: gentle reveals on mount — */
+@keyframes fadeSlideUp { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+@keyframes toastIn { from { opacity: 0; transform: translate(-50%, 16px) scale(.96); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+/* fill-mode `backwards` (not `both`) so the final `transform: none` isn't kept
+   after the animation — otherwise it would override :hover lifts on the tiles. */
+.card, details.section, .metric { animation: fadeSlideUp .32s var(--ease) backwards; }
+details.section[open] > .sec-body, details.add[open] .form-box { animation: fadeSlideUp .22s var(--ease) backwards; }
+
+/* — Save toast — */
+.save-toast { animation: toastIn .3s var(--ease) both; }
+
+/* — Warmer empty states — */
+.empty::before { content: "✨"; display: block; font-size: 24px; margin-bottom: 8px; opacity: .75; }
+
+/* — Respect the user's motion preference — */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+}
