@@ -1,6 +1,7 @@
 import { getOrgContext } from "@/lib/org";
 import { prisma } from "@/lib/db";
 import AddMemberForm from "./AddMemberForm";
+import ResetPasswordForm from "./ResetPasswordForm";
 import { removeMember, setTripAccess } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -79,12 +80,17 @@ export default async function TeamPage() {
                 </td>
                 <td className="muted small">{fmt(m.createdAt)}</td>
                 <td className="num">
-                  {m.id !== meId && !m.isPlatformAdmin ? (
-                    <form action={removeMember}>
-                      <input type="hidden" name="id" value={m.id} />
-                      <button className="sm" type="submit">Remove</button>
-                    </form>
-                  ) : <span className="muted small">—</span>}
+                  {m.isPlatformAdmin ? <span className="muted small">—</span> : (
+                    <div className="flex" style={{ gap: 6, justifyContent: "flex-end" }}>
+                      <ResetPasswordForm id={m.id} name={m.name} />
+                      {m.id !== meId && (
+                        <form action={removeMember}>
+                          <input type="hidden" name="id" value={m.id} />
+                          <button className="sm" type="submit">Remove</button>
+                        </form>
+                      )}
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}

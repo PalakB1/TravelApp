@@ -61,6 +61,25 @@ export async function setTripAccess(formData: FormData) {
   revalidatePath("/", "layout");
 }
 
+// Reset a teammate's password (for when they're locked out). Any org member can
+// do this for another member; they set a temporary password to hand over.
+export async function resetMemberPassword(_prev: MemberResult | undefined, formData: FormData): Promise<MemberResult> {
+  const ctx = await getOrgContext();
+  if (!ctx || !ctx.orgId) redirect("/login");
+  const orgId = ctx.orgId;
+  const id = String(formData.get("id"));
+  const password = String(formData.get("password") || "");
+  if (password.length < 8) return { error: "Temporary password must be at least 8 characters." };
+
+  const member = await prisma.user.findFirst({ where: { id, orgId, isPlatformAdmin: false }, select: { id: true, name: true, email: true } });
+  if (!member) return { error: "That member isn’t in this workspace." };
+
+  await prisma.user.update({ where: { id: member.id }, data: { passwordHash: await bcrypt.hash(password, 10) } });
+  await logActivity(orgId, "team", "updated", `Reset password for ${member.name} (${member.email})`);
+  revalidatePath("/team");
+  return { ok: true, message: `${member.name} can now sign in with that password — ask them to change it under Settings.` };
+}
+
 // Remove a member from the current org (can't remove yourself).
 export async function removeMember(formData: FormData) {
   const ctx = await getOrgContext();
