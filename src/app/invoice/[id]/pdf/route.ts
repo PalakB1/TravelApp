@@ -19,6 +19,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const org = b.trip.org;
   const inr = (n: number) => formatINR(n).replace("₹", "Rs. ");
+  // The base PDF fonts can't draw — – · … or non-Latin1 glyphs; normalise them.
+  const ascii = (s?: string | null) => (s || "").replace(/[—–]/g, "-").replace(/·/g, "-").replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/…/g, "...").replace(/[^\x00-\xff]/g, "");
   const gst = bookingGst(b);
   const gstHalf = Math.round(gst / 2);
   const nonTax = (b.nonTaxable || 0) + bookingInclNonTaxCharge(b);
@@ -26,19 +28,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const rate = b.gstRate ?? 5;
 
   const element = React.createElement(InvoiceDoc, {
-    agency: org?.legalName || org?.name || "Trip Desk",
-    gstAddress: org?.gstAddress ?? null,
+    agency: ascii(org?.legalName || org?.name || "Trip Desk"),
+    gstAddress: ascii(org?.gstAddress),
     gstin: org?.gstin ?? null,
-    gstState: org?.gstState ?? null,
+    gstState: ascii(org?.gstState),
     gstStateCode: org?.gstStateCode ?? null,
     logo: org?.logo ?? null,
     sacCode: org?.sacCode || "998555",
-    note: org?.invoiceNote ?? null,
+    note: ascii(org?.invoiceNote),
     invoiceNo: b.invoiceNo,
     date: (b.invoiceDate || b.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
-    customerName: b.customerName,
-    customerContact: [b.customer?.phone, b.customer?.email].filter(Boolean).join(" · "),
-    tripName: b.trip.name,
+    customerName: ascii(b.customerName),
+    customerContact: ascii([b.customer?.phone, b.customer?.email].filter(Boolean).join(" - ")),
+    tripName: ascii(b.trip.name),
     pax: b.pax,
     taxable: inr(bookingTaxable(b)),
     nonTax: inr(nonTax),

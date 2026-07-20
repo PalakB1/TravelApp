@@ -22,17 +22,18 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const receiptNo = `RCPT-${p.id.slice(-6).toUpperCase()}`;
   // The built-in PDF fonts have no ₹ glyph, so render amounts as "Rs."
   const inr = (n: number) => formatINR(n).replace("₹", "Rs. ");
+  const ascii = (s?: string | null) => (s || "").replace(/[—–]/g, "-").replace(/·/g, "-").replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/…/g, "...").replace(/[^\x00-\xff]/g, "");
 
   const element = React.createElement(ReceiptDoc, {
-      agency: org?.legalName || org?.name || "Trip Desk",
-      gstAddress: org?.gstAddress ?? null,
+      agency: ascii(org?.legalName || org?.name || "Trip Desk"),
+      gstAddress: ascii(org?.gstAddress),
       gstin: org?.gstin ?? null,
       receiptNo,
       date: p.date.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
-      customerName: b.customerName,
-      tripName: b.trip.name,
+      customerName: ascii(b.customerName),
+      tripName: ascii(b.trip.name),
       mode: p.mode.toUpperCase(),
-      note: p.note ?? null,
+      note: ascii(p.note),
       amount: inr(p.amount),
       amountWords: amountInWords(p.amount).replace(/ Rupees Only$/, ""),
       total: inr(bookingTotal(b)),
