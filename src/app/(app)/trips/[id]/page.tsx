@@ -13,8 +13,9 @@ import {
   addCar, updateCar, deleteCar,
   addInclusion, updateInclusion, deleteInclusion,
   deleteVisaApplicant,
-  duplicateTrip, updateTripRooms,
+  duplicateTrip, updateTripRooms, renameTrip,
 } from "../../data-actions";
+import InlineTitle from "@/components/InlineTitle";
 import ImportItinerary from "@/components/ImportItinerary";
 import CloseDetails from "@/components/CloseDetails";
 import AutoFill from "@/components/AutoFill";
@@ -121,7 +122,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
       <div className="page-head">
         <div>
           <div className="small muted"><Link href="/trips" style={{ color: "var(--text-2)" }}>← Trips</Link></div>
-          <h1 style={{ marginTop: 6 }}>{trip.name}</h1>
+          <h1 style={{ marginTop: 6 }}><InlineTitle action={renameTrip} id={trip.id} value={trip.name} /></h1>
           <p className="sub">{trip.destination || "—"} · {dateRange} · {coreNightCount} nights · {f.pax} travellers{f.hiredDrivers > 0 ? ` + ${f.hiredDrivers} driver${f.hiredDrivers > 1 ? "s" : ""} = ${f.totalPeople} total` : ""} · {trip.cars.length} cars</p>
         </div>
         <div className="flex" style={{ gap: 8, alignItems: "flex-start" }}>

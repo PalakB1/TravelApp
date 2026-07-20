@@ -4,8 +4,9 @@ import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookingTotal, bookingPaid, bookingBalance, bookingInclTaxCharge, bookingInclNonTaxCharge, bookingInclusionCost } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
-import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, generateInvoice } from "../../data-actions";
+import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, generateInvoice, renameBooking } from "../../data-actions";
 import ShareInvoice from "@/components/ShareInvoice";
+import InlineTitle from "@/components/InlineTitle";
 import AutoFill from "@/components/AutoFill";
 import CopyLink from "@/components/CopyLink";
 
@@ -65,7 +66,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
       <div className="page-head">
         <div>
           <div className="small muted"><Link href={`/trips/${b.tripId}`} style={{ color: "var(--text-2)" }}>← {b.trip.name}</Link></div>
-          <h1 style={{ marginTop: 6 }}>{b.customerName}</h1>
+          <h1 style={{ marginTop: 6 }}><InlineTitle action={renameBooking} id={b.id} value={b.customerName} /></h1>
           <p className="sub">
             <span className="badge accent" style={{ marginRight: 8 }}>{PACKAGE[b.packageType] || b.packageType}</span>
             {b.pax} pax{b.customerPhone ? ` · ${b.customerPhone}` : ""}

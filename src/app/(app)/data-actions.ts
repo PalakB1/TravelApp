@@ -52,6 +52,28 @@ const ownTrip = async (orgId: string, id: string) => {
   if (s?.tripIds && !s.tripIds.includes(id)) return null;
   return trip;
 };
+
+// Rename actions (used by the click-to-edit titles).
+export async function renameTrip(formData: FormData) {
+  const orgId = await guard();
+  const id = String(formData.get("id"));
+  const name = String(formData.get("value") || "").trim();
+  if (!name || !(await ownTrip(orgId, id))) return;
+  await prisma.trip.update({ where: { id }, data: { name } });
+  await logActivity(orgId, "trip", "updated", `Renamed trip to “${name}”`, `/trips/${id}`);
+  refresh();
+}
+export async function renameBooking(formData: FormData) {
+  const orgId = await guard();
+  const id = String(formData.get("id"));
+  const name = String(formData.get("value") || "").trim();
+  if (!name) return;
+  const owned = await prisma.booking.findFirst({ where: { id, trip: { orgId } }, select: { id: true } });
+  if (!owned) return;
+  await prisma.booking.update({ where: { id }, data: { customerName: name } });
+  await logActivity(orgId, "booking", "updated", `Renamed party to “${name}”`, `/bookings/${id}`);
+  refresh();
+}
 const ownBooking = (orgId: string, id: string) => prisma.booking.findFirst({ where: { id, trip: { orgId } }, select: { id: true } });
 const ownNight = (orgId: string, id: string) => prisma.night.findFirst({ where: { id, trip: { orgId } }, select: { id: true } });
 
