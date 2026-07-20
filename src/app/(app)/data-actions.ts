@@ -892,11 +892,22 @@ export async function deletePayment(formData: FormData) {
 export async function approvePendingPayment(formData: FormData) {
   const orgId = await guard();
   const id = String(formData.get("id"));
-  const p = await prisma.pendingPayment.findFirst({ where: { id, booking: { trip: { orgId } } }, include: { booking: { select: { id: true, customerName: true } } } });
+  const p = await prisma.pendingPayment.findFirst({ where: { id, OR: [{ booking: { trip: { orgId } } }, { trip: { orgId } }] } });
   if (!p) return;
+
+  // Matched → its booking. Unmatched (universal link) → the operator must pick one.
+  let bookingId = p.bookingId;
+  if (!bookingId) {
+    const chosen = String(formData.get("bookingId") || "");
+    if (!chosen) return; // no customer chosen yet — nothing to record
+    const b = await prisma.booking.findFirst({ where: { id: chosen, trip: { orgId } }, select: { id: true } });
+    if (!b) return;
+    bookingId = b.id;
+  }
+  const cust = await prisma.booking.findUnique({ where: { id: bookingId }, select: { customerName: true } });
   await prisma.payment.create({
     data: {
-      bookingId: p.bookingId,
+      bookingId,
       amount: p.amount,
       mode: p.mode,
       date: p.date,
@@ -904,7 +915,7 @@ export async function approvePendingPayment(formData: FormData) {
     },
   });
   await prisma.pendingPayment.delete({ where: { id } });
-  await logActivity(orgId, "payment", "added", `Approved ${formatINR(p.amount)} (${p.mode}) — ${p.booking.customerName}`, `/bookings/${p.booking.id}`);
+  await logActivity(orgId, "payment", "added", `Approved ${formatINR(p.amount)} (${p.mode}) — ${cust?.customerName ?? p.payerName ?? ""}`, `/bookings/${bookingId}`);
   refresh();
 }
 
@@ -934,9 +945,9 @@ export async function deleteVisaApplicant(formData: FormData) {
 export async function rejectPendingPayment(formData: FormData) {
   const orgId = await guard();
   const id = String(formData.get("id"));
-  const p = await prisma.pendingPayment.findFirst({ where: { id, booking: { trip: { orgId } } }, include: { booking: { select: { customerName: true } } } });
+  const p = await prisma.pendingPayment.findFirst({ where: { id, OR: [{ booking: { trip: { orgId } } }, { trip: { orgId } }] }, include: { booking: { select: { customerName: true } } } });
   if (!p) return;
   await prisma.pendingPayment.delete({ where: { id } });
-  if (p) await logActivity(orgId, "payment", "deleted", `Rejected self-reported ${formatINR(p.amount)} — ${p.booking.customerName}`);
+  await logActivity(orgId, "payment", "deleted", `Rejected self-reported ${formatINR(p.amount)} — ${p.booking?.customerName ?? p.payerName ?? "unmatched"}`);
   refresh();
 }

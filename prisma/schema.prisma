@@ -242,6 +242,7 @@ model Trip {
   cars          Car[]
   visaApplicants VisaApplicant[]
   access        TripAccess[]
+  pendingPayments PendingPayment[]
 
   @@index([orgId])
 }
@@ -448,8 +449,12 @@ model Payment {
 // before it becomes a real Payment. Doesn't affect any balance until approved.
 model PendingPayment {
   id         String   @id @default(cuid())
-  bookingId  String
-  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  // Matched to a booking when the payer's name resolves; else attached to the trip
+  // (from the universal pay link) for the operator to link on approval.
+  bookingId  String?
+  booking    Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  tripId     String?
+  trip       Trip?    @relation(fields: [tripId], references: [id], onDelete: SetNull)
   amount     Int
   mode       String   @default("upi")
   date       DateTime @default(now())

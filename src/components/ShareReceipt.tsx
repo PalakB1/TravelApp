@@ -1,6 +1,7 @@
 "use client";
 
-// Compact per-row control: open the receipt, or send it straight on WhatsApp.
+// Two clearly separate actions: VIEW the receipt (opens the receipt page), or
+// SEND it on WhatsApp (pre-filled message + receipt link to the customer).
 export default function ShareReceipt({ paymentId, customerName, amount, phone }: { paymentId: string; customerName: string; amount: string; phone?: string | null }) {
   function send() {
     const url = `${window.location.origin}/receipt/${paymentId}`;
@@ -10,9 +11,9 @@ export default function ShareReceipt({ paymentId, customerName, amount, phone }:
     window.open(digits ? `https://wa.me/${digits}?text=${text}` : `https://wa.me/?text=${text}`, "_blank", "noopener");
   }
   return (
-    <span className="flex" style={{ gap: 6, justifyContent: "flex-end" }}>
-      <a className="sm" href={`/receipt/${paymentId}`} target="_blank" rel="noopener">Receipt</a>
-      <button type="button" className="sm" onClick={send} title={`Send receipt to ${customerName}`} style={{ background: "#25D366", color: "#fff", borderColor: "transparent", fontWeight: 600 }}>↗</button>
+    <span className="flex" style={{ gap: 8, justifyContent: "flex-end" }}>
+      <a className="btn sm" href={`/receipt/${paymentId}`} target="_blank" rel="noopener" title="Open the receipt (view + download PDF)">View</a>
+      <button type="button" className="btn sm" onClick={send} title={`Send the receipt to ${customerName} on WhatsApp`} style={{ background: "#25D366", color: "#fff", borderColor: "transparent", fontWeight: 600 }}>WhatsApp</button>
     </span>
   );
 }

@@ -30,9 +30,9 @@ export default async function PaymentsPage() {
     include: { booking: { include: { trip: true } } },
   });
   const pending = await prisma.pendingPayment.findMany({
-    where: { booking: scope.viaTrip },
+    where: { OR: [{ booking: scope.viaTrip }, { trip: scope.tripWhere }] },
     orderBy: { createdAt: "desc" },
-    include: { booking: { include: { trip: true } } },
+    include: { booking: { include: { trip: true } }, trip: true },
   });
 
   const owing = bookings
@@ -78,15 +78,29 @@ export default async function PaymentsPage() {
                     </a>
                   ) : <div style={{ width: 54, height: 54, borderRadius: 8, background: "var(--surface-2)", display: "grid", placeItems: "center", fontSize: 11, color: "var(--text-3)" }}>no img</div>}
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 600 }}>{formatINR(p.amount)} <span className="badge gray">{p.mode}</span></div>
-                    <div className="small muted">{p.payerName || p.booking.customerName} · {p.booking.trip.name} · {fmtDate(p.date)}{p.reference ? ` · ref ${p.reference}` : ""}</div>
+                    <div style={{ fontWeight: 600 }}>{formatINR(p.amount)} <span className="badge gray">{p.mode}</span>{!p.booking && <span className="badge amber" style={{ marginLeft: 6 }}>unmatched</span>}</div>
+                    <div className="small muted">{p.payerName || p.booking?.customerName || "—"} · {p.booking?.trip.name || p.trip?.name || "—"} · {fmtDate(p.date)}{p.reference ? ` · ref ${p.reference}` : ""}</div>
                     {p.note ? <div className="small" style={{ color: "var(--text-3)" }}>{p.note}</div> : null}
                   </div>
                 </div>
-                <div className="flex" style={{ gap: 8 }}>
-                  <form action={approvePendingPayment}><input type="hidden" name="id" value={p.id} /><button className="primary sm" type="submit">Approve</button></form>
-                  <form action={rejectPendingPayment}><input type="hidden" name="id" value={p.id} /><button className="danger sm" type="submit">Reject</button></form>
-                </div>
+                {p.booking ? (
+                  <div className="flex" style={{ gap: 8 }}>
+                    <form action={approvePendingPayment}><input type="hidden" name="id" value={p.id} /><button className="primary sm" type="submit">Approve</button></form>
+                    <form action={rejectPendingPayment}><input type="hidden" name="id" value={p.id} /><button className="danger sm" type="submit">Reject</button></form>
+                  </div>
+                ) : (
+                  <form action={approvePendingPayment} className="flex" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <input type="hidden" name="id" value={p.id} />
+                    <select name="bookingId" defaultValue="" required style={{ fontSize: 13, maxWidth: 200 }}>
+                      <option value="" disabled>Link to customer…</option>
+                      {bookings.filter((b) => b.tripId === p.tripId && isActive(b.status)).map((b) => (
+                        <option key={b.id} value={b.id}>{b.customerName}</option>
+                      ))}
+                    </select>
+                    <button className="primary sm" type="submit">Approve</button>
+                    <button className="danger sm" type="submit" formAction={rejectPendingPayment}>Reject</button>
+                  </form>
+                )}
               </div>
             ))}
           </div>

@@ -1,20 +1,14 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { formatINR } from "@/lib/money";
 import { submitPendingPayment, type PayResult } from "../../actions";
 
-type Person = { id: string; name: string; balance: number };
-type Trip = { id: string; name: string; people: Person[] };
+type Trip = { id: string; name: string };
 
 export default function UniversalPayForm({ trips }: { trips: Trip[] }) {
   const [state, action, pending] = useActionState<PayResult | undefined, FormData>(submitPendingPayment, undefined);
   const [tripId, setTripId] = useState("");
-  const [bookingId, setBookingId] = useState("");
   const today = new Date().toISOString().slice(0, 10);
-
-  const trip = trips.find((t) => t.id === tripId);
-  const person = trip?.people.find((p) => p.id === bookingId);
 
   if (state?.ok) {
     return (
@@ -28,33 +22,19 @@ export default function UniversalPayForm({ trips }: { trips: Trip[] }) {
 
   return (
     <form action={action}>
+      <input type="hidden" name="tripId" value={tripId} />
       <label className="field"><span className="lbl">Which trip?</span>
-        <select value={tripId} onChange={(e) => { setTripId(e.target.value); setBookingId(""); }} required>
+        <select value={tripId} onChange={(e) => setTripId(e.target.value)} required>
           <option value="">Select your trip…</option>
           {trips.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
       </label>
 
-      {trip && (
-        <label className="field"><span className="lbl">Your name</span>
-          <select value={bookingId} onChange={(e) => setBookingId(e.target.value)} required>
-            <option value="">Select your name…</option>
-            {trip.people.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}{p.balance > 0 ? ` — ${formatINR(p.balance)} due` : " — fully paid"}</option>
-            ))}
-          </select>
-        </label>
-      )}
-
-      {person && (
+      {tripId && (
         <>
-          <input type="hidden" name="bookingId" value={person.id} />
-          <input type="hidden" name="payerName" value={person.name} />
-          {person.balance > 0 && (
-            <p className="small muted" style={{ margin: "-4px 0 12px" }}>Outstanding for {person.name}: <b>{formatINR(person.balance)}</b></p>
-          )}
+          <label className="field"><span className="lbl">Your name</span><input name="payerName" placeholder="Exactly as given at booking" required /></label>
           <div className="row">
-            <label className="field"><span className="lbl">Amount paid (₹)</span><input name="amount" defaultValue={person.balance > 0 ? person.balance : ""} placeholder="e.g. 50000" required /></label>
+            <label className="field"><span className="lbl">Amount paid (₹)</span><input name="amount" placeholder="e.g. 50000" required /></label>
             <label className="field"><span className="lbl">Date paid</span><input name="date" type="date" defaultValue={today} /></label>
           </div>
           <div className="row">
