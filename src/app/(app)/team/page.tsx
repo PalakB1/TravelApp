@@ -50,8 +50,8 @@ export default async function TeamPage() {
                     <span className="muted small">All trips</span>
                   ) : (
                     <details className="menu-pop" style={{ position: "relative" }}>
-                      <summary className="sm" style={{ listStyle: "none", cursor: "pointer" }}>
-                        {m.tripScoped ? `${m.tripAccess.length} of ${trips.length} trips` : "All trips"}
+                      <summary className="btn sm" style={{ listStyle: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }} title="Change what this member can see">
+                        {m.tripScoped ? `${m.tripAccess.length} of ${trips.length} trips` : "All trips"} <span aria-hidden style={{ fontSize: 10, opacity: 0.7 }}>▾ edit</span>
                       </summary>
                       <div style={{ position: "absolute", left: 0, top: "calc(100% + 6px)", width: 300, maxWidth: "80vw", zIndex: 30, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, boxShadow: "0 12px 32px rgba(27,28,43,0.16)", padding: 14, textAlign: "left" }}>
                         <div style={{ fontWeight: 500, marginBottom: 8 }}>What can {m.name.split(" ")[0]} see?</div>
