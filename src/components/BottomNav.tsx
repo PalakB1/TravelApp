@@ -4,15 +4,17 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { logout, exitOrgAction } from "@/app/(app)/actions";
+import { openQuickEntry } from "./QuickAddButton";
 
-// Mobile-only bottom tab bar (Paytm / MyGate style): four primary tabs + a
-// "More" button that slides up a sheet with everything else. Hidden on desktop
-// via CSS (the sidebar takes over there).
-const PRIMARY = [
+// Mobile-only bottom tab bar (Paytm / MyGate style): tabs flanking a raised
+// center "+" that opens Quick entry, plus a "More" sheet with everything else.
+// Hidden on desktop via CSS (the sidebar takes over there).
+const LEFT = [
   { href: "/dashboard", label: "Home", icon: "home" },
   { href: "/trips", label: "Trips", icon: "map" },
+] as const;
+const RIGHT = [
   { href: "/payments", label: "Pay", icon: "wallet" },
-  { href: "/expenses", label: "Costing", icon: "coins" },
 ] as const;
 
 function Icon({ name }: { name: string }) {
@@ -23,6 +25,7 @@ function Icon({ name }: { name: string }) {
     wallet: <><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2" /><path d="M21 12a2 2 0 0 0-2-2h-4a2 2 0 0 0 0 4h4a2 2 0 0 0 2-2z" /></>,
     coins: <><ellipse cx="8" cy="6" rx="6" ry="3" /><path d="M2 6v6c0 1.66 2.69 3 6 3s6-1.34 6-3V6" /><path d="M2 12v6c0 1.66 2.69 3 6 3 1.5 0 2.87-.28 3.9-.75" /><circle cx="17" cy="15" r="5" /></>,
     more: <><circle cx="5" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="19" cy="12" r="1.6" /></>,
+    plus: <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>,
     ticket: <><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 6 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-6z" /><line x1="13" y1="7" x2="13" y2="17" /></>,
     users: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>,
     bed: <><path d="M2 4v16" /><path d="M2 8h18a2 2 0 0 1 2 2v10" /><path d="M2 17h20" /><path d="M6 8v9" /></>,
@@ -44,6 +47,7 @@ export default function BottomNav({ isPlatformAdmin = false, actingOrgId = null,
   const isActive = (href: string) => (href === "/dashboard" ? path === "/dashboard" : path.startsWith(href));
 
   const moreLinks = [
+    { href: "/expenses", label: "Costing", icon: "coins" },
     { href: "/bookings", label: "Bookings", icon: "ticket" },
     { href: "/customers", label: "Customers", icon: "users" },
     { href: "/hotels", label: "Hotels", icon: "bed" },
@@ -90,7 +94,17 @@ export default function BottomNav({ isPlatformAdmin = false, actingOrgId = null,
       )}
 
       <nav className="bottom-nav">
-        {PRIMARY.map((l) => (
+        {LEFT.map((l) => (
+          <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className={isActive(l.href) && !open ? "on" : ""}>
+            <Icon name={l.icon} />
+            <span>{l.label}</span>
+          </Link>
+        ))}
+        <button type="button" className="bn-fab" onClick={() => { setOpen(false); openQuickEntry(); }} aria-label="Quick add">
+          <span className="bn-fab-inner"><Icon name="plus" /></span>
+          <span>Add</span>
+        </button>
+        {RIGHT.map((l) => (
           <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className={isActive(l.href) && !open ? "on" : ""}>
             <Icon name={l.icon} />
             <span>{l.label}</span>

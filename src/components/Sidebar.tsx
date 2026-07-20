@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { logout, exitOrgAction } from "@/app/(app)/actions";
+import QuickAddButton from "./QuickAddButton";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: "grid" },
@@ -57,6 +58,9 @@ export default function Sidebar({ name, isPlatformAdmin = false, actingOrgId = n
             </button>
           </form>
         )}
+        <QuickAddButton className="btn primary" style={{ width: "100%", justifyContent: "center", marginBottom: 14 }} ariaLabel="Quick add">
+          <span style={{ fontSize: 17, lineHeight: 1 }}>＋</span> Quick add
+        </QuickAddButton>
         <nav className="nav">
           {navLinks.map((l) => (
             <Link key={l.href} href={l.href} className={isActive(l.href) ? "active" : ""}>

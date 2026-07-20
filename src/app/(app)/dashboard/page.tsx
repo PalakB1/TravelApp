@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { tripFinancials, bookingBalance, bookingPaid, bookingTotal, bookingRevenue, bookingTax, isActive } from "@/lib/calc";
 import { formatINR, formatINRShort } from "@/lib/money";
-import QuickEntry from "@/components/QuickEntry";
+import QuickAddButton from "@/components/QuickAddButton";
 import { Donut, HBars } from "@/components/Charts";
 import DateRangeFilter from "@/components/DateRangeFilter";
 import { ctRevenue, ctProfit, ctCost, ctOutstanding, ctTax, ctTotal, ctPaid } from "../custom-trips/lib";
@@ -133,21 +133,6 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     .filter((r) => r.tripNames.length > 0)
     .sort((a, b) => b.out - a.out);
 
-  // ---- Quick-entry options (existing customers / trips / nights) ----
-  const payableOptions = trips
-    .flatMap((t) => t.bookings.filter((b) => isActive(b.status)).map((b) => {
-      const bal = bookingBalance(b);
-      return { id: b.id, label: b.customerName, sub: `${t.name}${bal > 0 ? ` · ${formatINRShort(bal)} due` : " · fully paid"}`, _bal: bal };
-    }))
-    .sort((a, b) => b._bal - a._bal)
-    .map(({ _bal, ...o }) => o);
-  const tripOptions = trips.map((t) => ({ id: t.id, name: t.name }));
-  const customerNameList = customers.map((c) => c.name).sort((a, b) => a.localeCompare(b));
-  const sourceList = [...new Set(trips.flatMap((t) => [
-    ...t.itinerary.flatMap((n) => n.hotels.map((h) => h.source)),
-    ...t.cars.map((c) => c.source),
-  ]).map((s) => (s || "").trim()).filter(Boolean))].sort();
-
   // recent payments for an activity feel
   const recentPayments = await prisma.payment.findMany({
     where: { booking: scope.viaTrip },
@@ -169,10 +154,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: 22 }}>
-        <div className="card-title">⚡ Quick entry <span className="small muted">log a payment, expense, booking, hotel &amp; more — in seconds</span></div>
-        <QuickEntry payable={payableOptions} trips={tripOptions} customerNames={customerNameList} sources={sourceList} />
-      </div>
+      <QuickAddButton className="qe-launch" ariaLabel="Open quick entry">
+        <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <span style={{ fontWeight: 600, fontSize: 15 }}>⚡ Quick entry</span>
+          <span className="small muted">Log a payment, expense, booking, hotel &amp; more — in seconds</span>
+        </span>
+        <span style={{ fontSize: 24, color: "var(--accent)", fontWeight: 600, lineHeight: 1 }}>＋</span>
+      </QuickAddButton>
 
       <div className="metrics">
         <Link className="metric c-emerald" href="/reports/revenue">

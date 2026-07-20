@@ -444,3 +444,48 @@ details.section[open] > .sec-body, details.add[open] .form-box { animation: fade
 }
 @keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ============================================================
+   Quick-entry launcher — centered modal on desktop, bottom sheet on mobile.
+   ============================================================ */
+.qe-overlay {
+  position: fixed; inset: 0; z-index: 130; background: rgba(20, 20, 45, 0.44);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  animation: fadeIn .2s var(--ease) both;
+}
+.qe-panel {
+  background: var(--surface); border-radius: 20px; width: 100%; max-width: 680px;
+  max-height: 88vh; overflow-y: auto; box-shadow: var(--shadow-lg);
+  padding: 4px 22px 22px; animation: qePop .26s var(--ease) both;
+}
+.qe-grip { display: none; }
+.qe-head { display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--surface); padding: 14px 0 12px; z-index: 1; }
+.qe-title { font-size: 16px; font-weight: 600; }
+.qe-close { width: 32px; height: 32px; padding: 0; justify-content: center; border-radius: 9px; color: var(--text-2); }
+@keyframes qePop { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+
+/* Dashboard trigger bar that opens the launcher */
+.qe-launch {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 15px 20px; margin-bottom: 22px; text-align: left; cursor: pointer;
+  background: var(--accent-bg); border: 1px solid transparent; border-radius: 16px; color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+.qe-launch:hover { background: var(--accent-bg); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+
+@media (max-width: 760px) {
+  .qe-overlay { align-items: flex-end; padding: 0; }
+  .qe-panel {
+    max-width: none; border-radius: 22px 22px 0 0; max-height: 92vh;
+    padding: 4px 16px calc(20px + env(safe-area-inset-bottom, 0px)); animation: sheetUp .3s var(--ease) both;
+  }
+  .qe-grip { display: block; width: 42px; height: 4px; border-radius: 3px; background: var(--border-strong); margin: 8px auto 2px; }
+
+  /* Raised center "+" in the bottom bar (Paytm-style hero action). */
+  .bottom-nav .bn-fab { color: var(--accent); overflow: visible; }
+  .bn-fab-inner {
+    width: 50px; height: 50px; border-radius: 50%; background: var(--accent-grad); color: #fff;
+    display: grid; place-items: center; margin: -24px auto 0; box-shadow: 0 8px 18px rgba(91, 80, 230, 0.5);
+  }
+  .bn-fab-inner svg { width: 26px; height: 26px; }
+}
