@@ -21,10 +21,30 @@ export async function addExpense(formData: FormData) {
   const amount = parseAmount(String(formData.get("amount") || ""));
   if (!amount || amount <= 0) { revalidatePath("/expenses"); return; }
 
-  // Trip is optional; if given it must belong to the org AND be one this member
-  // is allowed to touch. Anything invalid falls back to a general (untagged) spend.
-  let tripId: string | null = str(formData.get("tripId"));
-  if (tripId && !(await canUseTrip(scope, tripId))) tripId = null;
+  // Where to assign the spend. `target` is one of:
+  //   ""              → general / overhead
+  //   "trip:<id>"     → the whole trip
+  //   "hotel:<id>"    → a specific hotel booking (tripId derived from it)
+  //   "car:<id>"      → a specific car (tripId derived from it)
+  // Everything is re-validated against this org + the member's trip scope, so a
+  // stale or forged id just falls back to a general spend.
+  const target = String(formData.get("target") || "");
+  let tripId: string | null = null;
+  let hotelId: string | null = null;
+  let carId: string | null = null;
+
+  if (target.startsWith("hotel:")) {
+    const id = target.slice(6);
+    const h = await prisma.hotelBooking.findFirst({ where: { id, night: { trip: scope.tripWhere } }, select: { night: { select: { tripId: true } } } });
+    if (h) { hotelId = id; tripId = h.night.tripId; }
+  } else if (target.startsWith("car:")) {
+    const id = target.slice(4);
+    const c = await prisma.car.findFirst({ where: { id, trip: scope.tripWhere }, select: { tripId: true } });
+    if (c) { carId = id; tripId = c.tripId; }
+  } else if (target.startsWith("trip:")) {
+    const id = target.slice(5);
+    if (await canUseTrip(scope, id)) tripId = id;
+  }
 
   // Optional invoice/receipt file → base64 data URL.
   let fileName: string | null = null;
@@ -47,6 +67,8 @@ export async function addExpense(formData: FormData) {
     data: {
       orgId: scope.orgId,
       tripId,
+      hotelId,
+      carId,
       date: dateStr ? new Date(dateStr) : new Date(),
       category: str(formData.get("category")) || "misc",
       payee: str(formData.get("payee")),
@@ -58,14 +80,15 @@ export async function addExpense(formData: FormData) {
       fileType,
       fileData,
     },
-    include: { trip: { select: { name: true } } },
+    include: { trip: { select: { name: true } }, hotel: { select: { hotelName: true } }, car: { select: { label: true } } },
   });
 
+  const targetLabel = expense.hotel ? `${expense.trip?.name ?? "trip"} › ${expense.hotel.hotelName}` : expense.car ? `${expense.trip?.name ?? "trip"} › ${expense.car.label}` : expense.trip ? expense.trip.name : "general";
   await logActivity(
     scope.orgId,
     "expense",
     "create",
-    `Added ${formatINR(amount)} spend${expense.payee ? " to " + expense.payee : ""}${expense.trip ? " · " + expense.trip.name : " · general"}`,
+    `Added ${formatINR(amount)} spend${expense.payee ? " to " + expense.payee : ""} · ${targetLabel}`,
     "/expenses",
   );
   revalidatePath("/expenses");

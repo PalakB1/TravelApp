@@ -37,7 +37,12 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   const trips = await prisma.trip.findMany({
     where: scope.tripWhere,
     orderBy: [{ departureDate: "desc" }, { createdAt: "desc" }],
-    select: { id: true, name: true },
+    select: {
+      id: true,
+      name: true,
+      itinerary: { orderBy: { order: "asc" }, select: { location: true, hotels: { select: { id: true, hotelName: true } } } },
+      cars: { select: { id: true, label: true, carType: true } },
+    },
   });
   const tripIdSet = new Set(trips.map((t) => t.id));
 
@@ -55,7 +60,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   const expenses = await prisma.expense.findMany({
     where,
     orderBy: { date: "desc" },
-    include: { trip: { select: { id: true, name: true } } },
+    include: { trip: { select: { id: true, name: true } }, hotel: { select: { hotelName: true } }, car: { select: { label: true, carType: true } } },
   });
 
   // Totals across the CURRENT filter.
@@ -96,10 +101,19 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
             <label className="field"><span className="lbl">Date</span><input name="date" type="date" /></label>
           </div>
           <div className="row-3">
-            <label className="field"><span className="lbl">Assign to trip</span>
-              <select name="tripId" defaultValue={filter && tripIdSet.has(filter) ? filter : ""}>
+            <label className="field"><span className="lbl">Assign to</span>
+              <select name="target" defaultValue={filter && tripIdSet.has(filter) ? `trip:${filter}` : ""}>
                 <option value="">General / no trip</option>
-                {trips.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                {trips.map((t) => {
+                  const hotels = t.itinerary.flatMap((n) => n.hotels.map((h) => ({ ...h, location: n.location })));
+                  return (
+                    <optgroup key={t.id} label={t.name}>
+                      <option value={`trip:${t.id}`}>{t.name} — whole trip</option>
+                      {hotels.map((h) => <option key={h.id} value={`hotel:${h.id}`}>&nbsp;&nbsp;🏨 {h.hotelName}{h.location ? ` · ${h.location}` : ""}</option>)}
+                      {t.cars.map((c) => <option key={c.id} value={`car:${c.id}`}>&nbsp;&nbsp;🚗 {c.label}{c.carType ? ` · ${c.carType}` : ""}</option>)}
+                    </optgroup>
+                  );
+                })}
               </select>
             </label>
             <label className="field"><span className="lbl">Category</span>
@@ -147,14 +161,19 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
         ) : (
           <TableSearch placeholder="Search vendor, trip, category or note…" tags={["paid", "pending"]}>
             <table className="t">
-              <thead><tr><th>Date</th><th>Paid to</th><th>Category</th><th>Trip</th><th>Notes</th><th className="num">Amount</th><th></th><th></th></tr></thead>
+              <thead><tr><th>Date</th><th>Paid to</th><th>Category</th><th>Assigned to</th><th>Notes</th><th className="num">Amount</th><th></th><th></th></tr></thead>
               <tbody>
                 {expenses.map((e) => (
                   <tr key={e.id}>
                     <td className="muted small">{fmtDate(e.date)}</td>
                     <td>{e.payee || <span className="muted">—</span>}{e.status === "pending" && <span className="badge amber" style={{ marginLeft: 6 }}>unpaid</span>}</td>
                     <td><span className="badge gray">{catLabel(e.category)}</span></td>
-                    <td className="muted">{e.trip ? <Link className="row-link" href={`/trips/${e.trip.id}`}>{e.trip.name}</Link> : <span className="small" style={{ color: "var(--text-3)" }}>General</span>}</td>
+                    <td className="muted">
+                      {e.trip ? (
+                        <Link className="row-link" href={`/trips/${e.trip.id}`}>{e.trip.name}</Link>
+                      ) : <span className="small" style={{ color: "var(--text-3)" }}>General</span>}
+                      {e.hotel ? <span className="small muted"> › 🏨 {e.hotel.hotelName}</span> : e.car ? <span className="small muted"> › 🚗 {e.car.label}{e.car.carType ? ` (${e.car.carType})` : ""}</span> : null}
+                    </td>
                     <td className="muted small">{e.notes || ""}</td>
                     <td className="num" style={{ fontWeight: 500 }}>{formatINR(e.amount)}</td>
                     <td className="num">{e.fileData ? <a className="btn sm" href={`/expenses/file/${e.id}`} target="_blank" rel="noopener" title={e.fileName || "invoice"}>📎 View</a> : null}</td>

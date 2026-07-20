@@ -50,6 +50,12 @@ model Expense {
   org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   tripId      String? // null = general / overhead (not tied to a trip)
   trip        Trip?        @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  // Optional finer target — the actual invoice for a specific hotel booking or
+  // car (its stored cost is only a hold). tripId is kept in sync with these.
+  hotelId     String?
+  hotel       HotelBooking? @relation(fields: [hotelId], references: [id], onDelete: SetNull)
+  carId       String?
+  car         Car?         @relation(fields: [carId], references: [id], onDelete: SetNull)
   date        DateTime     @default(now())
   category    String       @default("misc") // hotel | transport | flight | guide | permit | fuel | visa | marketing | salary | office | software | tax | misc
   payee       String? // vendor / who you paid
@@ -308,6 +314,7 @@ model HotelBooking {
   notes          String?
   createdAt      DateTime  @default(now())
   updatedAt DateTime @updatedAt
+  expenses       Expense[]
 }
 
 // A car in the trip's self-drive fleet.
@@ -332,6 +339,7 @@ model Car {
   notes          String?
   createdAt      DateTime  @default(now())
   updatedAt DateTime @updatedAt
+  expenses       Expense[]
 }
 
 // Price options for a trip (Deluxe, Standard, single/twin, with/without flights...)
