@@ -392,3 +392,55 @@ details.section[open] > .sec-body, details.add[open] .form-box { animation: fade
   /* Comfortable tap targets for row actions on touch screens. */
   .main table.t td .btn, .main table.t td button { min-height: 34px; }
 }
+
+/* ============================================================
+   Mobile bottom tab bar (Paytm / MyGate style) + slide-up "More" sheet.
+   Hidden on desktop — the sidebar handles navigation there.
+   ============================================================ */
+.bottom-nav { display: none; }
+@media (max-width: 760px) {
+  .bottom-nav {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 100;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    -webkit-backdrop-filter: saturate(1.4) blur(12px); backdrop-filter: saturate(1.4) blur(12px);
+    border-top: 1px solid var(--border);
+    padding: 7px 6px calc(7px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -6px 24px rgba(27, 28, 43, 0.07);
+  }
+  .bottom-nav a, .bottom-nav button {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    background: none; border: none; box-shadow: none; padding: 5px 2px; border-radius: 12px;
+    color: var(--text-3); font-size: 10.5px; font-weight: 600; min-height: 0; letter-spacing: 0;
+    transition: color .16s var(--ease), background .16s var(--ease);
+  }
+  .bottom-nav a:hover, .bottom-nav button:hover { background: none; transform: none; }
+  .bottom-nav a.on, .bottom-nav button.on { color: var(--accent); background: var(--accent-bg); }
+  .bottom-nav svg { width: 22px; height: 22px; }
+  /* Leave room so page content never hides behind the bar. */
+  .main { padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
+
+  /* Slide-up sheet */
+  .bn-backdrop { position: fixed; inset: 0; z-index: 110; background: rgba(20, 20, 45, 0.42); animation: fadeIn .2s var(--ease) both; }
+  .bn-sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 120;
+    background: var(--surface); border-radius: 22px 22px 0 0;
+    padding: 8px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -12px 44px rgba(27, 28, 43, 0.22);
+    animation: sheetUp .3s var(--ease) both;
+  }
+  .bn-grip { width: 42px; height: 4px; border-radius: 3px; background: var(--border-strong); margin: 4px auto 14px; }
+  .bn-sheet-head { display: flex; align-items: baseline; justify-content: space-between; font-weight: 600; font-size: 14px; margin-bottom: 14px; }
+  .bn-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .bn-tile {
+    display: flex; flex-direction: column; align-items: center; gap: 7px; text-align: center;
+    padding: 14px 4px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--text); font-size: 11px; font-weight: 600; line-height: 1.2;
+  }
+  .bn-tile svg { width: 22px; height: 22px; color: var(--text-2); }
+  .bn-tile.on { background: var(--accent-bg); border-color: transparent; color: var(--accent); }
+  .bn-tile.on svg { color: var(--accent); }
+  .bn-sheet-foot { display: flex; gap: 10px; margin-top: 16px; }
+}
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

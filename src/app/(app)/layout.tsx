@@ -8,6 +8,7 @@ import EscToClose from "@/components/EscToClose";
 import CollapseOnSave from "@/components/CollapseOnSave";
 import SaveToast from "@/components/SaveToast";
 import TableLabels from "@/components/TableLabels";
+import BottomNav from "@/components/BottomNav";
 import { logout } from "./actions";
 
 function TrialEndedScreen({ name, orgName }: { name: string; orgName?: string }) {
@@ -87,6 +88,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         )}
         {children}
       </main>
+      <BottomNav name={ctx.session.name} isPlatformAdmin={ctx.isPlatformAdmin} actingOrgId={ctx.actingOrgId} customTrips={org?.customTripsEnabled ?? false} />
     </div>
   );
 }

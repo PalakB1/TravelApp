@@ -44,8 +44,6 @@ export default function Sidebar({ name, isPlatformAdmin = false, actingOrgId = n
   const navLinks = [...links];
   if (customTrips) navLinks.splice(2, 0, { href: "/custom-trips", label: "Custom trips", icon: "compass" });
 
-  const closeMenu = (e: React.MouseEvent) => (e.currentTarget as HTMLElement).closest("details")?.removeAttribute("open");
-
   return (
     <>
       <aside className="sidebar">
@@ -82,38 +80,14 @@ export default function Sidebar({ name, isPlatformAdmin = false, actingOrgId = n
         </div>
       </aside>
 
-      {/* Mobile top bar — the sidebar is hidden on small screens */}
+      {/* Mobile top bar — slim; navigation lives in the bottom tab bar */}
       <header className="mobile-topbar">
         <Link href="/dashboard" className="brand" style={{ padding: 0, fontSize: 16 }}><span className="dot">✦</span> Trip Desk</Link>
-        <details className="mobile-menu">
-          <summary className="btn sm" style={{ listStyle: "none", cursor: "pointer" }}>☰ Menu</summary>
-          <nav className="mobile-nav">
-            {navLinks.map((l) => (
-              <Link key={l.href} href={l.href} onClick={closeMenu} className={isActive(l.href) ? "active" : ""}>
-                <Icon name={l.icon} />
-                {l.label}
-              </Link>
-            ))}
-            {isPlatformAdmin && (
-              <Link href="/admin" onClick={closeMenu} className={isActive("/admin") ? "active" : ""}>
-                <Icon name="shield" />
-                Platform admin
-              </Link>
-            )}
-            {actingOrgId && (
-              <form action={exitOrgAction} style={{ borderTop: "1px solid var(--border)", marginTop: 4, paddingTop: 6 }}>
-                <button className="sm" style={{ width: "100%", justifyContent: "center" }} type="submit">👁️ Viewing a client · Exit</button>
-              </form>
-            )}
-            <Link href="/settings" onClick={closeMenu} className={isActive("/settings") ? "active" : ""} style={{ borderTop: "1px solid var(--border)", marginTop: 4, paddingTop: 6 }}>
-              <Icon name="gear" />
-              Settings
-            </Link>
-            <form action={logout} style={{ borderTop: "1px solid var(--border)", marginTop: 4, paddingTop: 6 }}>
-              <button className="sm" style={{ width: "100%", justifyContent: "center" }} type="submit">Sign out</button>
-            </form>
-          </nav>
-        </details>
+        {actingOrgId && (
+          <form action={exitOrgAction}>
+            <button className="sm" type="submit" style={{ background: "var(--accent-bg)", borderColor: "transparent" }} title="Return to the platform admin console">👁️ Exit</button>
+          </form>
+        )}
       </header>
     </>
   );
