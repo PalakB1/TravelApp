@@ -256,7 +256,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           </div>
 
           <details className="add">
-            <summary>Edit invoice</summary>
+            <summary>✏️ Edit party name, phone &amp; invoice amounts</summary>
             <div className="form-box">
               <form action={updateBookingInvoice}>
                 <input type="hidden" name="id" value={b.id} />
