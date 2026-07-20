@@ -7,6 +7,7 @@ import Sidebar from "@/components/Sidebar";
 import EscToClose from "@/components/EscToClose";
 import CollapseOnSave from "@/components/CollapseOnSave";
 import SaveToast from "@/components/SaveToast";
+import TableLabels from "@/components/TableLabels";
 import { logout } from "./actions";
 
 function TrialEndedScreen({ name, orgName }: { name: string; orgName?: string }) {
@@ -75,6 +76,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <EscToClose />
       <CollapseOnSave />
       <SaveToast />
+      <TableLabels />
       <Sidebar name={ctx.session.name} isPlatformAdmin={ctx.isPlatformAdmin} actingOrgId={ctx.actingOrgId} customTrips={org?.customTripsEnabled ?? false} />
       <main className="main">
         {daysLeft != null && (
