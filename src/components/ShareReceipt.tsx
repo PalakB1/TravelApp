@@ -1,19 +1,19 @@
 "use client";
 
-// Two clearly separate actions: VIEW the receipt (opens the receipt page), or
-// SEND it on WhatsApp (pre-filled message + receipt link to the customer).
-export default function ShareReceipt({ paymentId, customerName, amount, phone }: { paymentId: string; customerName: string; amount: string; phone?: string | null }) {
-  function send() {
+import { useState } from "react";
+
+// View the receipt, or copy a ready-to-send message + link to paste anywhere.
+export default function ShareReceipt({ paymentId, customerName, amount }: { paymentId: string; customerName: string; amount: string; phone?: string | null }) {
+  const [copied, setCopied] = useState(false);
+  function copy() {
     const url = `${window.location.origin}/receipt/${paymentId}`;
-    const text = encodeURIComponent(`Hi ${customerName}, we've received your payment of ${amount}. Here's your receipt: ${url}`);
-    let digits = (phone || "").replace(/\D/g, "");
-    if (digits.length === 10) digits = "91" + digits;
-    window.open(digits ? `https://wa.me/${digits}?text=${text}` : `https://wa.me/?text=${text}`, "_blank", "noopener");
+    const msg = `Hi ${customerName}, we've received your payment of ${amount}. Here's your receipt — you can view and download it here: ${url}`;
+    navigator.clipboard.writeText(msg).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1600); }).catch(() => {});
   }
   return (
     <span className="flex" style={{ gap: 8, justifyContent: "flex-end" }}>
       <a className="btn sm" href={`/receipt/${paymentId}`} target="_blank" rel="noopener" title="Open the receipt (view + download PDF)">View</a>
-      <button type="button" className="btn sm" onClick={send} title={`Send the receipt to ${customerName} on WhatsApp`} style={{ background: "#25D366", color: "#fff", borderColor: "transparent", fontWeight: 600 }}>WhatsApp</button>
+      <button type="button" className="btn sm" onClick={copy} title="Copy the message + link to send anywhere">{copied ? "Copied ✓" : "Copy message"}</button>
     </span>
   );
 }
