@@ -89,17 +89,19 @@ export default async function PaymentsPage() {
                     <form action={rejectPendingPayment}><input type="hidden" name="id" value={p.id} /><button className="danger sm" type="submit">Reject</button></form>
                   </div>
                 ) : (
-                  <form action={approvePendingPayment} className="flex" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                    <input type="hidden" name="id" value={p.id} />
-                    <select name="bookingId" defaultValue="" required style={{ fontSize: 13, maxWidth: 200 }}>
-                      <option value="" disabled>Link to customer…</option>
-                      {bookings.filter((b) => b.tripId === p.tripId && isActive(b.status)).map((b) => (
-                        <option key={b.id} value={b.id}>{b.customerName}</option>
-                      ))}
-                    </select>
-                    <button className="primary sm" type="submit">Approve</button>
-                    <button className="danger sm" type="submit" formAction={rejectPendingPayment}>Reject</button>
-                  </form>
+                  <div className="flex" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <form action={approvePendingPayment} className="flex" style={{ gap: 8, alignItems: "center" }}>
+                      <input type="hidden" name="id" value={p.id} />
+                      <select name="bookingId" defaultValue="" required style={{ fontSize: 13, maxWidth: 200 }}>
+                        <option value="" disabled>Link to customer…</option>
+                        {bookings.filter((b) => b.tripId === p.tripId && isActive(b.status)).map((b) => (
+                          <option key={b.id} value={b.id}>{b.customerName}</option>
+                        ))}
+                      </select>
+                      <button className="primary sm" type="submit">Approve</button>
+                    </form>
+                    <form action={rejectPendingPayment}><input type="hidden" name="id" value={p.id} /><button className="danger sm" type="submit">Reject</button></form>
+                  </div>
                 )}
               </div>
             ))}
