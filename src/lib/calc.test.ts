@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTotal, bookingRevenue, bookingTax, bookingBalance } from "./calc";
+import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTotal, bookingRevenue, bookingTax, bookingBalance, reconcileTrip } from "./calc";
 
 const base = { pax: 1, discount: 0, status: "confirmed" as const };
 
@@ -45,5 +45,43 @@ describe("booking GST/TCS math", () => {
   it("balance = total − payments", () => {
     const b = { ...base, landAmount: 100000, gstRate: 5, tcsRate: 2, payments: [{ amount: 50000 }, { amount: 7100 }] };
     expect(bookingBalance(b)).toBe(50000); // 107100 − 57100
+  });
+});
+
+describe("costing reconciliation (estimate → actual)", () => {
+  const hotels = [{ id: "h1", estimate: 60000 }, { id: "h2", estimate: 40000 }];
+  const cars = [{ id: "c1", estimate: 30000 }];
+  // estimateCost = 60000 + 40000 + 30000 + otherEstimate(10000) = 140000
+  const args = { revenue: 200000, estimateCost: 140000, hotels, cars, otherEstimate: 10000 };
+
+  it("with no expenses logged, reconciled cost equals the estimate", () => {
+    const r = reconcileTrip({ ...args, expenses: [] });
+    expect(r.hasActuals).toBe(false);
+    expect(r.reconciledCost).toBe(140000);
+    expect(r.reconciledProfit).toBe(60000);
+    expect(r.variance).toBe(0);
+  });
+
+  it("swaps the actual invoice in for a specific hotel and keeps estimates elsewhere", () => {
+    // h1 actually cost 72000 (over the 60000 hold); everything else unlogged
+    const r = reconcileTrip({ ...args, expenses: [{ amount: 72000, hotelId: "h1" }] });
+    expect(r.hotelReconciled).toBe(72000 + 40000); // actual h1 + estimate h2
+    expect(r.reconciledCost).toBe(152000); // 112000 + 30000 + 10000
+    expect(r.variance).toBe(12000); // costing 12k more than the hold
+    expect(r.reconciledProfit).toBe(48000);
+  });
+
+  it("adds trip-level spend (no hotel/car) on top of estimates", () => {
+    const r = reconcileTrip({ ...args, expenses: [{ amount: 5000, carId: "c1" }, { amount: 8000 }] });
+    expect(r.carReconciled).toBe(5000); // actual replaces the 30000 car hold
+    expect(r.otherActual).toBe(8000); // fuel/guide/etc — added
+    expect(r.reconciledCost).toBe(60000 + 40000 + 5000 + 10000 + 8000); // 123000
+    expect(r.totalActual).toBe(13000);
+  });
+
+  it("sums multiple invoices for the same hotel", () => {
+    const r = reconcileTrip({ ...args, expenses: [{ amount: 30000, hotelId: "h1" }, { amount: 25000, hotelId: "h1" }] });
+    expect(r.hotelActual).toBe(55000);
+    expect(r.hotelReconciled).toBe(55000 + 40000);
   });
 });

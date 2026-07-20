@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
-import { tripFinancials, bookingTotal, bookingPaid, bookingBalance, isNightGap, holdExpiringSoon, carCost, pricePerRoom, nightCost, nightBookedRooms, carPassengerSeats } from "@/lib/calc";
+import { tripFinancials, reconcileTrip, bookingTotal, bookingPaid, bookingBalance, isNightGap, holdExpiringSoon, carCost, pricePerRoom, nightCost, nightBookedRooms, carPassengerSeats } from "@/lib/calc";
 import { formatINR, formatINRShort } from "@/lib/money";
 import {
   addVariant, deleteVariant,
@@ -69,6 +69,19 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
   if (!trip) notFound();
 
   const f = tripFinancials({ bookings: trip.bookings, nights: trip.itinerary, cars: trip.cars, vendorBookings: trip.vendorBookings, maxPerRoom: trip.maxPerRoom });
+
+  // Actual costs logged in the Costing ledger for this trip (each optionally tied
+  // to a specific hotel or car). Used to reconcile the hold/estimate with reality.
+  const tripExpenses = await prisma.expense.findMany({ where: { tripId: id }, select: { amount: true, hotelId: true, carId: true } });
+  const allHotelsFlat = trip.itinerary.flatMap((n) => n.hotels);
+  const rec = reconcileTrip({
+    revenue: f.revenue,
+    estimateCost: f.cost,
+    hotels: allHotelsFlat.map((h) => ({ id: h.id, estimate: h.cost })),
+    cars: trip.cars.map((c) => ({ id: c.id, estimate: carCost(c) })),
+    otherEstimate: f.extrasCost + f.inclusionsCost,
+    expenses: tripExpenses,
+  });
 
   // hotel names already used, for the "pick or type new" dropdown
   const known = await prisma.hotelBooking.findMany({ where: { night: scope.viaTrip }, distinct: ["hotelName"], select: { hotelName: true }, orderBy: { hotelName: "asc" } });
@@ -166,10 +179,27 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
       <div className="metrics">
         <div className="metric c-emerald"><div className="label">Revenue</div><div className="value">{formatINR(f.revenue)}</div><div className="foot">+ GST/TCS {formatINRShort(f.taxCollected)} → billed {formatINRShort(f.invoiced)}</div></div>
         <div className="metric c-amber"><div className="label">Your cost{f.assumedRoomCost > 0 ? <span className="small muted" style={{ fontWeight: 400 }}> · assumed {formatINR(f.assumedCost)}</span> : null}</div><div className="value">{formatINR(f.cost)}</div><div className="foot">hotels {formatINR(f.hotelCost)} · cars {formatINR(f.carRental)}{f.driverCost > 0 ? ` · drivers ${formatINR(f.driverCost)}` : ""}{f.extrasCost > 0 ? ` · extras ${formatINR(f.extrasCost)}` : ""}{f.inclusionsCost > 0 ? ` · inclusions ${formatINR(f.inclusionsCost)}` : ""}{f.assumedRoomCost > 0 ? ` · +${formatINR(f.assumedRoomCost)} for ${f.roomNightsToBook} rooms to book (@ ${formatINR(f.avgRoomCost)})` : ""}</div></div>
-        <div className="metric c-violet"><div className="label">Profit</div><div className="value">{formatINR(f.profit)}</div><div className="foot">{Math.round(f.margin * 100)}% margin{f.assumedRoomCost > 0 ? ` · assumed ${formatINR(f.assumedProfit)} (${Math.round(f.assumedMargin * 100)}%)` : ""}</div></div>
+        <div className="metric c-violet"><div className="label">Profit</div><div className="value">{formatINR(f.profit)}</div><div className="foot">{Math.round(f.margin * 100)}% margin{rec.hasActuals ? ` · actual ${formatINR(rec.reconciledProfit)} (${Math.round(rec.reconciledMargin * 100)}%)` : f.assumedRoomCost > 0 ? ` · assumed ${formatINR(f.assumedProfit)} (${Math.round(f.assumedMargin * 100)}%)` : ""}</div></div>
         <div className="metric c-sky"><div className="label">Outstanding</div><div className="value">{formatINR(f.outstanding)}</div><div className="foot">{formatINR(f.paid)} collected</div></div>
         <div className={`metric ${f.unbookedNights + f.expiringHolds + f.shortRoomNights > 0 ? "c-rose" : "c-emerald"}`}><div className="label">Needs attention</div><div className="value">{f.unbookedNights + f.expiringHolds + f.shortRoomNights}</div><div className="foot">{f.unbookedNights} unbooked · {f.shortRoomNights} short rooms · {f.expiringHolds} holds expiring</div></div>
       </div>
+
+      {rec.hasActuals && (
+        <div className="card" style={{ borderColor: rec.variance > 0 ? "var(--warning-bg)" : "var(--emerald-bg)" }}>
+          <div className="between" style={{ flexWrap: "wrap", gap: 8 }}>
+            <div className="card-title" style={{ margin: 0 }}>Estimate vs actual <span className="small muted">from invoices logged in <Link href="/expenses" className="row-link">Costing</Link></span></div>
+            <span className="badge" style={{ background: rec.variance > 0 ? "var(--warning-bg)" : "var(--emerald-bg)", color: rec.variance > 0 ? "var(--warning)" : "#0b7a52" }}>
+              {rec.variance === 0 ? "on budget" : rec.variance > 0 ? `₹${formatINR(rec.variance).replace("₹", "")} over the hold` : `${formatINR(-rec.variance)} under the hold`}
+            </span>
+          </div>
+          <div className="row-3" style={{ marginTop: 12 }}>
+            <div><div className="small muted">Estimated cost (holds)</div><div style={{ fontSize: 18, fontWeight: 600 }}>{formatINR(f.cost)}</div><div className="small muted">→ profit {formatINR(f.profit)} ({Math.round(f.margin * 100)}%)</div></div>
+            <div><div className="small muted">Reconciled cost (actuals where logged)</div><div style={{ fontSize: 18, fontWeight: 600 }}>{formatINR(rec.reconciledCost)}</div><div className="small muted">→ profit {formatINR(rec.reconciledProfit)} ({Math.round(rec.reconciledMargin * 100)}%)</div></div>
+            <div><div className="small muted">Invoiced so far</div><div style={{ fontSize: 18, fontWeight: 600 }}>{formatINR(rec.totalActual)}</div><div className="small muted">🏨 {formatINR(rec.hotelActual)} · 🚗 {formatINR(rec.carActual)}{rec.otherActual > 0 ? ` · other ${formatINR(rec.otherActual)}` : ""}</div></div>
+          </div>
+          <p className="small muted" style={{ margin: "10px 0 0" }}>Reconciled cost uses the real invoice for any hotel/car you&rsquo;ve logged, the hold estimate for the rest, plus any trip-level spend (fuel, guides, permits…).</p>
+        </div>
+      )}
 
       {(trip.itinerary.length > 0 || trip.bookings.length > 0) && (() => {
         const roomNightsNeeded = f.roomsNeeded * coreNightCount;
@@ -279,6 +309,11 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                               <div>
                                 <div style={{ fontSize: 13.5, fontWeight: 500 }}>{h.hotelName}</div>
                                 <div className="small muted">{h.rooms} rooms · {formatINR(h.cost)}{h.rooms > 0 ? ` · ${formatINR(pricePerRoom(h))}/room` : ""}{h.source ? ` · ${h.source}` : ""}</div>
+                                {rec.hotelActualBy.has(h.id) ? (() => {
+                                  const actual = rec.hotelActualBy.get(h.id)!;
+                                  const over = actual > h.cost;
+                                  return <div className="small" style={{ color: over ? "var(--danger)" : "#0b7a52", fontWeight: 500 }}>Actual invoiced {formatINR(actual)}{h.cost > 0 ? (actual === h.cost ? " · on the hold" : over ? ` · ${formatINR(actual - h.cost)} over hold` : ` · ${formatINR(h.cost - actual)} under hold`) : ""}</div>;
+                                })() : null}
                                 {h.notes ? <div className="small" style={{ color: "var(--text-3)" }}>{h.notes}</div> : null}
                               </div>
                               <div className="right">
@@ -465,6 +500,12 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                       {c.driverMode === "hired" ? `+ Hired driver · ${formatINR(c.driverCost)}${c.driverNeedsStay ? " · needs a room" : ""}` : "Client drives"}
                     </div>
                     <div className="small muted" style={{ marginTop: 4 }}>Rental {formatINR(c.rentalCost)} · total {formatINR(carCost(c))}</div>
+                    {rec.carActualBy.has(c.id) ? (() => {
+                      const actual = rec.carActualBy.get(c.id)!;
+                      const est = carCost(c);
+                      const over = actual > est;
+                      return <div className="small" style={{ color: over ? "var(--danger)" : "#0b7a52", fontWeight: 500 }}>Actual invoiced {formatINR(actual)}{est > 0 ? (actual === est ? " · on the hold" : over ? ` · ${formatINR(actual - est)} over hold` : ` · ${formatINR(est - actual)} under hold`) : ""}</div>;
+                    })() : null}
                     {c.seats > 0 ? <div className="small muted">{c.seats} seats · {carPassengerSeats(c)} for guests</div> : null}
                     {c.status === "hold" && c.holdUntil ? <div className="small" style={{ color: expiring ? "var(--danger)" : "var(--warning)", marginTop: 4 }}>hold till {fmtDate(c.holdUntil)}{c.source ? ` · ${c.source}` : ""}</div> : null}
                   </summary>

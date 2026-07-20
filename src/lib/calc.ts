@@ -238,3 +238,55 @@ export function tripFinancials(args: {
 }
 
 export type TripFinancials = ReturnType<typeof tripFinancials>;
+
+// --- Costing reconciliation: swap the hold/estimate for the ACTUAL invoiced ---
+// The cost stored on a hotel/car is only the hold. When real invoices are logged
+// in the Costing ledger (each optionally tagged to a specific hotel or car), this
+// recomputes the trip cost using actuals where they exist, estimates elsewhere,
+// plus any trip-level spend (fuel, guides, permits…) that isn't in the itinerary.
+export type TripExpenseLite = { amount: number; hotelId?: string | null; carId?: string | null };
+
+export function reconcileTrip(args: {
+  revenue: number;
+  estimateCost: number; // = tripFinancials.cost
+  hotels: { id: string; estimate: number }[];
+  cars: { id: string; estimate: number }[];
+  otherEstimate: number; // inclusions + vendor extras (no per-item expense link) — the rest of estimateCost
+  expenses: TripExpenseLite[];
+}) {
+  const hotelActualBy = new Map<string, number>();
+  const carActualBy = new Map<string, number>();
+  let otherActual = 0; // trip-tagged spend not pinned to a hotel or car
+  for (const e of args.expenses) {
+    if (e.hotelId) hotelActualBy.set(e.hotelId, (hotelActualBy.get(e.hotelId) ?? 0) + e.amount);
+    else if (e.carId) carActualBy.set(e.carId, (carActualBy.get(e.carId) ?? 0) + e.amount);
+    else otherActual += e.amount;
+  }
+  const sumVals = (m: Map<string, number>) => [...m.values()].reduce((s, v) => s + v, 0);
+  const hotelActual = sumVals(hotelActualBy);
+  const carActual = sumVals(carActualBy);
+  const totalActual = hotelActual + carActual + otherActual;
+
+  const hotelReconciled = args.hotels.reduce((s, h) => s + (hotelActualBy.has(h.id) ? hotelActualBy.get(h.id)! : h.estimate), 0);
+  const carReconciled = args.cars.reduce((s, c) => s + (carActualBy.has(c.id) ? carActualBy.get(c.id)! : c.estimate), 0);
+  const reconciledCost = hotelReconciled + carReconciled + args.otherEstimate + otherActual;
+  const reconciledProfit = args.revenue - reconciledCost;
+  const reconciledMargin = args.revenue > 0 ? reconciledProfit / args.revenue : 0;
+  const variance = reconciledCost - args.estimateCost; // + = costing more than the hold
+
+  return {
+    hotelActualBy,
+    carActualBy,
+    hotelActual,
+    carActual,
+    otherActual,
+    totalActual,
+    hotelReconciled,
+    carReconciled,
+    reconciledCost,
+    reconciledProfit,
+    reconciledMargin,
+    variance,
+    hasActuals: totalActual > 0,
+  };
+}
