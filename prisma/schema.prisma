@@ -180,7 +180,9 @@ model VisaApplicant {
   id              String    @id @default(cuid())
   tripId          String
   trip            Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  fullName        String
+  fullName        String // auto-composed "given surname" — kept for display + documents
+  surname         String? // family / last name, exactly as in the passport
+  givenName       String? // given / first name(s), exactly as in the passport
   dob             DateTime?
   placeOfBirth    String?
   nationality     String?   @default("Indian")

@@ -83,7 +83,14 @@ export default async function VisaDetailPage({ params }: { params: Promise<{ id:
         <div className="card-title">All details <span className="small muted">everything the applicant entered — for filling the visa form</span></div>
         <div className="grid-2">
           <div>
-            <Field label="Full name (passport)" value={a.fullName} />
+            {(a.surname || a.givenName) ? (
+              <>
+                <Field label="Surname / last name (passport)" value={a.surname} />
+                <Field label="Given name(s) / first name (passport)" value={a.givenName} />
+              </>
+            ) : (
+              <Field label="Full name (passport)" value={a.fullName} />
+            )}
             <Field label="Date of birth" value={fmt(a.dob)} />
             <Field label="Place of birth" value={a.placeOfBirth} />
             <Field label="Nationality" value={a.nationality} />

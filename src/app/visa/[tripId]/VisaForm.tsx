@@ -35,7 +35,11 @@ export default function VisaForm({ tripId, visaType = "schengen", visaCountry = 
       <input type="hidden" name="visaCountry" value={visaCountry} />
 
       <Section title="You (as in passport)">
-        <label className="field"><span className="lbl">Full name</span><input name="fullName" placeholder="As printed in passport" required /></label>
+        <div className="row">
+          <label className="field"><span className="lbl">Given name(s) / first name</span><input name="givenName" placeholder="Exactly as in your passport" required /></label>
+          <label className="field"><span className="lbl">Surname / last name</span><input name="surname" placeholder="Exactly as in your passport" /></label>
+        </div>
+        <p className="small muted" style={{ margin: "-4px 0 12px" }}>Copy these two exactly as printed on your passport — the embassy form asks for them separately.</p>
         <div className="row-3">
           <label className="field"><span className="lbl">Date of birth</span><input name="dob" type="date" /></label>
           <label className="field"><span className="lbl">Place of birth</span><input name="placeOfBirth" placeholder="City" /></label>

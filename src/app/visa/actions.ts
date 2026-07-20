@@ -12,8 +12,12 @@ const str = (v: FormDataEntryValue | null) => String(v || "").trim() || null;
 // and they're sent to their generated cover letter + checklist.
 export async function submitVisaApplicant(_prev: VisaResult | undefined, formData: FormData): Promise<VisaResult> {
   const tripId = String(formData.get("tripId") || "");
-  const fullName = String(formData.get("fullName") || "").trim();
-  if (!tripId || !fullName) return { ok: false, message: "Please enter your full name (as in your passport)." };
+  const givenName = str(formData.get("givenName"));
+  const surname = str(formData.get("surname"));
+  // Back-compat: older links may still post a single fullName field.
+  const legacyFull = String(formData.get("fullName") || "").trim() || null;
+  const fullName = [givenName, surname].filter(Boolean).join(" ") || legacyFull || "";
+  if (!tripId || !fullName) return { ok: false, message: "Please enter your name exactly as in your passport." };
 
   const trip = await prisma.trip.findUnique({ where: { id: tripId }, select: { id: true } });
   if (!trip) return { ok: false, message: "This visa link is invalid." };
@@ -22,6 +26,8 @@ export async function submitVisaApplicant(_prev: VisaResult | undefined, formDat
     data: {
       tripId,
       fullName,
+      surname,
+      givenName,
       dob: toDate(formData.get("dob")),
       placeOfBirth: str(formData.get("placeOfBirth")),
       nationality: str(formData.get("nationality")) || "Indian",
