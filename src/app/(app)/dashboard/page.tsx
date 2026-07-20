@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
-import { tripFinancials, bookingBalance, bookingPaid, bookingTotal, bookingRevenue, bookingTax, isActive, isNightGap, holdExpiringSoon } from "@/lib/calc";
+import { tripFinancials, bookingBalance, bookingPaid, bookingTotal, bookingRevenue, bookingTax, isActive } from "@/lib/calc";
 import { formatINR, formatINRShort } from "@/lib/money";
 import QuickEntry from "@/components/QuickEntry";
 import { Donut, HBars } from "@/components/Charts";
@@ -86,24 +86,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
   const upcoming = perTrip.filter((p) => !p.trip.departureDate || p.trip.departureDate >= new Date(Date.now() - 864e5));
 
-  // Actionable operations list: unbooked nights + holds expiring soon
-  type Alert = { tripId: string; tripName: string; text: string; kind: "gap" | "hold" };
-  const alerts: Alert[] = [];
-  for (const t of trips) {
-    for (const n of t.itinerary) {
-      if (isNightGap(n)) alerts.push({ tripId: t.id, tripName: t.name, kind: "gap", text: `No hotel in ${n.location}${n.date ? " · " + fmtDate(n.date) : ""}` });
-      for (const h of n.hotels) {
-        if (holdExpiringSoon(h.status, h.holdUntil)) alerts.push({ tripId: t.id, tripName: t.name, kind: "hold", text: `${h.hotelName} (${n.location}) hold ends ${fmtDate(h.holdUntil)}${h.source ? " · " + h.source : ""}` });
-      }
-    }
-    for (const c of t.cars) {
-      if (holdExpiringSoon(c.status, c.holdUntil)) alerts.push({ tripId: t.id, tripName: t.name, kind: "hold", text: `${c.label} hold ends ${fmtDate(c.holdUntil)}${c.source ? " · " + c.source : ""}` });
-    }
-  }
-  for (const { trip, f } of perTrip) {
-    if (f.shortRoomNights > 0) alerts.push({ tripId: trip.id, tripName: trip.name, kind: "gap", text: `${f.shortRoomNights} night${f.shortRoomNights > 1 ? "s" : ""} short on rooms — ${f.pax} travellers need ${f.roomsNeeded}/night` });
-    if (f.seatsShort > 0) alerts.push({ tripId: trip.id, tripName: trip.name, kind: "gap", text: `${f.seatsShort} traveller${f.seatsShort > 1 ? "s" : ""} without a car seat — ${f.pax} travellers, ${f.carSeats} seats` });
-  }
+  // The detailed "needs attention" list lives on /reports/attention (reached by
+  // clicking the tile) — kept off the dashboard so it doesn't dominate the page.
 
   // ---- Chart data ----
   const allActive = trips.flatMap((t) => t.bookings).filter((b) => isActive(b.status));
@@ -212,21 +196,6 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           <div className="foot">{unbookedNights} unbooked · {shortRoomNights} short rooms · {seatIssues} car seats · {expiringHolds} holds</div>
         </Link>
       </div>
-
-      {alerts.length > 0 && (
-        <div className="card" style={{ borderColor: "var(--warning-bg)" }}>
-          <div className="card-title">Needs booking or about to expire</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {alerts.slice(0, 8).map((a, i) => (
-              <Link key={i} href={`/trips/${a.tripId}`} className="between" style={{ padding: "9px 12px", borderRadius: 8, background: a.kind === "gap" ? "var(--danger-bg)" : "var(--warning-bg)" }}>
-                <span style={{ fontSize: 13.5, color: a.kind === "gap" ? "var(--danger)" : "var(--warning)" }}>{a.text}</span>
-                <span className="small muted">{a.tripName}</span>
-              </Link>
-            ))}
-            {alerts.length > 8 && <div className="small muted">+{alerts.length - 8} more</div>}
-          </div>
-        </div>
-      )}
 
       {allActive.length > 0 && (
         <>
