@@ -541,7 +541,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
       </details>
 
       {/* INCLUSIONS */}
-      <details className="section">
+      <details className="section" open={trip.inclusions.length > 0}>
         <summary>
           <span className="sec-title">Inclusions &amp; extras</span>
           <span className="sec-hi" style={{ marginLeft: "auto", marginRight: 12 }}>
