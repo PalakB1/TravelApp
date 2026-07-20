@@ -169,6 +169,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </div>
       </div>
 
+      <div className="card" style={{ marginBottom: 22 }}>
+        <div className="card-title">⚡ Quick entry <span className="small muted">log a payment, expense, booking, hotel &amp; more — in seconds</span></div>
+        <QuickEntry payable={payableOptions} trips={tripOptions} customerNames={customerNameList} sources={sourceList} />
+      </div>
+
       <div className="metrics">
         <Link className="metric c-emerald" href="/reports/revenue">
           <div className="label">Revenue booked</div>
@@ -247,14 +252,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </>
       )}
 
-      <div className="grid-2">
-        <div className="card">
-          <div className="card-title">Quick entry <span className="small muted">pick what you’re adding</span></div>
-          <QuickEntry payable={payableOptions} trips={tripOptions} customerNames={customerNameList} sources={sourceList} />
-        </div>
-
-        <div className="card">
-          <div className="card-title">
+      <div className="card">
+        <div className="card-title">
             Upcoming trips
             <Link className="small" style={{ color: "var(--accent)" }} href="/trips">View all</Link>
           </div>
@@ -288,7 +287,6 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             </div>
           )}
         </div>
-      </div>
 
       {customerRows.length > 0 && (
         <div className="card" style={{ padding: 0 }}>

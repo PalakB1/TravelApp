@@ -5,6 +5,7 @@ import Combobox, { type ComboOption } from "./Combobox";
 import {
   addPayment, addBooking, addHotelStay, createCustomer, createTrip,
 } from "@/app/(app)/data-actions";
+import { addExpense } from "@/app/(app)/expenses/actions";
 
 type Props = {
   payable: ComboOption[];
@@ -15,12 +16,19 @@ type Props = {
 
 const ACTIONS = [
   { key: "payment", label: "💸 Payment made" },
+  { key: "expense", label: "💰 Expense" },
   { key: "booking", label: "🎫 New booking" },
   { key: "hotel", label: "🏨 Book hotel" },
   { key: "customer", label: "🧑 Add customer" },
   { key: "trip", label: "🗺️ New trip" },
 ] as const;
 type ActionKey = (typeof ACTIONS)[number]["key"];
+
+const EXP_CATS: [string, string][] = [
+  ["hotel", "Hotel / stay"], ["transport", "Transport / car"], ["flight", "Flight"], ["guide", "Guide / activity"],
+  ["permit", "Permit / entry"], ["fuel", "Fuel / tolls"], ["visa", "Visa"], ["marketing", "Marketing / ads"],
+  ["salary", "Salary / payroll"], ["office", "Office / rent"], ["software", "Software / tools"], ["tax", "Tax / govt"], ["misc", "Miscellaneous"],
+];
 
 export default function QuickEntry({ payable, trips, customerNames, sources }: Props) {
   const [action, setAction] = useState<ActionKey>("payment");
@@ -54,6 +62,37 @@ export default function QuickEntry({ payable, trips, customerNames, sources }: P
             <label className="field"><span className="lbl">Date</span><input name="date" type="date" defaultValue={today} /></label>
           </div>
           <button className="primary" type="submit" disabled={payable.length === 0}>Record payment</button>
+        </form>
+      )}
+
+      {/* EXPENSE — money out; optionally tag it to a trip, attach the invoice */}
+      {action === "expense" && (
+        <form action={addExpense} key="expense">
+          <div className="row-3">
+            <label className="field"><span className="lbl">Amount spent</span><input name="amount" placeholder="12000 or 12k" required /></label>
+            <label className="field"><span className="lbl">Paid to (vendor)</span><input name="payee" placeholder="Hotel · car · guide…" /></label>
+            <label className="field"><span className="lbl">Date</span><input name="date" type="date" defaultValue={today} /></label>
+          </div>
+          <div className="row-3">
+            <label className="field"><span className="lbl">Assign to</span>
+              <select name="target" defaultValue="">
+                <option value="">General / no trip</option>
+                {trips.map((t) => <option key={t.id} value={`trip:${t.id}`}>{t.name}</option>)}
+              </select>
+            </label>
+            <label className="field"><span className="lbl">Category</span>
+              <select name="category" defaultValue="misc">{EXP_CATS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
+            </label>
+            <label className="field"><span className="lbl">Mode</span>
+              <select name="paymentMode" defaultValue="bank"><option value="bank">Bank transfer</option><option value="upi">UPI</option><option value="card">Card</option><option value="cash">Cash</option><option value="other">Other</option></select>
+            </label>
+          </div>
+          <div className="row">
+            <label className="field"><span className="lbl">Notes</span><input name="notes" placeholder="3 nights · advance / balance…" /></label>
+            <label className="field"><span className="lbl">Invoice / receipt <span className="small muted">optional</span></span><input name="file" type="file" accept="image/*,application/pdf" /></label>
+          </div>
+          <button className="primary" type="submit">Log expense</button>
+          <p className="small muted" style={{ margin: "10px 0 0" }}>To pin it to a specific hotel or car, open <a href="/expenses" style={{ color: "var(--accent)" }}>Costing</a>. General spend (fuel, ads, salaries) stays untagged.</p>
         </form>
       )}
 
