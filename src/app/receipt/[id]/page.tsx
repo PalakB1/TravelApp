@@ -35,9 +35,12 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
   return (
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "start center", padding: "24px 16px" }}>
       <div style={{ width: 560, maxWidth: "100%" }}>
-        <div className="between no-print" style={{ marginBottom: 14 }}>
+        <div className="between no-print" style={{ marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
           <div className="brand" style={{ paddingLeft: 0 }}><span className="dot">✦</span> {agency}</div>
-          <PrintButton />
+          <div className="flex" style={{ gap: 8 }}>
+            <a className="btn primary sm" href={`/receipt/${p.id}/pdf`} download>⬇ Download PDF</a>
+            <PrintButton />
+          </div>
         </div>
 
         <div className="card sheet">
