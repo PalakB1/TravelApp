@@ -12,7 +12,7 @@ export default async function SettingsPage() {
   const org = ctx?.orgId
     ? await prisma.organization.findUnique({
         where: { id: ctx.orgId },
-        select: { name: true, legalName: true, gstin: true, gstAddress: true, gstState: true, gstStateCode: true, sacCode: true, invoiceNote: true },
+        select: { name: true, legalName: true, gstin: true, gstAddress: true, gstState: true, gstStateCode: true, sacCode: true, invoiceNote: true, logo: true },
       })
     : null;
 
@@ -27,8 +27,19 @@ export default async function SettingsPage() {
 
       {org && (
         <div className="card">
-          <div className="card-title">Business &amp; GST details <span className="small muted">printed on your tax invoices</span></div>
+          <div className="card-title">Business &amp; branding <span className="small muted">shown on pay pages, receipts &amp; tax invoices</span></div>
           <form action={updateOrgProfile}>
+            <div className="row-2">
+              <label className="field"><span className="lbl">Business name (shown to customers)</span><input name="name" defaultValue={org.name || ""} placeholder="e.g. My Travel Storiis" /></label>
+              <label className="field"><span className="lbl">Logo (PNG/JPG, under 1 MB)</span><input name="logo" type="file" accept="image/*" style={{ padding: 7 }} /></label>
+            </div>
+            {org.logo && (
+              <div className="flex" style={{ gap: 12, alignItems: "center", marginBottom: 12 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={org.logo} alt="current logo" style={{ height: 46, maxWidth: 160, objectFit: "contain", borderRadius: 8, border: "1px solid var(--border)", padding: 4 }} />
+                <label className="flex small muted" style={{ gap: 6, cursor: "pointer" }}><input type="checkbox" name="removeLogo" value="yes" /> Remove logo</label>
+              </div>
+            )}
             <div className="row-2">
               <label className="field"><span className="lbl">Legal business name</span><input name="legalName" defaultValue={org.legalName || ""} placeholder="e.g. My Travel Storiis Pvt Ltd" /></label>
               <label className="field"><span className="lbl">GSTIN</span><input name="gstin" defaultValue={org.gstin || ""} placeholder="15-digit GSTIN" /></label>

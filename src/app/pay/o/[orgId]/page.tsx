@@ -12,7 +12,7 @@ function fmtDate(d: Date | null) {
 // TYPES their own name — no other customers' names are ever sent to the browser.
 export default async function OrgPayPage({ params }: { params: Promise<{ orgId: string }> }) {
   const { orgId } = await params;
-  const org = await prisma.organization.findFirst({ where: { id: orgId, status: "approved" }, select: { id: true, name: true } });
+  const org = await prisma.organization.findFirst({ where: { id: orgId, status: "approved" }, select: { id: true, name: true, logo: true } });
   if (!org) notFound();
 
   // Only trip names (with at least one booking) — deliberately NO customer data.
@@ -26,7 +26,12 @@ export default async function OrgPayPage({ params }: { params: Promise<{ orgId: 
   return (
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20 }}>
       <div className="card" style={{ width: 460, maxWidth: "100%" }}>
-        <div className="brand" style={{ paddingLeft: 0, marginBottom: 4 }}><span className="dot">✦</span> {org.name}</div>
+        {org.logo ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={org.logo} alt={org.name} style={{ height: 44, maxWidth: 180, objectFit: "contain", marginBottom: 8 }} />
+        ) : (
+          <div className="brand" style={{ paddingLeft: 0, marginBottom: 4 }}><span className="dot">✦</span> {org.name}</div>
+        )}
         <h1 style={{ fontSize: 20, marginTop: 6 }}>Tell us about your payment</h1>
         <p className="muted small" style={{ marginTop: 4, marginBottom: 16 }}>
           Pick your trip, enter your name (as given at booking) and the payment details. We’ll confirm it shortly.

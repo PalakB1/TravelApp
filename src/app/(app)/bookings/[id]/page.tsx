@@ -5,6 +5,7 @@ import { requireScope } from "@/lib/scope";
 import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookingTotal, bookingPaid, bookingBalance, bookingInclTaxCharge, bookingInclNonTaxCharge, bookingInclusionCost } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, generateInvoice } from "../../data-actions";
+import ShareInvoice from "@/components/ShareInvoice";
 import AutoFill from "@/components/AutoFill";
 import CopyLink from "@/components/CopyLink";
 
@@ -73,7 +74,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
         </div>
         <div className="flex" style={{ gap: 8, flexWrap: "wrap" }}>
           {b.invoiceNo
-            ? <Link className="btn sm" href={`/invoice/${b.id}`}>🧾 Invoice {b.invoiceNo}</Link>
+            ? <><Link className="btn sm" href={`/invoice/${b.id}`} target="_blank">🧾 Invoice {b.invoiceNo}</Link><ShareInvoice bookingId={b.id} customerName={b.customerName} invoiceNo={b.invoiceNo} phone={b.customerPhone} /></>
             : <form action={generateInvoice}><input type="hidden" name="id" value={b.id} /><button className="btn sm" type="submit">🧾 Generate GST invoice</button></form>}
           <form action={deleteBooking}>
             <input type="hidden" name="id" value={b.id} />

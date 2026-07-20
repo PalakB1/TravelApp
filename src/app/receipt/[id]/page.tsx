@@ -45,6 +45,10 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
 
         <div className="card sheet">
           <div style={{ textAlign: "center", borderBottom: "2px solid var(--border-strong)", paddingBottom: 12, marginBottom: 14 }}>
+            {org?.logo ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={org.logo} alt="" style={{ height: 48, maxWidth: 170, objectFit: "contain", marginBottom: 8 }} />
+            ) : null}
             <div style={{ fontSize: 17, fontWeight: 700 }}>{agency}</div>
             {org?.gstAddress && <div className="small muted">{org.gstAddress}</div>}
             {org?.gstin && <div className="small muted">GSTIN: {org.gstin}</div>}

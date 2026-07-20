@@ -26,6 +26,7 @@ model Organization {
   gstStateCode       String?
   sacCode            String?  @default("998555") // SAC for tour-operator services
   invoiceNote        String?
+  logo               String? // base64 data URL, shown on pay pages / receipts / invoices
   // Billing: 30-day trial → paid. plan = trial | pro | business (founders grandfathered to business).
   plan               String   @default("trial")
   trialEndsAt        DateTime?

@@ -11,13 +11,28 @@ export type PwResult = { ok?: boolean; error?: string; message?: string };
 
 const str = (v: FormDataEntryValue | null) => String(v || "").trim() || null;
 
-// Save the org's business / GST details (printed on tax invoices).
+// Save the org's business / branding / GST details (shown on customer pages).
 export async function updateOrgProfile(formData: FormData) {
   const ctx = await getOrgContext();
   if (!ctx?.orgId) redirect("/login");
+
+  // Logo: new upload → base64; "remove" ticked → null; otherwise leave unchanged.
+  let logo: string | null | undefined = undefined;
+  const file = formData.get("logo");
+  if (file && typeof file === "object" && "arrayBuffer" in file && (file as File).size > 0) {
+    const f = file as File;
+    if (f.size <= 1_000_000) {
+      const buf = Buffer.from(await f.arrayBuffer());
+      logo = `data:${f.type || "image/png"};base64,${buf.toString("base64")}`;
+    }
+  } else if (String(formData.get("removeLogo")) === "yes") {
+    logo = null;
+  }
+
   await prisma.organization.update({
     where: { id: ctx.orgId },
     data: {
+      name: str(formData.get("name")) || undefined,
       legalName: str(formData.get("legalName")),
       gstin: str(formData.get("gstin")),
       gstAddress: str(formData.get("gstAddress")),
@@ -25,6 +40,7 @@ export async function updateOrgProfile(formData: FormData) {
       gstStateCode: str(formData.get("gstStateCode")),
       sacCode: str(formData.get("sacCode")) || "998555",
       invoiceNote: str(formData.get("invoiceNote")),
+      ...(logo !== undefined ? { logo } : {}),
     },
   });
   revalidatePath("/settings");
