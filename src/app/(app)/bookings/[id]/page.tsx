@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { requireOrgId } from "@/lib/org";
+import { requireScope } from "@/lib/scope";
 import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookingTotal, bookingPaid, bookingBalance, bookingInclTaxCharge, bookingInclNonTaxCharge, bookingInclusionCost } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, generateInvoice } from "../../data-actions";
@@ -17,9 +17,9 @@ const PACKAGE: Record<string, string> = { land: "Land only", lva: "Land + visa (
 
 export default async function BookingDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const orgId = await requireOrgId();
+  const scope = await requireScope();
   const b = await prisma.booking.findFirst({
-    where: { id, trip: { orgId } },
+    where: { id, ...scope.viaTrip },
     include: {
       trip: { include: { inclusions: { orderBy: { createdAt: "asc" } } } },
       variant: true, customer: true,
@@ -33,7 +33,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
   // Known ages from every traveller ever added, so the same person's age
   // auto-fills next time they're entered on any trip (most recent age wins).
   const knownPeople = await prisma.traveller.findMany({
-    where: { age: { not: null }, booking: { trip: { orgId } } },
+    where: { age: { not: null }, booking: scope.viaTrip },
     orderBy: { createdAt: "desc" },
     select: { name: true, age: true },
   });

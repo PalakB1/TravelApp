@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { requireOrgId } from "@/lib/org";
+import { requireScope } from "@/lib/scope";
 import { bookingTotal, bookingPaid, bookingBalance, isActive } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import TableSearch from "@/components/TableSearch";
@@ -10,10 +10,15 @@ import Stamp from "@/components/Stamp";
 export const dynamic = "force-dynamic";
 
 export default async function CustomersPage() {
-  const orgId = await requireOrgId();
+  const scope = await requireScope();
   const customers = await prisma.customer.findMany({
-    where: { orgId },
-    include: { bookings: { include: { variant: true, payments: true, trip: true } } },
+    where: scope.tripIds
+      ? { orgId: scope.orgId, bookings: { some: { trip: { id: { in: scope.tripIds } } } } }
+      : { orgId: scope.orgId },
+    include: {
+      // Only surface bookings on trips this member may see (else other trip names leak).
+      bookings: { where: scope.tripIds ? { trip: { id: { in: scope.tripIds } } } : {}, include: { variant: true, payments: true, trip: true } },
+    },
     orderBy: { name: "asc" },
   });
 

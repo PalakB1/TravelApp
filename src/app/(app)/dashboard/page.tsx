@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { requireOrgId } from "@/lib/org";
+import { requireScope } from "@/lib/scope";
 import { tripFinancials, bookingBalance, bookingPaid, bookingTotal, bookingRevenue, bookingTax, isActive, isNightGap, holdExpiringSoon } from "@/lib/calc";
 import { formatINR, formatINRShort } from "@/lib/money";
 import QuickEntry from "@/components/QuickEntry";
@@ -18,7 +18,7 @@ function fmtDate(d: Date | null) {
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
-  const orgId = await requireOrgId();
+  const scope = await requireScope();
 
   // Date-range filter — default is a rolling one-year window from today.
   const { from: fromQ, to: toQ } = await searchParams;
@@ -32,7 +32,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const tripInRange = { OR: [{ departureDate: null }, { departureDate: { gte: rangeFrom, lte: rangeTo } }] };
 
   const trips = await prisma.trip.findMany({
-    where: { orgId, ...tripInRange },
+    where: { ...scope.tripWhere, ...tripInRange },
     include: {
       itinerary: { include: { hotels: true } },
       cars: true,
@@ -68,7 +68,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
   // Custom trips (bespoke, per-client) in the same window — folded into the totals.
   const customTrips = await prisma.customTrip.findMany({
-    where: { orgId, status: { not: "cancelled" }, OR: [{ startDate: null }, { startDate: { gte: rangeFrom, lte: rangeTo } }] },
+    where: { orgId: scope.orgId, status: { not: "cancelled" }, OR: [{ startDate: null }, { startDate: { gte: rangeFrom, lte: rangeTo } }] },
     include: { items: true, payments: true },
   });
   const custRevenue = customTrips.reduce((s, ct) => s + ctRevenue(ct), 0);
@@ -135,8 +135,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
   // top customers by outstanding, with their trips
   const customers = await prisma.customer.findMany({
-    where: { orgId },
-    include: { bookings: { include: { variant: true, payments: true, trip: true } } },
+    where: { orgId: scope.orgId },
+    // Only bookings on trips this member may see (else other trip names leak).
+    include: { bookings: { where: scope.tripIds ? { trip: { id: { in: scope.tripIds } } } : {}, include: { variant: true, payments: true, trip: true } } },
   });
   const customerRows = customers
     .map((c) => {
@@ -165,7 +166,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
   // recent payments for an activity feel
   const recentPayments = await prisma.payment.findMany({
-    where: { booking: { trip: { orgId } } },
+    where: { booking: scope.viaTrip },
     take: 6,
     orderBy: { date: "desc" },
     include: { booking: { include: { trip: true } } },

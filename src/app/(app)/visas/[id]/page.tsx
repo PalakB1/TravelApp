@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { requireOrgId } from "@/lib/org";
+import { requireScope } from "@/lib/scope";
 import { visaCoverLetter, visaChecklist, visaLabel } from "@/lib/visa";
 import { updateVisaApplicant, deleteVisaApplicant } from "../../data-actions";
 import PrintButton from "@/components/PrintButton";
@@ -27,9 +27,9 @@ function Field({ label, value }: { label: string; value?: string | null }) {
 
 export default async function VisaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const orgId = await requireOrgId();
+  const scope = await requireScope();
   const a = await prisma.visaApplicant.findFirst({
-    where: { id, trip: { orgId } },
+    where: { id, ...scope.viaTrip },
     include: { trip: { include: { itinerary: { orderBy: { order: "asc" }, include: { hotels: true } } } } },
   });
   if (!a) notFound();

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { requireOrgId } from "@/lib/org";
+import { requireScope } from "@/lib/scope";
 import { bookingTotal, bookingPaid, bookingBalance, isActive } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import { updateCustomer, deleteCustomer } from "../../data-actions";
@@ -22,11 +22,14 @@ function statusBadge(s: string) {
 
 export default async function CustomerDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const orgId = await requireOrgId();
+  const scope = await requireScope();
   const c = await prisma.customer.findFirst({
-    where: { id, orgId },
+    where: scope.tripIds
+      ? { id, orgId: scope.orgId, bookings: { some: { trip: { id: { in: scope.tripIds } } } } }
+      : { id, orgId: scope.orgId },
     include: {
-      bookings: { include: { trip: true, variant: true, payments: true }, orderBy: { createdAt: "desc" } },
+      // Only bookings on trips this member may see (else other trip names leak).
+      bookings: { where: scope.tripIds ? { trip: { id: { in: scope.tripIds } } } : {}, include: { trip: true, variant: true, payments: true }, orderBy: { createdAt: "desc" } },
       customTrips: { include: { items: true, payments: true }, orderBy: { createdAt: "desc" } },
     },
   });

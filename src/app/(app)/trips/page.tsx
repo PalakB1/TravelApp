@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { requireOrgId } from "@/lib/org";
+import { requireScope } from "@/lib/scope";
 import { tripFinancials } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import { duplicateTrip } from "../data-actions";
@@ -13,9 +13,9 @@ function fmtDate(d: Date | null) {
 }
 
 export default async function TripsPage() {
-  const orgId = await requireOrgId();
+  const scope = await requireScope();
   const trips = await prisma.trip.findMany({
-    where: { orgId },
+    where: scope.tripWhere,
     include: {
       itinerary: { include: { hotels: true } },
       cars: true,

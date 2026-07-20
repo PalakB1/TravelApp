@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { requireOrgId } from "@/lib/org";
+import { requireScope } from "@/lib/scope";
 import { bookingTotal, bookingPaid, bookingBalance, isActive } from "@/lib/calc";
 import { formatINR, formatINRShort } from "@/lib/money";
 import TableSearch from "@/components/TableSearch";
 import Combobox from "@/components/Combobox";
 import ActivityLog from "@/components/ActivityLog";
+import CopyLink from "@/components/CopyLink";
+import ShareReceipt from "@/components/ShareReceipt";
 import { addPayment, approvePendingPayment, rejectPendingPayment } from "../data-actions";
 
 export const dynamic = "force-dynamic";
@@ -15,19 +17,20 @@ function fmtDate(d: Date) {
 }
 
 export default async function PaymentsPage() {
-  const orgId = await requireOrgId();
+  const scope = await requireScope();
+  const orgId = scope.orgId;
   const bookings = await prisma.booking.findMany({
-    where: { trip: { orgId } },
+    where: scope.viaTrip,
     include: { trip: true, variant: true, payments: true },
   });
   const recent = await prisma.payment.findMany({
-    where: { booking: { trip: { orgId } } },
+    where: { booking: scope.viaTrip },
     take: 25,
     orderBy: { date: "desc" },
     include: { booking: { include: { trip: true } } },
   });
   const pending = await prisma.pendingPayment.findMany({
-    where: { booking: { trip: { orgId } } },
+    where: { booking: scope.viaTrip },
     orderBy: { createdAt: "desc" },
     include: { booking: { include: { trip: true } } },
   });
@@ -53,6 +56,12 @@ export default async function PaymentsPage() {
           <h1>Payments</h1>
           <p className="sub">{formatINR(totalCollected)} collected · {formatINR(totalDue)} outstanding{pending.length > 0 ? ` · ${pending.length} awaiting approval` : ""}</p>
         </div>
+      </div>
+
+      <div className="card" style={{ background: "var(--accent-bg)", borderColor: "transparent" }}>
+        <div className="card-title">🔗 Universal payment link <span className="small muted">one link for everyone — they pick their trip &amp; name</span></div>
+        <CopyLink path={`/pay/o/${orgId}`} label="Copy link" waText="Please confirm your payment here:" />
+        <p className="small muted" style={{ margin: "8px 0 0" }}>Share this once (WhatsApp group, email signature, anywhere). Each person selects their trip and name, then reports what they paid — it lands below for your approval.</p>
       </div>
 
       {pending.length > 0 && (
@@ -149,7 +158,7 @@ export default async function PaymentsPage() {
         ) : (
           <TableSearch placeholder="Search customer, trip or mode…" tags={["upi", "cash", "card", "bank"]}>
           <table className="t">
-            <thead><tr><th>Date</th><th>Customer</th><th>Trip</th><th>Mode</th><th className="num">Amount</th></tr></thead>
+            <thead><tr><th>Date</th><th>Customer</th><th>Trip</th><th>Mode</th><th className="num">Amount</th><th className="num">Receipt</th></tr></thead>
             <tbody>
               {recent.map((p) => (
                 <tr key={p.id}>
@@ -158,6 +167,7 @@ export default async function PaymentsPage() {
                   <td className="muted">{p.booking.trip.name}</td>
                   <td><span className="badge gray">{p.mode}</span></td>
                   <td className="num" style={{ fontWeight: 500 }}>{formatINR(p.amount)}</td>
+                  <td className="num"><ShareReceipt paymentId={p.id} customerName={p.booking.customerName} amount={formatINR(p.amount)} phone={p.booking.customerPhone} /></td>
                 </tr>
               ))}
             </tbody>

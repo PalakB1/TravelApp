@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getOrgContext } from "@/lib/org";
+import { getScope } from "@/lib/scope";
 import { parseAmount, formatINR } from "@/lib/money";
 import { financialYear } from "@/lib/invoice";
 
@@ -43,7 +44,14 @@ export async function generateInvoice(formData: FormData) {
 
 // Ownership checks — return the row only if it belongs to this org, else null.
 // Child records (booking/night/car/…) are scoped through their trip.
-const ownTrip = (orgId: string, id: string) => prisma.trip.findFirst({ where: { id, orgId }, select: { id: true } });
+// Owns the trip AND (if the member is trip-restricted) has been granted it.
+const ownTrip = async (orgId: string, id: string) => {
+  const trip = await prisma.trip.findFirst({ where: { id, orgId }, select: { id: true } });
+  if (!trip) return null;
+  const s = await getScope();
+  if (s?.tripIds && !s.tripIds.includes(id)) return null;
+  return trip;
+};
 const ownBooking = (orgId: string, id: string) => prisma.booking.findFirst({ where: { id, trip: { orgId } }, select: { id: true } });
 const ownNight = (orgId: string, id: string) => prisma.night.findFirst({ where: { id, trip: { orgId } }, select: { id: true } });
 

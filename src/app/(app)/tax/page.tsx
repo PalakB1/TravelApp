@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { requireOrgId } from "@/lib/org";
+import { requireScope } from "@/lib/scope";
 import { bookingGst, bookingTcs, bookingTax, isActive } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import { markTaxRemittedBulk, setTaxRemitted } from "../data-actions";
@@ -13,9 +13,9 @@ function fmtDate(d: Date | null) {
 }
 
 export default async function TaxPage() {
-  const orgId = await requireOrgId();
+  const scope = await requireScope();
   const bookings = await prisma.booking.findMany({
-    where: { trip: { orgId } },
+    where: scope.viaTrip,
     include: { trip: true, variant: true },
     orderBy: { createdAt: "desc" },
   });

@@ -1,7 +1,7 @@
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { requireOrgId } from "@/lib/org";
+import { getScope } from "@/lib/scope";
 import { pricePerRoom } from "@/lib/calc";
 
 function d(date: Date | null) {
@@ -12,16 +12,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const session = await getSession();
   if (!session) return new Response("Unauthorized", { status: 401 });
 
-  let orgId: string;
-  try {
-    orgId = await requireOrgId();
-  } catch {
-    return new Response("Unauthorized", { status: 401 });
-  }
+  const scope = await getScope();
+  if (!scope) return new Response("Unauthorized", { status: 401 });
 
   const { id } = await params;
   const trip = await prisma.trip.findFirst({
-    where: { id, orgId },
+    where: { AND: [{ id }, scope.tripWhere] },
     include: { itinerary: { orderBy: { order: "asc" }, include: { hotels: true } } },
   });
   if (!trip) return new Response("Not found", { status: 404 });

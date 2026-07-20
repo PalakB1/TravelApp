@@ -33,6 +33,34 @@ export async function addMember(_prev: MemberResult | undefined, formData: FormD
   return { ok: true, message: `${name} can now sign in with that email and password, then change it under Settings.` };
 }
 
+// Give a member access to all trips, or only to specific ones.
+export async function setTripAccess(formData: FormData) {
+  const ctx = await getOrgContext();
+  if (!ctx || !ctx.orgId) redirect("/login");
+  const orgId = ctx.orgId;
+  const userId = String(formData.get("userId"));
+  const scoped = String(formData.get("scoped")) === "limited";
+
+  const member = await prisma.user.findFirst({ where: { id: userId, orgId, isPlatformAdmin: false }, select: { id: true, name: true } });
+  if (!member) return;
+
+  // Only trips that actually belong to this org can be granted.
+  const wanted = formData.getAll("tripIds").map(String);
+  const valid = scoped && wanted.length
+    ? await prisma.trip.findMany({ where: { orgId, id: { in: wanted } }, select: { id: true } })
+    : [];
+
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: userId }, data: { tripScoped: scoped } }),
+    prisma.tripAccess.deleteMany({ where: { userId } }),
+    ...(valid.length ? [prisma.tripAccess.createMany({ data: valid.map((t) => ({ userId, tripId: t.id })) })] : []),
+  ]);
+
+  await logActivity(orgId, "team", "updated", scoped ? `Limited ${member.name} to ${valid.length} trip${valid.length === 1 ? "" : "s"}` : `Gave ${member.name} access to all trips`);
+  revalidatePath("/team");
+  revalidatePath("/", "layout");
+}
+
 // Remove a member from the current org (can't remove yourself).
 export async function removeMember(formData: FormData) {
   const ctx = await getOrgContext();
