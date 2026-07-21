@@ -5,6 +5,7 @@ import { bookingTotal, bookingPaid, bookingBalance } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import TableSearch from "@/components/TableSearch";
 import ActivityLog from "@/components/ActivityLog";
+import { visaMeta } from "@/lib/visaStatus";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,7 @@ export default async function BookingsPage() {
           <TableSearch placeholder="Search customer or trip…" tags={["confirmed", "enquiry", "travelled", "cancelled"]}>
           <table className="t">
             <thead>
-              <tr><th style={{ paddingLeft: 20 }}>Customer</th><th>Trip</th><th>Pax</th><th>Status</th><th className="num">Total</th><th className="num">Paid</th><th className="num">Balance</th></tr>
+              <tr><th style={{ paddingLeft: 20 }}>Customer</th><th>Trip</th><th>Pax</th><th>Status</th><th>Visa</th><th className="num">Total</th><th className="num">Paid</th><th className="num">Balance</th></tr>
             </thead>
             <tbody>
               {bookings.map((b) => {
@@ -57,6 +58,7 @@ export default async function BookingsPage() {
                     <td className="muted">{b.trip.name}</td>
                     <td className="muted">{b.pax}</td>
                     <td>{statusBadge(b.status)}</td>
+                    <td>{b.visaStatus === "not_required" ? <span className="small muted">—</span> : <span className={`badge ${visaMeta(b.visaStatus).badge}`}>{visaMeta(b.visaStatus).short}</span>}</td>
                     <td className="num">{formatINR(bookingTotal(b))}</td>
                     <td className="num">{formatINR(bookingPaid(b))}</td>
                     <td className="num">{bal > 0 ? <span className="badge amber">{formatINR(bal)}</span> : <span className="badge green">paid</span>}</td>

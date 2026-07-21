@@ -525,6 +525,26 @@ export async function setBookingStatus(formData: FormData) {
   refresh();
 }
 
+export async function updateBookingVisa(formData: FormData) {
+  const orgId = await guard();
+  const id = String(formData.get("id"));
+  if (!(await ownBooking(orgId, id))) return;
+  const visaStatus = String(formData.get("visaStatus") || "not_required");
+  const handledRaw = String(formData.get("visaHandledBy") || "");
+  const visaHandledBy = handledRaw === "us" || handledRaw === "self" ? handledRaw : null;
+  const validStr = String(formData.get("visaValidUntil") || "");
+  const b = await prisma.booking.update({
+    where: { id },
+    data: {
+      visaStatus,
+      visaHandledBy,
+      visaValidUntil: validStr ? new Date(validStr) : null,
+    },
+  });
+  await logActivity(orgId, "booking", "visa", `Visa for ${b.customerName} → ${visaStatus}`, `/bookings/${id}`);
+  refresh();
+}
+
 export async function deleteBooking(formData: FormData) {
   const orgId = await guard();
   const id = String(formData.get("id"));

@@ -4,7 +4,8 @@ import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookingTotal, bookingPaid, bookingBalance, bookingInclTaxCharge, bookingInclNonTaxCharge, bookingInclusionCost } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
-import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, generateInvoice, renameBooking } from "../../data-actions";
+import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, generateInvoice, renameBooking, updateBookingVisa } from "../../data-actions";
+import { VISA_STATUSES, visaMeta } from "@/lib/visaStatus";
 import ShareInvoice from "@/components/ShareInvoice";
 import InlineTitle from "@/components/InlineTitle";
 import AutoFill from "@/components/AutoFill";
@@ -120,6 +121,34 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           <span className="small" style={{ color: "var(--warning)" }}><b>Remarks:</b> {b.notes}</span>
         </div>
       ) : null}
+
+      <div className="card">
+        <div className="card-title">Visa <span className={`badge ${visaMeta(b.visaStatus).badge}`}>{visaMeta(b.visaStatus).short}</span></div>
+        <form action={updateBookingVisa}>
+          <input type="hidden" name="id" value={b.id} />
+          <div className="row-3">
+            <label className="field"><span className="lbl">Visa status</span>
+              <select name="visaStatus" defaultValue={b.visaStatus}>
+                {VISA_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </label>
+            <label className="field"><span className="lbl">Who arranges it?</span>
+              <select name="visaHandledBy" defaultValue={b.visaHandledBy || ""}>
+                <option value="">— not set —</option>
+                <option value="us">We arrange it</option>
+                <option value="self">Customer arranges it</option>
+              </select>
+            </label>
+            <label className="field"><span className="lbl">Visa valid until <span className="small muted">if held / approved</span></span>
+              <input name="visaValidUntil" type="date" defaultValue={b.visaValidUntil ? b.visaValidUntil.toISOString().slice(0, 10) : ""} />
+            </label>
+          </div>
+          <button className="primary" type="submit">Save visa status</button>
+          {b.visaValidUntil && b.trip?.endDate && b.visaValidUntil < b.trip.endDate ? (
+            <p className="small" style={{ color: "var(--danger)", margin: "10px 0 0" }}>⚠ Visa expires before this trip ends ({b.visaValidUntil.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}).</p>
+          ) : null}
+        </form>
+      </div>
 
       <div className="card">
         <div className="card-title">
