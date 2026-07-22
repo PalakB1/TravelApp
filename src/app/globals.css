@@ -464,6 +464,23 @@ details.section[open] > .sec-body, details.add[open] .form-box { animation: fade
 .qe-close { width: 32px; height: 32px; padding: 0; justify-content: center; border-radius: 9px; color: var(--text-2); }
 @keyframes qePop { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
 
+/* Shareable link row (payment link, receipts) */
+.copylink { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.copylink-url { flex: 1; min-width: 0; font-size: 12.5px; color: var(--text-2); background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 9px 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.copylink-actions { display: flex; gap: 8px; }
+.copylink-wa { background: #25D366; color: #fff; border-color: transparent; font-weight: 600; }
+.copylink-wa:hover { background: #21c15d; }
+@media (max-width: 640px) {
+  .copylink { flex-direction: column; align-items: stretch; }
+  .copylink-url { width: 100%; }
+  .copylink-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .copylink-actions button { justify-content: center; min-height: 40px; }
+  .copylink-actions button.primary { grid-column: 1 / -1; }
+}
+
+/* "Show all" toggle under mobile-capped lists */
+.showall-btn { width: 100%; justify-content: center; margin-top: 10px; }
+
 /* Dashboard trigger bar that opens the launcher */
 .qe-launch {
   width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
