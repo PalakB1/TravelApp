@@ -66,6 +66,12 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     return { trip: t, f };
   });
 
+  // Trip profitability — where each trip's money goes. Lowest margin first so
+  // the trips leaking profit surface at the top.
+  const marginRows = perTrip
+    .filter((r) => r.f.revenue > 0 && r.f.bookingCount > 0)
+    .sort((a, b) => a.f.margin - b.f.margin);
+
   // Custom trips (bespoke, per-client) in the same window — folded into the totals.
   const customTrips = await prisma.customTrip.findMany({
     where: { orgId: scope.orgId, status: { not: "cancelled" }, OR: [{ startDate: null }, { startDate: { gte: rangeFrom, lte: rangeTo } }] },
@@ -237,6 +243,46 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               />
             </div>
           </div>
+
+          {marginRows.length > 0 && (
+            <div className="card">
+              <div className="card-title">Trip margins <span className="small muted">where the money goes · lowest margin first · click a trip</span></div>
+              <div className="flex" style={{ gap: 13, flexWrap: "wrap", marginBottom: 14, fontSize: 11.5, color: "var(--text-2)" }}>
+                {([["Hotels", "var(--sky)"], ["Cars", "var(--violet)"], ["Drivers", "var(--amber)"], ["Extras", "var(--orange)"], ["Inclusions", "var(--rose)"], ["Profit", "var(--emerald)"]] as const).map(([l, c]) => (
+                  <span key={l} className="flex" style={{ gap: 5 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: c, display: "inline-block" }} />{l}</span>
+                ))}
+              </div>
+              <div className="stack" style={{ gap: 6 }}>
+                {marginRows.map(({ trip, f }) => {
+                  const denom = f.revenue > 0 ? f.revenue : 1;
+                  const segs = [
+                    { v: f.hotelCost, c: "var(--sky)" },
+                    { v: f.carRental, c: "var(--violet)" },
+                    { v: f.driverCost, c: "var(--amber)" },
+                    { v: f.extrasCost, c: "var(--orange)" },
+                    { v: f.inclusionsCost, c: "var(--rose)" },
+                    { v: Math.max(0, f.profit), c: "var(--emerald)" },
+                  ].filter((s) => s.v > 0);
+                  const pct = Math.round(f.margin * 100);
+                  const pcol = pct >= 35 ? "var(--emerald)" : pct >= 20 ? "#9a6109" : "var(--rose)";
+                  return (
+                    <Link key={trip.id} href={`/trips/${trip.id}`} className="hbar-row" style={{ padding: "7px 8px" }}>
+                      <div className="between" style={{ marginBottom: 6, gap: 10 }}>
+                        <span style={{ fontWeight: 500, fontSize: 13.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{trip.name}</span>
+                        <span className="small" style={{ whiteSpace: "nowrap" }}><b style={{ color: pcol }}>{pct}%</b> · {formatINRShort(f.profit)}</span>
+                      </div>
+                      <div style={{ display: "flex", height: 12, borderRadius: 6, overflow: "hidden", background: "var(--surface-2)" }}>
+                        {segs.map((s, i) => <span key={i} style={{ width: `${(s.v / denom) * 100}%`, background: s.c }} />)}
+                      </div>
+                      <div className="small muted" style={{ marginTop: 5 }}>
+                        {f.pax} pax · {formatINRShort(f.pax ? Math.round(f.revenue / f.pax) : 0)}/pax revenue · {formatINRShort(f.pax ? Math.round(f.cost / f.pax) : 0)}/pax cost
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </>
       )}
 
