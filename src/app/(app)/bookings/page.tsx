@@ -3,16 +3,10 @@ import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { bookingTotal, bookingPaid, bookingBalance } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
-import TableSearch from "@/components/TableSearch";
 import ActivityLog from "@/components/ActivityLog";
-import { visaMeta } from "@/lib/visaStatus";
+import BookingsTable from "@/components/BookingsTable";
 
 export const dynamic = "force-dynamic";
-
-function statusBadge(s: string) {
-  const map: Record<string, string> = { confirmed: "green", travelled: "accent", enquiry: "amber", cancelled: "red" };
-  return <span className={`badge ${map[s] || "gray"}`}>{s}</span>;
-}
 
 export default async function BookingsPage() {
   const scope = await requireScope();
@@ -23,6 +17,12 @@ export default async function BookingsPage() {
   });
 
   const totalDue = bookings.filter((b) => b.status !== "cancelled").reduce((s, b) => s + bookingBalance(b), 0);
+  const rows = bookings.map((b) => ({
+    id: b.id, name: b.customerName, trip: b.trip.name, pax: b.pax, status: b.status,
+    visaStatus: b.visaStatus, visaHandledBy: b.visaHandledBy,
+    total: bookingTotal(b), paid: bookingPaid(b), balance: bookingBalance(b),
+    discount: b.discount, discountReason: b.discountReason,
+  }));
 
   return (
     <>
@@ -44,30 +44,7 @@ export default async function BookingsPage() {
         </div>
       ) : (
         <div className="card" style={{ padding: "18px 20px" }}>
-          <TableSearch placeholder="Search customer or trip…" tags={["confirmed", "enquiry", "travelled", "cancelled"]}>
-          <table className="t">
-            <thead>
-              <tr><th style={{ paddingLeft: 20 }}>Customer</th><th>Trip</th><th>Pax</th><th>Status</th><th>Visa</th><th className="num">Total</th><th className="num">Paid</th><th className="num">Balance</th></tr>
-            </thead>
-            <tbody>
-              {bookings.map((b) => {
-                const bal = bookingBalance(b);
-                return (
-                  <tr key={b.id}>
-                    <td style={{ paddingLeft: 20 }}><Link className="row-link" href={`/bookings/${b.id}`}>{b.customerName}</Link></td>
-                    <td className="muted">{b.trip.name}</td>
-                    <td className="muted">{b.pax}</td>
-                    <td>{statusBadge(b.status)}</td>
-                    <td>{b.visaStatus === "not_required" ? <span className="small muted">—</span> : <span className={`badge ${visaMeta(b.visaStatus).badge}`}>{visaMeta(b.visaStatus).short}</span>}</td>
-                    <td className="num">{formatINR(bookingTotal(b))}</td>
-                    <td className="num">{formatINR(bookingPaid(b))}</td>
-                    <td className="num">{bal > 0 ? <span className="badge amber">{formatINR(bal)}</span> : <span className="badge green">paid</span>}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          </TableSearch>
+          <BookingsTable rows={rows} showTrip />
         </div>
       )}
 

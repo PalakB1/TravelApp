@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { tripFinancials, reconcileTrip, bookingTotal, bookingPaid, bookingBalance, isNightGap, holdExpiringSoon, carCost, pricePerRoom, nightCost, nightBookedRooms, carPassengerSeats } from "@/lib/calc";
-import { visaMeta } from "@/lib/visaStatus";
+import BookingsTable from "@/components/BookingsTable";
 import { formatINR, formatINRShort } from "@/lib/money";
 import {
   addVariant, deleteVariant,
@@ -701,26 +701,12 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
             <span className="btn primary sm" style={{ pointerEvents: "none" }}>↓ Add a booking below</span>
           </div>
         ) : (
-          <table className="t">
-            <thead><tr><th>Party</th><th>Pax</th><th>Status</th><th className="num">Total</th><th className="num">Paid</th><th className="num">Balance</th></tr></thead>
-            <tbody>
-              {trip.bookings.map((b) => {
-                const bal = bookingBalance(b);
-                return (
-                  <tr key={b.id}>
-                    <td><Link className="row-link" href={`/bookings/${b.id}`}>{b.customerName}</Link>
-                      {b.visaStatus !== "not_required" ? <div style={{ marginTop: 3 }}><span className={`badge ${visaMeta(b.visaStatus).badge}`} style={{ fontSize: 10.5 }}>{visaMeta(b.visaStatus).short}{b.visaHandledBy ? ` · ${b.visaHandledBy === "us" ? "we do it" : "they do it"}` : ""}</span></div> : null}
-                      {b.discount > 0 ? <div className="small muted">−{formatINR(b.discount)} {b.discountReason || "discount"}</div> : null}</td>
-                    <td className="muted">{b.pax}</td>
-                    <td>{statusBadge(b.status)}</td>
-                    <td className="num">{formatINR(bookingTotal(b))}</td>
-                    <td className="num">{formatINR(bookingPaid(b))}</td>
-                    <td className="num">{bal > 0 ? <span className="badge amber">{formatINR(bal)}</span> : <span className="badge green">paid</span>}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <BookingsTable rows={trip.bookings.map((b) => ({
+            id: b.id, name: b.customerName, pax: b.pax, status: b.status,
+            visaStatus: b.visaStatus, visaHandledBy: b.visaHandledBy,
+            total: bookingTotal(b), paid: bookingPaid(b), balance: bookingBalance(b),
+            discount: b.discount, discountReason: b.discountReason,
+          }))} />
         )}
         <details className="add">
           <summary>+ Add booking</summary>
