@@ -63,6 +63,8 @@ export async function addExpense(formData: FormData) {
 
   const dateStr = str(formData.get("date"));
 
+  const paidPersonally = String(formData.get("paidPersonally") || "") === "on";
+
   const expense = await prisma.expense.create({
     data: {
       orgId: scope.orgId,
@@ -75,6 +77,10 @@ export async function addExpense(formData: FormData) {
       amount,
       status: str(formData.get("status")) || "paid",
       paymentMode: str(formData.get("paymentMode")),
+      bankName: str(formData.get("bankName")),
+      paidPersonally,
+      // Only meaningful for personal spends — who fronted the money.
+      paidBy: paidPersonally ? str(formData.get("paidBy")) : null,
       notes: str(formData.get("notes")),
       fileName,
       fileType,
@@ -109,6 +115,71 @@ export async function deleteExpense(formData: FormData) {
 
   await prisma.expense.update({ where: { id: exp.id }, data: { deletedAt: new Date() } });
   await logActivity(scope.orgId, "expense", "delete", `Removed ${formatINR(exp.amount)} spend${exp.payee ? " to " + exp.payee : ""} (recoverable)`, "/expenses");
+  revalidatePath("/expenses");
+  revalidatePath("/", "layout");
+}
+
+// Reimburse one or more personal spends in a single company transfer. The chosen
+// expenses get stamped with the settlement (its bank + transaction reference), so
+// the ledger shows they've been paid back and how.
+export async function settleExpenses(formData: FormData) {
+  const scope = await getScope();
+  if (!scope) redirect("/login");
+
+  const ids = formData.getAll("ids").map((v) => String(v)).filter(Boolean);
+  if (ids.length === 0) { revalidatePath("/expenses"); return; }
+
+  // Re-validate: only this org's rows, personal, not already settled, not deleted,
+  // and (for trip-scoped members) within their trips.
+  const where = scope.tripIds
+    ? { id: { in: ids }, orgId: scope.orgId, paidPersonally: true, settlementId: null, deletedAt: null, OR: [{ tripId: { in: scope.tripIds } }, { tripId: null }] }
+    : { id: { in: ids }, orgId: scope.orgId, paidPersonally: true, settlementId: null, deletedAt: null };
+  const rows = await prisma.expense.findMany({ where, select: { id: true, amount: true } });
+  if (rows.length === 0) { revalidatePath("/expenses"); return; }
+
+  const total = rows.reduce((s, r) => s + r.amount, 0);
+  const dateStr = str(formData.get("date"));
+
+  const settlement = await prisma.settlement.create({
+    data: {
+      orgId: scope.orgId,
+      date: dateStr ? new Date(dateStr) : new Date(),
+      reference: str(formData.get("reference")),
+      bankName: str(formData.get("bankName")),
+      paidTo: str(formData.get("paidTo")),
+      notes: str(formData.get("notes")),
+      amount: total,
+      expenses: { connect: rows.map((r) => ({ id: r.id })) },
+    },
+  });
+
+  await logActivity(
+    scope.orgId,
+    "expense",
+    "settle",
+    `Reimbursed ${formatINR(total)} across ${rows.length} personal spend${rows.length === 1 ? "" : "s"}${settlement.paidTo ? " to " + settlement.paidTo : ""}${settlement.reference ? " · ref " + settlement.reference : ""}`,
+    "/expenses",
+  );
+  revalidatePath("/expenses");
+  revalidatePath("/", "layout");
+}
+
+// Reverse a settlement: unlink its expenses (they become owed again) and delete
+// the settlement record. Used to fix a mistaken reimbursement.
+export async function undoSettlement(formData: FormData) {
+  const scope = await getScope();
+  if (!scope) redirect("/login");
+  const id = String(formData.get("id"));
+
+  const settlement = await prisma.settlement.findFirst({
+    where: { id, orgId: scope.orgId },
+    select: { id: true, amount: true, _count: { select: { expenses: true } } },
+  });
+  if (!settlement) { revalidatePath("/expenses"); return; }
+
+  await prisma.expense.updateMany({ where: { settlementId: id, orgId: scope.orgId }, data: { settlementId: null } });
+  await prisma.settlement.delete({ where: { id } });
+  await logActivity(scope.orgId, "expense", "settle", `Reversed a ${formatINR(settlement.amount)} reimbursement (${settlement._count.expenses} spend${settlement._count.expenses === 1 ? "" : "s"} owed again)`, "/expenses");
   revalidatePath("/expenses");
   revalidatePath("/", "layout");
 }

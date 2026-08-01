@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { logout, exitOrgAction } from "@/app/(app)/actions";
 import QuickAddButton from "./QuickAddButton";
+import ThemeToggle from "./ThemeToggle";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: "grid" },
@@ -79,6 +80,7 @@ export default function Sidebar({ name, isPlatformAdmin = false, actingOrgId = n
           <p className="small muted" style={{ padding: "0 11px 8px" }}>Signed in as {name}</p>
           <Link href="/trash" className="sm" style={{ display: "flex", width: "100%", justifyContent: "center", marginBottom: 6 }}>🗑️ Recycle bin</Link>
           <Link href="/settings" className="sm" style={{ display: "flex", width: "100%", justifyContent: "center", marginBottom: 6 }}>Settings</Link>
+          <ThemeToggle />
           <form action={logout}>
             <button className="sm" style={{ width: "100%", justifyContent: "center" }} type="submit">Sign out</button>
           </form>
@@ -88,11 +90,14 @@ export default function Sidebar({ name, isPlatformAdmin = false, actingOrgId = n
       {/* Mobile top bar — slim; navigation lives in the bottom tab bar */}
       <header className="mobile-topbar">
         <Link href="/dashboard" className="brand" style={{ padding: 0, fontSize: 16 }}><span className="dot">✦</span> Trip Desk</Link>
-        {actingOrgId && (
-          <form action={exitOrgAction}>
-            <button className="sm" type="submit" style={{ background: "var(--accent-bg)", borderColor: "transparent" }} title="Return to the platform admin console">👁️ Exit</button>
-          </form>
-        )}
+        <div className="flex" style={{ gap: 8, alignItems: "center" }}>
+          {actingOrgId && (
+            <form action={exitOrgAction}>
+              <button className="sm" type="submit" style={{ background: "var(--accent-bg)", borderColor: "transparent" }} title="Return to the platform admin console">👁️ Exit</button>
+            </form>
+          )}
+          <ThemeToggle compact />
+        </div>
       </header>
     </>
   );

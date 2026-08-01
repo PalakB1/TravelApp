@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
+import { getOrgContext } from "@/lib/org";
 import { formatINR } from "@/lib/money";
 import TableSearch from "@/components/TableSearch";
 import ActivityLog from "@/components/ActivityLog";
-import { addExpense, deleteExpense } from "./actions";
+import SettlePersonal, { type PersonalRow } from "@/components/SettlePersonal";
+import { addExpense, deleteExpense, undoSettlement } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +65,44 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
     include: { trip: { select: { id: true, name: true } }, hotel: { select: { hotelName: true } }, car: { select: { label: true, carType: true } } },
   });
 
+  // Personal spends still owed back (ignores the trip filter — always show the
+  // full reimbursement backlog). Grouped by who paid.
+  const personalOwed = await prisma.expense.findMany({
+    where: { ...base, paidPersonally: true, settlementId: null, deletedAt: null },
+    orderBy: { date: "asc" },
+    include: { trip: { select: { name: true } }, hotel: { select: { hotelName: true } }, car: { select: { label: true } } },
+  });
+  const owedTotal = personalOwed.reduce((s, e) => s + e.amount, 0);
+
+  const assignedLabel = (e: (typeof personalOwed)[number]) =>
+    e.hotel ? `${e.trip?.name ?? "trip"} › ${e.hotel.hotelName}` : e.car ? `${e.trip?.name ?? "trip"} › ${e.car.label}` : e.trip?.name ?? "General";
+
+  const groupsMap = new Map<string, PersonalRow[]>();
+  for (const e of personalOwed) {
+    const person = e.paidBy?.trim() || "Unattributed";
+    const row: PersonalRow = { id: e.id, date: fmtDate(e.date), payee: e.payee || "", category: catLabel(e.category), trip: assignedLabel(e), bankName: e.bankName || "", notes: e.notes || "", amount: e.amount };
+    (groupsMap.get(person) ?? groupsMap.set(person, []).get(person)!).push(row);
+  }
+  const personalGroups = [...groupsMap.entries()].map(([person, rows]) => ({ person, rows }));
+
+  // Past reimbursements (settlement history).
+  const settlements = await prisma.settlement.findMany({
+    where: { orgId: scope.orgId },
+    orderBy: { date: "desc" },
+    include: { expenses: { select: { id: true, payee: true, amount: true, category: true } } },
+  });
+
+  // Bank names seen so far → autocomplete source for the spend + settle forms.
+  const bankSet = new Set<string>();
+  for (const e of expenses) if (e.bankName) bankSet.add(e.bankName);
+  for (const e of personalOwed) if (e.bankName) bankSet.add(e.bankName);
+  for (const s of settlements) if (s.bankName) bankSet.add(s.bankName);
+  const banks = [...bankSet].sort((a, b) => a.localeCompare(b));
+
+  // Prefill "Paid by" with the signed-in member's name.
+  const ctx = await getOrgContext();
+  const myName = ctx?.session.name ?? "";
+
   // Totals across the CURRENT filter.
   const total = expenses.reduce((s, e) => s + e.amount, 0);
   const tripLinked = expenses.filter((e) => e.tripId).reduce((s, e) => s + e.amount, 0);
@@ -90,6 +130,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
         <div className="metric c-violet"><div className="label">Trip-linked</div><div className="value">{formatINR(tripLinked)}</div><div className="foot">tagged to a trip</div></div>
         <div className="metric c-sky"><div className="label">General / overhead</div><div className="value">{formatINR(general)}</div><div className="foot">no trip</div></div>
         <div className={`metric ${pendingTotal > 0 ? "c-rose" : "c-emerald"}`}><div className="label">Unpaid</div><div className="value">{formatINR(pendingTotal)}</div><div className="foot">{pending.length} pending</div></div>
+        <div className={`metric ${owedTotal > 0 ? "c-amber" : "c-emerald"}`}><div className="label">Owed to staff</div><div className="value">{formatINR(owedTotal)}</div><div className="foot">{personalOwed.length} personal spend{personalOwed.length === 1 ? "" : "s"} to reimburse</div></div>
       </div>
 
       <div className="card">
@@ -125,18 +166,69 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                 <option value="bank">Bank transfer</option><option value="upi">UPI</option><option value="card">Card</option><option value="cash">Cash</option><option value="other">Other</option>
               </select>
             </label>
-            <label className="field"><span className="lbl">Date</span><input name="date" type="date" /></label>
+            <label className="field"><span className="lbl">Bank / account <span className="small muted">optional</span></span>
+              <input name="bankName" list="bank-names" placeholder="HDFC current / ICICI…" />
+            </label>
           </div>
           <div className="row-3">
+            <label className="field"><span className="lbl">Date</span><input name="date" type="date" /></label>
             <label className="field"><span className="lbl">Status</span>
               <select name="status" defaultValue="paid"><option value="paid">Paid</option><option value="pending">Unpaid / due</option></select>
             </label>
             <label className="field"><span className="lbl">Notes</span><input name="notes" placeholder="3 nights · advance / balance…" /></label>
+          </div>
+          <div className="row-3" style={{ alignItems: "end" }}>
+            <label className="field" style={{ justifyContent: "center" }}>
+              <span className="flex" style={{ gap: 8, alignItems: "center", cursor: "pointer" }}>
+                <input type="checkbox" name="paidPersonally" style={{ width: "auto" }} />
+                <span className="lbl" style={{ margin: 0 }}>Paid from personal money <span className="small muted">— to be reimbursed</span></span>
+              </span>
+            </label>
+            <label className="field"><span className="lbl">Paid by <span className="small muted">if personal</span></span><input name="paidBy" defaultValue={myName} placeholder="Who fronted the money" /></label>
             <label className="field"><span className="lbl">Invoice / receipt <span className="small muted">optional</span></span><input name="file" type="file" accept="image/*,application/pdf" /></label>
           </div>
           <button className="primary" type="submit">Add spend</button>
         </form>
       </div>
+
+      {/* One datalist, referenced by both the spend form and the settle forms. */}
+      <datalist id="bank-names">{banks.map((b) => <option key={b} value={b} />)}</datalist>
+
+      {/* PERSONAL SPENDS TO REIMBURSE — pick any/all, settle in one transfer. */}
+      {personalOwed.length > 0 && (
+        <div className="card">
+          <div className="card-title">Reimburse personal spends <span className="small muted">{formatINR(owedTotal)} owed · tick the ones you&apos;re settling and record the transfer</span></div>
+          <SettlePersonal groups={personalGroups} />
+        </div>
+      )}
+
+      {/* REIMBURSEMENT HISTORY */}
+      {settlements.length > 0 && (
+        <details className="section">
+          <summary className="between" style={{ padding: "14px 18px", cursor: "pointer" }}>
+            <span className="sec-title">Reimbursements paid</span>
+            <span className="small muted">{settlements.length} transfer{settlements.length === 1 ? "" : "s"} · {formatINR(settlements.reduce((s, x) => s + x.amount, 0))}</span>
+          </summary>
+          <div style={{ padding: "0 18px 16px" }}>
+            <table className="t">
+              <thead><tr><th>Date</th><th>Reimbursed to</th><th>Bank</th><th>Txn no.</th><th>Covers</th><th className="num">Amount</th><th></th></tr></thead>
+              <tbody>
+                {settlements.map((s) => (
+                  <tr key={s.id}>
+                    <td className="muted small">{fmtDate(s.date)}</td>
+                    <td>{s.paidTo || <span className="muted">—</span>}</td>
+                    <td className="muted small">{s.bankName || "—"}</td>
+                    <td className="muted small">{s.reference || "—"}</td>
+                    <td className="muted small">{s.expenses.length} spend{s.expenses.length === 1 ? "" : "s"}{s.notes ? ` · ${s.notes}` : ""}</td>
+                    <td className="num" style={{ fontWeight: 500 }}>{formatINR(s.amount)}</td>
+                    <td className="num"><form action={undoSettlement}><input type="hidden" name="id" value={s.id} /><button className="sm" type="submit" title="Reverse this reimbursement — the spends become owed again">Undo</button></form></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      )}
 
       <div className="card">
         <div className="between" style={{ marginBottom: 10 }}>
@@ -166,7 +258,12 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                 {expenses.map((e) => (
                   <tr key={e.id}>
                     <td className="muted small">{fmtDate(e.date)}</td>
-                    <td>{e.payee || <span className="muted">—</span>}{e.status === "pending" && <span className="badge amber" style={{ marginLeft: 6 }}>unpaid</span>}</td>
+                    <td>{e.payee || <span className="muted">—</span>}
+                      {e.status === "pending" && <span className="badge amber" style={{ marginLeft: 6 }}>unpaid</span>}
+                      {e.paidPersonally && (e.settlementId
+                        ? <span className="badge gray" style={{ marginLeft: 6 }} title={e.paidBy ? `Paid by ${e.paidBy}, reimbursed` : "Reimbursed"}>reimbursed</span>
+                        : <span className="badge amber" style={{ marginLeft: 6 }} title={e.paidBy ? `Paid personally by ${e.paidBy}` : "Paid personally"}>personal{e.paidBy ? ` · ${e.paidBy}` : ""}</span>)}
+                    </td>
                     <td><span className="badge gray">{catLabel(e.category)}</span></td>
                     <td className="muted">
                       {e.trip ? (

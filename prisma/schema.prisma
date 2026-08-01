@@ -39,6 +39,7 @@ model Organization {
   activityLogs ActivityLog[]
   customTrips  CustomTrip[]
   expenses     Expense[]
+  settlements  Settlement[]
 }
 
 // Costing ledger: any money YOU spend — supplier invoices, ground costs, fuel,
@@ -62,6 +63,13 @@ model Expense {
   amount      Int          @default(0) // rupees
   status      String       @default("paid") // paid | pending
   paymentMode String? // upi | cash | bank | card | other
+  bankName    String? // which bank / account the money moved through (autocompletes)
+  // Personal spend: an employee paid from their own pocket and the company owes it
+  // back. Settled later by transferring from a company account (see Settlement).
+  paidPersonally Boolean   @default(false)
+  paidBy         String? // who paid personally (name)
+  settlementId   String? // set once reimbursed — links to the settling transfer
+  settlement     Settlement? @relation(fields: [settlementId], references: [id], onDelete: SetNull)
   notes       String?
   fileName    String? // original name of the uploaded invoice
   fileType    String? // mime type
@@ -73,6 +81,26 @@ model Expense {
   @@index([orgId])
   @@index([tripId])
   @@index([deletedAt])
+  @@index([settlementId])
+}
+
+// A reimbursement: company money transferred to an employee to settle one or more
+// expenses they paid from their personal funds. Groups the settled expenses under
+// one bank transaction reference so the ledger shows what was paid back, when.
+model Settlement {
+  id        String       @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  date      DateTime     @default(now()) // when the reimbursing transfer was made
+  reference String? // bank transaction / UTR number of the transfer
+  bankName  String? // company account it was paid from
+  paidTo    String? // the person being reimbursed
+  amount    Int          @default(0) // total reimbursed (sum of settled expenses)
+  notes     String?
+  createdAt DateTime     @default(now())
+  expenses  Expense[]
+
+  @@index([orgId])
 }
 
 // --- Custom trips module (bespoke, per-client à-la-carte itineraries) ---

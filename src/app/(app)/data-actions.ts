@@ -561,6 +561,27 @@ function toDate(v: FormDataEntryValue | null): Date | null {
   return s ? new Date(s) : null;
 }
 
+// Renumber a trip's nights so `order` follows the dates. This keeps the derived
+// Day numbers chronological, so a night added or re-dated out of sequence
+// (e.g. 11 Sep dropped between 10 Sep and 12 Sep) lands in its right slot
+// instead of at the end. Undated nights keep their relative order, sorted last.
+async function resequenceNights(tripId: string) {
+  const nights = await prisma.night.findMany({
+    where: { tripId },
+    select: { id: true, date: true, order: true, createdAt: true },
+  });
+  nights.sort((a, b) => {
+    const at = a.date ? new Date(a.date).getTime() : Infinity;
+    const bt = b.date ? new Date(b.date).getTime() : Infinity;
+    if (at !== bt) return at - bt;
+    if (a.order !== b.order) return a.order - b.order;
+    return a.createdAt.getTime() - b.createdAt.getTime();
+  });
+  await prisma.$transaction(
+    nights.map((n, i) => prisma.night.update({ where: { id: n.id }, data: { order: i } })),
+  );
+}
+
 export async function addNight(formData: FormData) {
   const orgId = await guard();
   const tripId = String(formData.get("tripId"));
@@ -568,29 +589,13 @@ export async function addNight(formData: FormData) {
   if (!tripId || !location || !(await ownTrip(orgId, tripId))) return;
   const extra = String(formData.get("extra")) === "yes";
   const date = toDate(formData.get("date"));
-  const existing = await prisma.night.findMany({ where: { tripId }, select: { order: true, date: true } });
-
-  // Normal nights append to the end. Add-on nights slot in chronologically so a
-  // pre-trip night sorts ahead of Day 1 (and reads as Day -1) instead of last.
-  let order = existing.length;
-  if (extra && date) {
-    const orders = existing.map((n) => n.order);
-    const minOrder = orders.length ? Math.min(...orders) : 0;
-    const maxOrder = orders.length ? Math.max(...orders) : 0;
-    const ts = existing.filter((n) => n.date).map((n) => new Date(n.date!).getTime());
-    const minT = ts.length ? Math.min(...ts) : null;
-    const maxT = ts.length ? Math.max(...ts) : null;
-    if (minT != null && date.getTime() < minT) order = minOrder - 1;
-    else if (maxT != null && date.getTime() > maxT) order = maxOrder + 1;
-    else order = maxOrder + 1;
-  }
 
   const hotelName = String(formData.get("hotelName") || "").trim();
   await prisma.night.create({
     data: {
       tripId,
       location,
-      order,
+      order: 0, // provisional; resequenceNights sets the real order by date
       extra,
       date,
       // optionally seed the first hotel from the same form
@@ -599,13 +604,16 @@ export async function addNight(formData: FormData) {
         : undefined,
     },
   });
+  // Slot the new night into date order (a dated night finds its Day; an undated
+  // add-on sorts last) so Day numbers stay chronological.
+  await resequenceNights(tripId);
   refresh();
 }
 
 export async function updateNight(formData: FormData) {
   const orgId = await guard();
   const id = String(formData.get("id"));
-  await prisma.night.updateMany({
+  const updated = await prisma.night.updateMany({
     where: { id, trip: { orgId } },
     data: {
       location: String(formData.get("location") || "").trim() || undefined,
@@ -613,6 +621,12 @@ export async function updateNight(formData: FormData) {
       notes: String(formData.get("notes") || "") || null,
     },
   });
+  // Changing a night's date can move it in the sequence — re-slot so Day
+  // numbers stay chronological.
+  if (updated.count > 0) {
+    const night = await prisma.night.findUnique({ where: { id }, select: { tripId: true } });
+    if (night) await resequenceNights(night.tripId);
+  }
   refresh();
 }
 

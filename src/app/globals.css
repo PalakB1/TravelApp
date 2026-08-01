@@ -506,3 +506,90 @@ details.section[open] > .sec-body, details.add[open] .form-box { animation: fade
   }
   .bn-fab-inner svg { width: 26px; height: 26px; }
 }
+
+/* dark-theme v1 */
+/* ============================================================
+   DARK THEME
+   - Auto: follows the device when no manual choice is set.
+   - Manual: [data-theme="dark"|"light"] on <html> wins over the device.
+   The palette is declared twice (attribute + media query) because CSS can't
+   share one declaration block across a selector and an @media rule.
+   ============================================================ */
+:root[data-theme="dark"] {
+  --bg: #0e0f16;
+  --surface: #181a24;
+  --surface-2: #20222e;
+  --border: #2a2d3b;
+  --border-strong: #3a3e50;
+  --text: #e8eaf3;
+  --text-2: #a4a7bb;
+  --text-3: #71748a;
+
+  --accent: #8f84ff;
+  --accent-2: #a99dff;
+  --accent-bg: #262248;
+  --accent-grad: linear-gradient(135deg, #8f84ff 0%, #6d5ef0 100%);
+
+  --success: #34d399; --success-bg: #0f2a20;
+  --warning: #eab24a; --warning-bg: #2c2410;
+  --danger: #f4718a;  --danger-bg: #2e1621;
+
+  --sky: #38bdf8;     --sky-bg: #0c2636;
+  --violet: #a78bfa;  --violet-bg: #211a3a;
+  --rose: #fb7185;    --rose-bg: #2e1621;
+  --amber: #e0a53c;   --amber-bg: #2c2410;
+  --emerald: #34d399; --emerald-bg: #0f2a20;
+  --orange: #f4894a;  --orange-bg: #2e1d10;
+
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e0f16;
+    --surface: #181a24;
+    --surface-2: #20222e;
+    --border: #2a2d3b;
+    --border-strong: #3a3e50;
+    --text: #e8eaf3;
+    --text-2: #a4a7bb;
+    --text-3: #71748a;
+
+    --accent: #8f84ff;
+    --accent-2: #a99dff;
+    --accent-bg: #262248;
+    --accent-grad: linear-gradient(135deg, #8f84ff 0%, #6d5ef0 100%);
+
+    --success: #34d399; --success-bg: #0f2a20;
+    --warning: #eab24a; --warning-bg: #2c2410;
+    --danger: #f4718a;  --danger-bg: #2e1621;
+
+    --sky: #38bdf8;     --sky-bg: #0c2636;
+    --violet: #a78bfa;  --violet-bg: #211a3a;
+    --rose: #fb7185;    --rose-bg: #2e1621;
+    --amber: #e0a53c;   --amber-bg: #2c2410;
+    --emerald: #34d399; --emerald-bg: #0f2a20;
+    --orange: #f4894a;  --orange-bg: #2e1d10;
+
+    color-scheme: dark;
+  }
+}
+
+/* Surfaces that use hardcoded light gradients need explicit dark overrides. */
+:root[data-theme="dark"] body,
+:root[data-theme="dark"] html {
+  background: linear-gradient(160deg, #0d0e15 0%, #101019 40%, #0c1119 100%);
+}
+:root[data-theme="dark"] .sidebar {
+  background: linear-gradient(180deg, #181a24 0%, #14151d 100%);
+}
+:root[data-theme="dark"] details.add > summary:hover { background: var(--accent-bg); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) body,
+  :root:not([data-theme="light"]) html {
+    background: linear-gradient(160deg, #0d0e15 0%, #101019 40%, #0c1119 100%);
+  }
+  :root:not([data-theme="light"]) .sidebar {
+    background: linear-gradient(180deg, #181a24 0%, #14151d 100%);
+  }
+  :root:not([data-theme="light"]) details.add > summary:hover { background: var(--accent-bg); }
+}
