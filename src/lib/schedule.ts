@@ -19,13 +19,17 @@ export type ScheduleLineStatus = {
   overdue: boolean; // not fully paid and the due date has passed
 };
 
-// Sort by due date (undated lines last), then by explicit order.
+// Sort by the plan's own step sequence (advance first, then 2nd, 3rd…). We fill
+// received money oldest-obligation-first in THIS order, not by due date — so a
+// paid advance credits the advance even if a later installment happens to carry
+// an earlier (or past) due date. Due date is only the reminder date, not the
+// fill order. Ties fall back to the earliest due date.
 export function sortSchedule<T extends { dueDate: Date | null; order: number }>(items: T[]): T[] {
   return [...items].sort((a, b) => {
+    if (a.order !== b.order) return a.order - b.order;
     const at = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
     const bt = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-    if (at !== bt) return at - bt;
-    return a.order - b.order;
+    return at - bt;
   });
 }
 
