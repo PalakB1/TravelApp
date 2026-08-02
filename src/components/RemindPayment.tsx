@@ -10,6 +10,7 @@ export default function RemindPayment({
   tripName,
   payPath,
   overdue = false,
+  count = 1,
 }: {
   phone?: string | null;
   customerName: string;
@@ -18,6 +19,7 @@ export default function RemindPayment({
   tripName: string;
   payPath: string; // e.g. "/pay/abc123"
   overdue?: boolean;
+  count?: number; // how many installments this total covers
 }) {
   // Digits only, with a country code so wa.me works. Assume India (91) when absent.
   function waNumber(): string | null {
@@ -31,8 +33,9 @@ export default function RemindPayment({
 
   function send() {
     const url = `${window.location.origin}${payPath}`;
+    const many = count > 1 ? ` (${count} installments)` : "";
     const msg = overdue
-      ? `Hi ${customerName}, a gentle reminder — the payment of ${amount} for your ${tripName} trip was due on ${dueLabel}. You can pay securely here: ${url}`
+      ? `Hi ${customerName}, a gentle reminder — a total of ${amount}${many} for your ${tripName} trip is now due (from ${dueLabel}). You can pay securely here: ${url}`
       : `Hi ${customerName}, a friendly reminder — ${amount} for your ${tripName} trip is due on ${dueLabel}. You can pay securely here: ${url}`;
     const wa = waNumber();
     const link = wa

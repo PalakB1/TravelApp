@@ -45,19 +45,31 @@ export default async function PaymentsPage() {
   const totalDue = owing.reduce((s, b) => s + bookingBalance(b), 0);
   const totalCollected = bookings.reduce((s, b) => s + bookingPaid(b), 0);
 
-  // Money due from payment plans: the next unpaid dated installment per booking,
-  // so you can send a reminder for exactly what's due. Overdue ones float to top.
+  // Money due from payment plans. Per customer we total EVERYTHING that should
+  // already be in — every unpaid installment dated today or earlier — so a reminder
+  // asks for the full amount owed, not just the next single step. If nothing is due
+  // yet, we surface the next upcoming installment so it's still on the radar.
   const now = new Date();
+  const dayStart = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
+  const today0 = dayStart(now);
   const dueRows = bookings
     .filter((b) => isActive(b.status) && !b.deletedAt && b.schedule.length > 0)
     .map((b) => {
       const lines = scheduleStatus(b.schedule.map((s) => ({ id: s.id, label: s.label, amount: s.amount, dueDate: s.dueDate, order: s.order })), bookingPaid(b), now);
-      const next = lines.find((l) => !l.covered && l.item.dueDate);
-      return next ? { b, next } : null;
+      const uncovered = lines.filter((l) => !l.covered);
+      const dueNow = uncovered.filter((l) => l.item.dueDate && dayStart(new Date(l.item.dueDate)) <= today0);
+      if (dueNow.length > 0) {
+        const amount = dueNow.reduce((s, l) => s + l.remaining, 0);
+        const earliest = Math.min(...dueNow.map((l) => new Date(l.item.dueDate!).getTime()));
+        return { b, amount, date: new Date(earliest), count: dueNow.length, overdue: earliest < today0, label: dueNow.length === 1 ? dueNow[0].item.label : `${dueNow.length} installments` };
+      }
+      const nextUp = uncovered.find((l) => l.item.dueDate);
+      if (!nextUp) return null;
+      return { b, amount: nextUp.remaining, date: new Date(nextUp.item.dueDate!), count: 1, overdue: false, label: nextUp.item.label };
     })
     .filter((x): x is NonNullable<typeof x> => x !== null)
-    .sort((a, c) => new Date(a.next.item.dueDate!).getTime() - new Date(c.next.item.dueDate!).getTime());
-  const overdueCount = dueRows.filter((r) => r.next.overdue).length;
+    .sort((a, c) => a.date.getTime() - c.date.getTime());
+  const overdueCount = dueRows.filter((r) => r.overdue).length;
 
   // Free-cancellation windows closing within the next 10 days — nudge the customer
   // before their free-cancel date passes. Soonest first.
@@ -93,26 +105,26 @@ export default async function PaymentsPage() {
         <p className="small muted" style={{ margin: "8px 0 0" }}>Share this once (WhatsApp group, email signature, anywhere). Each person selects their trip and name, then reports what they paid — it lands below for your approval.</p>
       </div>
 
-      {/* MONEY DUE — next planned installment per customer, with a WhatsApp nudge. */}
+      {/* MONEY DUE — total currently owed per customer, with a WhatsApp nudge. */}
       {dueRows.length > 0 && (
         <div className="card">
-          <div className="card-title">Money due <span className="small muted">next installment per customer{overdueCount > 0 ? ` · ${overdueCount} overdue` : ""} · tap Remind to send on WhatsApp</span></div>
+          <div className="card-title">Money due <span className="small muted">total owed now per customer{overdueCount > 0 ? ` · ${overdueCount} overdue` : ""} · tap Remind to send on WhatsApp</span></div>
           <table className="t">
             <thead><tr><th>Due date</th><th>Customer</th><th>Trip</th><th>For</th><th className="num">Amount due</th><th></th></tr></thead>
             <tbody>
-              {dueRows.map(({ b, next }) => (
-                <tr key={b.id}>
+              {dueRows.map((r) => (
+                <tr key={r.b.id}>
                   <td className="small">
-                    {next.overdue
-                      ? <span className="badge rose">{fmtDate(new Date(next.item.dueDate!))}</span>
-                      : <span className="muted">{fmtDate(new Date(next.item.dueDate!))}</span>}
+                    {r.overdue
+                      ? <span className="badge rose">{fmtDate(r.date)}</span>
+                      : <span className="muted">{fmtDate(r.date)}</span>}
                   </td>
-                  <td><Link className="row-link" href={`/bookings/${b.id}`}>{b.customerName}</Link></td>
-                  <td className="muted small">{b.trip.name}</td>
-                  <td className="muted small">{next.item.label}</td>
-                  <td className="num" style={{ fontWeight: 500 }}>{formatINR(next.remaining)}</td>
+                  <td><Link className="row-link" href={`/bookings/${r.b.id}`}>{r.b.customerName}</Link></td>
+                  <td className="muted small">{r.b.trip.name}</td>
+                  <td className="muted small">{r.label}</td>
+                  <td className="num" style={{ fontWeight: 500 }}>{formatINR(r.amount)}</td>
                   <td className="num">
-                    <RemindPayment phone={b.customerPhone} customerName={b.customerName} amount={formatINR(next.remaining)} dueLabel={fmtDate(new Date(next.item.dueDate!))} tripName={b.trip.name} payPath={`/pay/${b.id}`} overdue={next.overdue} />
+                    <RemindPayment phone={r.b.customerPhone} customerName={r.b.customerName} amount={formatINR(r.amount)} dueLabel={fmtDate(r.date)} tripName={r.b.trip.name} payPath={`/pay/${r.b.id}`} overdue={r.overdue} count={r.count} />
                   </td>
                 </tr>
               ))}
