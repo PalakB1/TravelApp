@@ -3,17 +3,19 @@
 import { useRef, useState, useEffect } from "react";
 
 // Wraps any table and live-filters its <tbody> rows by free-text search and
-// optional quick-filter chips. On phones it also caps the list to the first few
-// rows with a "Show all" toggle (Paytm-style), so pages aren't a long scroll.
+// optional quick-filter chips. It also caps the list — a few rows on phones,
+// more on laptops — with a "Show all" toggle, so pages aren't a long scroll.
 export default function TableSearch({
   placeholder = "Search…",
   tags = [],
-  cap = 6,
+  cap = 5, // rows shown on mobile before "Show all"
+  desktopCap = 10, // rows shown on laptop before "Show all"
   children,
 }: {
   placeholder?: string;
   tags?: string[];
   cap?: number;
+  desktopCap?: number;
   children: React.ReactNode;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -31,14 +33,15 @@ export default function TableSearch({
     const rows = Array.from(root.querySelectorAll<HTMLTableRowElement>("tbody tr")).filter((r) => !r.dataset.noFilter);
     const ql = query.trim().toLowerCase();
     const tl = t.trim().toLowerCase();
+    const activeCap = mobile ? cap : desktopCap;
     let matched = 0;
     for (const r of rows) {
       const txt = (r.textContent || "").toLowerCase();
       const ok = (!ql || txt.includes(ql)) && (!tl || txt.includes(tl));
       if (!ok) { r.style.display = "none"; continue; }
       matched++;
-      // On mobile, hide rows past the cap until "Show all" is tapped.
-      r.style.display = mobile && !exp && matched > cap ? "none" : "";
+      // Hide rows past the cap (5 on mobile, 10 on laptop) until "Show all" is tapped.
+      r.style.display = !exp && matched > activeCap ? "none" : "";
     }
     setTotal(rows.length);
     setShown(matched);
@@ -85,7 +88,7 @@ export default function TableSearch({
       {shown === 0 && (q || tag) && (
         <div className="empty">No matches for “{q || tag}”. Try a different search.</div>
       )}
-      {isMobile && matchCount > cap && (
+      {matchCount > (isMobile ? cap : desktopCap) && (
         <button type="button" className="btn sm showall-btn" onClick={() => setExpanded((v) => !v)}>
           {expanded ? "Show less" : `Show all ${matchCount} →`}
         </button>

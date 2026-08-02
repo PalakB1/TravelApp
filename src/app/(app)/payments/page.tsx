@@ -118,6 +118,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
               <Link href="/payments?due=amount" className={`btn sm ${dueSort === "amount" ? "primary" : ""}`}>Owes most</Link>
             </div>
           </div>
+          <TableSearch placeholder="Search customer or trip…">
           <table className="t">
             <thead><tr><th>Due date</th><th>Customer</th><th>Trip</th><th>For</th><th className="num">Amount due</th><th></th></tr></thead>
             <tbody>
@@ -139,6 +140,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
               ))}
             </tbody>
           </table>
+          </TableSearch>
         </div>
       )}
 
@@ -252,6 +254,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         {owing.length === 0 ? (
           <div className="empty">Everyone’s paid up. Nice.</div>
         ) : (
+          <TableSearch placeholder="Search customer or trip…">
           <table className="t">
             <thead><tr><th>Customer</th><th>Trip</th><th className="num">Total</th><th className="num">Paid</th><th className="num">Balance</th></tr></thead>
             <tbody>
@@ -266,6 +269,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
               ))}
             </tbody>
           </table>
+          </TableSearch>
         )}
       </div>
 

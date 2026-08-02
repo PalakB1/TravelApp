@@ -41,7 +41,8 @@ const SORTS: { v: string; label: string }[] = [
 // Visa sort: things that need work bubble to the top.
 const VISA_ORDER = ["rejected", "required", "initiated", "submitted", "approved", "held", "not_required"];
 
-const CAP = 8; // rows shown on mobile before "Show all"
+const CAP_MOBILE = 5; // rows shown before "Show all" — phone
+const CAP_DESKTOP = 10; // ...and laptop
 
 export default function BookingsTable({ rows, showTrip = false }: { rows: BookingRow[]; showTrip?: boolean }) {
   const [q, setQ] = useState("");
@@ -79,7 +80,8 @@ export default function BookingsTable({ rows, showTrip = false }: { rows: Bookin
   }, [rows, q, status, visa, sort]);
 
   const filtering = q || status || visa;
-  const capped = isMobile && !expanded ? view.slice(0, CAP) : view;
+  const activeCap = isMobile ? CAP_MOBILE : CAP_DESKTOP;
+  const capped = expanded ? view : view.slice(0, activeCap);
 
   // Invoice action — shared by the desktop table and the mobile cards.
   const invoiceAction = (b: BookingRow) =>
@@ -174,7 +176,7 @@ export default function BookingsTable({ rows, showTrip = false }: { rows: Bookin
         </table>
       )}
       {view.length === 0 && <div className="empty">No bookings match these filters.</div>}
-      {isMobile && view.length > CAP && (
+      {view.length > activeCap && (
         <button type="button" className="btn sm showall-btn" onClick={() => setExpanded((v) => !v)}>
           {expanded ? "Show less" : `Show all ${view.length} →`}
         </button>
