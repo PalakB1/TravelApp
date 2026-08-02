@@ -44,49 +44,9 @@ model Organization {
   // Default cancellation / refund terms — auto-fills on new bookings, editable per booking.
   defaultRefundPolicy String?
   paymentPlanTemplates PaymentPlanTemplate[]
-  proposals    Proposal[]
 }
 
-// A pre-sale quote/proposal: the beautiful, branded, day-by-day pitch an agency
-// sends a prospective customer to win the booking. Separate from confirmed
-// trips/bookings — this is the front-of-funnel document.
-model Proposal {
-  id             String   @id @default(cuid())
-  orgId          String
-  org            Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  title          String   @default("Untitled proposal") // "Bali Honeymoon Escape"
-  destination    String? // "Bali, Indonesia"
-  customerName   String?
-  customerPhone  String?
-  startDate      DateTime?
-  nights         Int      @default(0)
-  pax            Int      @default(1)
-  heroNote       String? // one-line hook shown under the title
-  coverImage     String? // optional base64 data URL for a hero image
-  priceAmount    Int      @default(0) // headline price in rupees
-  pricePerPerson Boolean  @default(false) // price is per person (true) or total (false)
-  inclusions     String? // newline-separated "what's included"
-  exclusions     String? // newline-separated "not included"
-  terms          String? // payment / cancellation terms shown to the customer
-  status         String   @default("draft") // draft | sent | accepted | declined
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  days           ProposalDay[]
 
-  @@index([orgId])
-}
-
-// One day of a proposal's itinerary.
-model ProposalDay {
-  id          String   @id @default(cuid())
-  proposalId  String
-  proposal    Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
-  title       String   @default("") // "Arrival in Bali"
-  description String? // what the day holds
-  order       Int      @default(0)
-
-  @@index([proposalId])
-}
 
 // A reusable payment plan an agency defines once (e.g. "25% now, balance 21 days
 // before travel") and then assigns to any booking with one tap. Assigning turns
