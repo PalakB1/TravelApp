@@ -9,6 +9,7 @@ import ActivityLog from "@/components/ActivityLog";
 import CopyLink from "@/components/CopyLink";
 import ShareReceipt from "@/components/ShareReceipt";
 import RemindPayment from "@/components/RemindPayment";
+import RemindCancelWindow from "@/components/RemindCancelWindow";
 import { scheduleStatus } from "@/lib/schedule";
 import { addPayment, approvePendingPayment, rejectPendingPayment } from "../data-actions";
 
@@ -58,6 +59,18 @@ export default async function PaymentsPage() {
     .sort((a, c) => new Date(a.next.item.dueDate!).getTime() - new Date(c.next.item.dueDate!).getTime());
   const overdueCount = dueRows.filter((r) => r.next.overdue).length;
 
+  // Free-cancellation windows closing within the next 10 days — nudge the customer
+  // before their free-cancel date passes. Soonest first.
+  const CANCEL_WINDOW_DAYS = 10;
+  const soonMs = now.getTime() + CANCEL_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  const startOfToday = new Date(now); startOfToday.setHours(0, 0, 0, 0);
+  const closingRows = bookings
+    .filter((b) => isActive(b.status) && !b.deletedAt && b.freeCancelUntil != null)
+    .map((b) => ({ b, until: new Date(b.freeCancelUntil!) }))
+    .filter(({ until }) => until.getTime() >= startOfToday.getTime() && until.getTime() <= soonMs)
+    .sort((a, c) => a.until.getTime() - c.until.getTime());
+  const daysLeft = (d: Date) => Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - startOfToday.getTime()) / (24 * 60 * 60 * 1000));
+
   // Pick-from-list of existing customers/groups — payments only ever attach to
   // a booking that already exists (no new customers created here).
   const payable = bookings
@@ -103,6 +116,30 @@ export default async function PaymentsPage() {
                   </td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* FREE-CANCELLATION WINDOWS CLOSING — heads-up before the date passes. */}
+      {closingRows.length > 0 && (
+        <div className="card">
+          <div className="card-title">Free cancellation closing <span className="small muted">within {CANCEL_WINDOW_DAYS} days · give the customer a heads-up before the window shuts</span></div>
+          <table className="t">
+            <thead><tr><th>Free until</th><th>Customer</th><th>Trip</th><th>Left</th><th></th></tr></thead>
+            <tbody>
+              {closingRows.map(({ b, until }) => {
+                const d = daysLeft(until);
+                return (
+                  <tr key={b.id}>
+                    <td className="small muted">{fmtDate(until)}</td>
+                    <td><Link className="row-link" href={`/bookings/${b.id}`}>{b.customerName}</Link></td>
+                    <td className="muted small">{b.trip.name}</td>
+                    <td><span className={`badge ${d <= 2 ? "rose" : "amber"}`}>{d === 0 ? "today" : d === 1 ? "1 day" : `${d} days`}</span></td>
+                    <td className="num"><RemindCancelWindow phone={b.customerPhone} customerName={b.customerName} tripName={b.trip.name} dateLabel={fmtDate(until)} /></td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
