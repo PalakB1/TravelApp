@@ -1,0 +1,49 @@
+"use client";
+
+// Tap-to-send a payment reminder on WhatsApp. Opens WhatsApp on the user's phone
+// with the message ready — they just press send, so it goes from their own number.
+export default function RemindPayment({
+  phone,
+  customerName,
+  amount,
+  dueLabel,
+  tripName,
+  payPath,
+  overdue = false,
+}: {
+  phone?: string | null;
+  customerName: string;
+  amount: string; // pre-formatted, e.g. "₹40,000"
+  dueLabel: string; // e.g. "20 Sep 2026" or "today"
+  tripName: string;
+  payPath: string; // e.g. "/pay/abc123"
+  overdue?: boolean;
+}) {
+  // Digits only, with a country code so wa.me works. Assume India (91) when absent.
+  function waNumber(): string | null {
+    if (!phone) return null;
+    let d = phone.replace(/\D/g, "");
+    if (!d) return null;
+    if (d.length === 10) d = "91" + d;
+    else if (d.length === 11 && d.startsWith("0")) d = "91" + d.slice(1);
+    return d;
+  }
+
+  function send() {
+    const url = `${window.location.origin}${payPath}`;
+    const msg = overdue
+      ? `Hi ${customerName}, a gentle reminder — the payment of ${amount} for your ${tripName} trip was due on ${dueLabel}. You can pay securely here: ${url}`
+      : `Hi ${customerName}, a friendly reminder — ${amount} for your ${tripName} trip is due on ${dueLabel}. You can pay securely here: ${url}`;
+    const wa = waNumber();
+    const link = wa
+      ? `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`
+      : `https://wa.me/?text=${encodeURIComponent(msg)}`; // no number on file → pick the chat
+    window.open(link, "_blank", "noopener");
+  }
+
+  return (
+    <button type="button" className="btn sm" onClick={send} title="Open WhatsApp with the reminder ready to send">
+      💬 Remind
+    </button>
+  );
+}

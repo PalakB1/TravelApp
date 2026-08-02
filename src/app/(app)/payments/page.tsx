@@ -8,6 +8,8 @@ import Combobox from "@/components/Combobox";
 import ActivityLog from "@/components/ActivityLog";
 import CopyLink from "@/components/CopyLink";
 import ShareReceipt from "@/components/ShareReceipt";
+import RemindPayment from "@/components/RemindPayment";
+import { scheduleStatus } from "@/lib/schedule";
 import { addPayment, approvePendingPayment, rejectPendingPayment } from "../data-actions";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +23,7 @@ export default async function PaymentsPage() {
   const orgId = scope.orgId;
   const bookings = await prisma.booking.findMany({
     where: scope.viaTrip,
-    include: { trip: true, variant: true, payments: true },
+    include: { trip: true, variant: true, payments: true, schedule: true },
   });
   const recent = await prisma.payment.findMany({
     where: { booking: { ...scope.viaTrip, deletedAt: null } },
@@ -41,6 +43,20 @@ export default async function PaymentsPage() {
 
   const totalDue = owing.reduce((s, b) => s + bookingBalance(b), 0);
   const totalCollected = bookings.reduce((s, b) => s + bookingPaid(b), 0);
+
+  // Money due from payment plans: the next unpaid dated installment per booking,
+  // so you can send a reminder for exactly what's due. Overdue ones float to top.
+  const now = new Date();
+  const dueRows = bookings
+    .filter((b) => isActive(b.status) && !b.deletedAt && b.schedule.length > 0)
+    .map((b) => {
+      const lines = scheduleStatus(b.schedule.map((s) => ({ id: s.id, label: s.label, amount: s.amount, dueDate: s.dueDate, order: s.order })), bookingPaid(b), now);
+      const next = lines.find((l) => !l.covered && l.item.dueDate);
+      return next ? { b, next } : null;
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null)
+    .sort((a, c) => new Date(a.next.item.dueDate!).getTime() - new Date(c.next.item.dueDate!).getTime());
+  const overdueCount = dueRows.filter((r) => r.next.overdue).length;
 
   // Pick-from-list of existing customers/groups — payments only ever attach to
   // a booking that already exists (no new customers created here).
@@ -63,6 +79,34 @@ export default async function PaymentsPage() {
         <CopyLink path={`/pay/o/${orgId}`} label="Copy link" waText="Please confirm your payment here:" />
         <p className="small muted" style={{ margin: "8px 0 0" }}>Share this once (WhatsApp group, email signature, anywhere). Each person selects their trip and name, then reports what they paid — it lands below for your approval.</p>
       </div>
+
+      {/* MONEY DUE — next planned installment per customer, with a WhatsApp nudge. */}
+      {dueRows.length > 0 && (
+        <div className="card">
+          <div className="card-title">Money due <span className="small muted">next installment per customer{overdueCount > 0 ? ` · ${overdueCount} overdue` : ""} · tap Remind to send on WhatsApp</span></div>
+          <table className="t">
+            <thead><tr><th>Due date</th><th>Customer</th><th>Trip</th><th>For</th><th className="num">Amount due</th><th></th></tr></thead>
+            <tbody>
+              {dueRows.map(({ b, next }) => (
+                <tr key={b.id}>
+                  <td className="small">
+                    {next.overdue
+                      ? <span className="badge rose">{fmtDate(new Date(next.item.dueDate!))}</span>
+                      : <span className="muted">{fmtDate(new Date(next.item.dueDate!))}</span>}
+                  </td>
+                  <td><Link className="row-link" href={`/bookings/${b.id}`}>{b.customerName}</Link></td>
+                  <td className="muted small">{b.trip.name}</td>
+                  <td className="muted small">{next.item.label}</td>
+                  <td className="num" style={{ fontWeight: 500 }}>{formatINR(next.remaining)}</td>
+                  <td className="num">
+                    <RemindPayment phone={b.customerPhone} customerName={b.customerName} amount={formatINR(next.remaining)} dueLabel={fmtDate(new Date(next.item.dueDate!))} tripName={b.trip.name} payPath={`/pay/${b.id}`} overdue={next.overdue} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {pending.length > 0 && (
         <div className="card" style={{ borderColor: "var(--warning)", background: "var(--warning-bg)" }}>

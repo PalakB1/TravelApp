@@ -40,6 +40,9 @@ model Organization {
   customTrips  CustomTrip[]
   expenses     Expense[]
   settlements  Settlement[]
+
+  // Default cancellation / refund terms — auto-fills on new bookings, editable per booking.
+  defaultRefundPolicy String?
 }
 
 // Costing ledger: any money YOU spend — supplier invoices, ground costs, fuel,
@@ -494,15 +497,39 @@ model Booking {
   visaHandledBy  String? // us (agency assists) | self (customer arranges it)
   visaValidUntil DateTime? // for held/approved visas — valid until this date
 
+  // Cancellation & refund terms shown to the customer, plus the last date they can
+  // cancel free of charge (used to nudge them before the window closes).
+  refundPolicy    String?
+  freeCancelUntil DateTime?
+
   createdAt      DateTime  @default(now())
   updatedAt DateTime @updatedAt
   payments       Payment[]
   travellers     Traveller[]
   inclusions     BookingInclusion[]
   pendingPayments PendingPayment[]
+  schedule       PaymentScheduleItem[]
   deletedAt      DateTime? // soft-delete: hidden everywhere, restorable from the recycle bin
 
   @@index([deletedAt])
+}
+
+// One planned installment in a booking's payment plan: how much is due, by when.
+// Payments aren't linked line-by-line — instead, money received fills the plan in
+// date order (advance first, then the next, …), so each line reads paid / due /
+// overdue from the running total. This is what payment reminders fire from.
+model PaymentScheduleItem {
+  id        String    @id @default(cuid())
+  bookingId String
+  booking   Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  label     String    @default("Installment") // e.g. "Advance", "Balance"
+  amount    Int       @default(0) // rupees due at this step
+  dueDate   DateTime? // when it's due (drives reminders / overdue)
+  order     Int       @default(0) // sequence within the plan
+  createdAt DateTime  @default(now())
+
+  @@index([bookingId])
+  @@index([dueDate])
 }
 
 // An individual person on a booking (a family member / party member).

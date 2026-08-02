@@ -949,6 +949,53 @@ export async function deletePayment(formData: FormData) {
   refresh();
 }
 
+// ---- Payment plan (installment schedule) ----
+export async function addScheduleItem(formData: FormData) {
+  const orgId = await guard();
+  const bookingId = String(formData.get("bookingId"));
+  const amount = parseAmount(String(formData.get("amount")));
+  if (!bookingId || amount <= 0 || !(await ownBooking(orgId, bookingId))) return;
+  const dateStr = String(formData.get("dueDate") || "");
+  const last = await prisma.paymentScheduleItem.findFirst({ where: { bookingId }, orderBy: { order: "desc" }, select: { order: true } });
+  await prisma.paymentScheduleItem.create({
+    data: {
+      bookingId,
+      label: String(formData.get("label") || "").trim() || "Installment",
+      amount,
+      dueDate: dateStr ? new Date(dateStr) : null,
+      order: (last?.order ?? -1) + 1,
+    },
+  });
+  refresh();
+}
+
+export async function deleteScheduleItem(formData: FormData) {
+  const orgId = await guard();
+  const id = String(formData.get("id"));
+  const item = await prisma.paymentScheduleItem.findFirst({ where: { id, booking: { trip: { orgId } } }, select: { id: true } });
+  if (!item) { refresh(); return; }
+  await prisma.paymentScheduleItem.delete({ where: { id } });
+  refresh();
+}
+
+// ---- Cancellation / refund policy ----
+export async function updateBookingPolicy(formData: FormData) {
+  const orgId = await guard();
+  const id = String(formData.get("id"));
+  if (!(await ownBooking(orgId, id))) { refresh(); return; }
+  const dateStr = String(formData.get("freeCancelUntil") || "");
+  const policy = String(formData.get("refundPolicy") || "").trim() || null;
+  await prisma.booking.updateMany({
+    where: { id, trip: { orgId } },
+    data: { refundPolicy: policy, freeCancelUntil: dateStr ? new Date(dateStr) : null },
+  });
+  // Optionally make these terms the org-wide default for future bookings.
+  if (String(formData.get("saveDefault") || "") === "on" && policy) {
+    await prisma.organization.update({ where: { id: orgId }, data: { defaultRefundPolicy: policy } });
+  }
+  refresh();
+}
+
 // ---- Customer-submitted payments (public link) approval ----
 export async function approvePendingPayment(formData: FormData) {
   const orgId = await guard();

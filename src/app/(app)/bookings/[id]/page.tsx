@@ -4,7 +4,8 @@ import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookingTotal, bookingPaid, bookingBalance, bookingInclTaxCharge, bookingInclNonTaxCharge, bookingInclusionCost } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
-import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, generateInvoice, renameBooking, updateBookingVisa } from "../../data-actions";
+import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, generateInvoice, renameBooking, updateBookingVisa, addScheduleItem, deleteScheduleItem, updateBookingPolicy } from "../../data-actions";
+import { scheduleStatus, scheduleTotal } from "@/lib/schedule";
 import { VISA_STATUSES, visaMeta } from "@/lib/visaStatus";
 import ShareInvoice from "@/components/ShareInvoice";
 import InlineTitle from "@/components/InlineTitle";
@@ -29,9 +30,13 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
       travellers: { orderBy: { createdAt: "asc" } },
       payments: { orderBy: { date: "asc" } },
       inclusions: { orderBy: { bookedAt: "asc" } },
+      schedule: { orderBy: { order: "asc" } },
     },
   });
   if (!b) notFound();
+
+  // Org's default cancellation terms — used to prefill this booking's policy box.
+  const org = await prisma.organization.findUnique({ where: { id: scope.orgId }, select: { defaultRefundPolicy: true } });
 
   // Known ages from every traveller ever added, so the same person's age
   // auto-fills next time they're entered on any trip (most recent age wins).
@@ -54,6 +59,14 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
   const paid = bookingPaid(b);
   const balance = bookingBalance(b);
   const pct = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
+
+  // Payment plan status: fill the installments from money received, in date order.
+  const planLines = scheduleStatus(b.schedule.map((s) => ({ id: s.id, label: s.label, amount: s.amount, dueDate: s.dueDate, order: s.order })), paid);
+  const planTotal = scheduleTotal(b.schedule);
+  const planMismatch = b.schedule.length > 0 ? planTotal - total : 0; // ≠0 means the plan doesn't add up to the invoice
+  const nextDue = planLines.find((l) => !l.covered); // the next unpaid line
+  const policyValue = b.refundPolicy ?? org?.defaultRefundPolicy ?? "";
+  const toInput = (d: Date | null | undefined) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 
   const Line = ({ label, value, strong, muted }: { label: string; value: string; strong?: boolean; muted?: boolean }) => (
     <div className="between" style={{ padding: "7px 0", borderBottom: "1px solid var(--border)" }}>
@@ -320,6 +333,60 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
         </div>
 
         {/* PAYMENTS */}
+        {/* PAYMENT PLAN — planned installments with due dates (drives reminders). */}
+        <div className="card">
+          <div className="card-title">Payment plan <span className="small muted">what&apos;s due and by when · money received fills the plan in date order</span></div>
+
+          {b.schedule.length === 0 ? (
+            <div className="empty" style={{ padding: "16px 8px" }}>No plan yet. Add the advance and balance below so reminders know what&apos;s due.</div>
+          ) : (
+            <>
+              <table className="t">
+                <thead><tr><th>Step</th><th>Due date</th><th className="num">Amount</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                  {planLines.map((l) => (
+                    <tr key={l.item.id}>
+                      <td>{l.item.label}</td>
+                      <td className="muted small">{l.item.dueDate ? fmtDate(new Date(l.item.dueDate)) : "—"}</td>
+                      <td className="num" style={{ fontWeight: 500 }}>{formatINR(l.item.amount)}</td>
+                      <td>
+                        {l.covered
+                          ? <span className="badge emerald">paid</span>
+                          : l.overdue
+                            ? <span className="badge rose">overdue · {formatINR(l.remaining)} left</span>
+                            : l.paidHere > 0
+                              ? <span className="badge amber">part-paid · {formatINR(l.remaining)} left</span>
+                              : <span className="badge gray">due</span>}
+                      </td>
+                      <td className="num"><form action={deleteScheduleItem}><input type="hidden" name="id" value={l.item.id} /><button className="sm" type="submit" aria-label="Delete">✕</button></form></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="small muted" style={{ marginTop: 8 }}>
+                Plan totals {formatINR(planTotal)} · invoice {formatINR(total)}
+                {planMismatch !== 0 && <span style={{ color: "var(--warning)" }}> · ⚠ off by {formatINR(Math.abs(planMismatch))}</span>}
+                {nextDue && <> · next: <b>{formatINR(nextDue.remaining)}</b> {nextDue.item.dueDate ? `by ${fmtDate(new Date(nextDue.item.dueDate))}` : ""}</>}
+              </div>
+            </>
+          )}
+
+          <details className="add" open={b.schedule.length === 0}>
+            <summary>+ Add a step</summary>
+            <div className="form-box">
+              <form action={addScheduleItem}>
+                <input type="hidden" name="bookingId" value={b.id} />
+                <div className="row-3">
+                  <label className="field"><span className="lbl">Name</span><input name="label" placeholder="Advance / Balance / Installment 2" /></label>
+                  <label className="field"><span className="lbl">Amount</span><input name="amount" placeholder="20000 or 20k" required /></label>
+                  <label className="field"><span className="lbl">Due date</span><input name="dueDate" type="date" /></label>
+                </div>
+                <button className="primary sm" type="submit">Add step</button>
+              </form>
+            </div>
+          </details>
+        </div>
+
         <div className="card">
           <div className="card-title">Payments</div>
           <div className="bar" style={{ marginBottom: 6 }}><span className={balance > 0 ? "amber" : ""} style={{ width: `${pct}%` }} /></div>
@@ -364,6 +431,28 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
               </form>
             </div>
           </details>
+        </div>
+
+        {/* CANCELLATION & REFUND POLICY — prefilled from the org default, editable. */}
+        <div className="card">
+          <div className="card-title">Cancellation &amp; refund policy <span className="small muted">shown to the customer · sets the free-cancel reminder</span></div>
+          <form action={updateBookingPolicy}>
+            <input type="hidden" name="id" value={b.id} />
+            <label className="field"><span className="lbl">Terms</span>
+              <textarea name="refundPolicy" rows={4} defaultValue={policyValue} placeholder="e.g. Free cancellation up to 30 days before departure. 50% refund 15–30 days before. No refund within 15 days." />
+            </label>
+            <div className="row-3" style={{ alignItems: "end" }}>
+              <label className="field"><span className="lbl">Free cancellation until <span className="small muted">optional</span></span><input name="freeCancelUntil" type="date" defaultValue={toInput(b.freeCancelUntil)} /></label>
+              <label className="field" style={{ justifyContent: "center" }}>
+                <span className="flex" style={{ gap: 8, alignItems: "center", cursor: "pointer" }}>
+                  <input type="checkbox" name="saveDefault" style={{ width: "auto" }} />
+                  <span className="lbl" style={{ margin: 0 }}>Save as my default <span className="small muted">for future bookings</span></span>
+                </span>
+              </label>
+              <button className="primary sm" type="submit">Save policy</button>
+            </div>
+          </form>
+          {!b.refundPolicy && org?.defaultRefundPolicy && <p className="small muted" style={{ marginTop: 8 }}>Showing your saved default — edit and save to customise it for {b.customerName}.</p>}
         </div>
       </div>
     </>
