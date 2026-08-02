@@ -17,7 +17,9 @@ const links = [
   { href: "/expenses", label: "Costing", icon: "coins" },
   { href: "/visas", label: "Visa desk", icon: "passport" },
   { href: "/tax", label: "GST / Tax", icon: "receipt" },
-  { href: "/team", label: "Team", icon: "team" },
+  // Team, Recycle bin and the theme toggle deliberately live outside this list —
+  // they're setup/global controls, not daily destinations, and every extra row
+  // here pushed the menu into scrolling on a laptop.
 ];
 
 function Icon({ name }: { name: string }) {
@@ -78,14 +80,21 @@ export default function Sidebar({ name, isPlatformAdmin = false, actingOrgId = n
             </Link>
           )}
         </nav>
-        <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
-          <p className="small muted" style={{ padding: "0 11px 8px" }}>Signed in as {name}</p>
-          <Link href="/trash" className="sm" style={{ display: "flex", width: "100%", justifyContent: "center", marginBottom: 6 }}>🗑️ Recycle bin</Link>
-          <Link href="/settings" className="sm" style={{ display: "flex", width: "100%", justifyContent: "center", marginBottom: 6 }}>Settings</Link>
-          <ThemeToggle />
-          <form action={logout}>
-            <button className="sm" style={{ width: "100%", justifyContent: "center" }} type="submit">Sign out</button>
-          </form>
+        {/* One compact account row instead of five stacked buttons — the name is
+            the link to Settings (where Team + Recycle bin now live). */}
+        <div style={{ marginTop: "auto", paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+          <div className="flex" style={{ gap: 6, alignItems: "center" }}>
+            <Link href="/settings" className="flex" title="Settings, team & recycle bin"
+              style={{ gap: 8, alignItems: "center", flex: 1, minWidth: 0, padding: "6px 8px", borderRadius: 9, color: "var(--text-2)" }}>
+              <span aria-hidden style={{ width: 26, height: 26, flexShrink: 0, borderRadius: "50%", background: "var(--accent-bg)", color: "var(--accent)", display: "grid", placeItems: "center", fontSize: 12, fontWeight: 700 }}>
+                {name.trim().charAt(0).toUpperCase() || "?"}
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</span>
+            </Link>
+            <form action={logout}>
+              <button className="sm" type="submit" title="Sign out" aria-label="Sign out">↪</button>
+            </form>
+          </div>
         </div>
       </aside>
 

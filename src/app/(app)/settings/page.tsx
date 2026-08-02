@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { getOrgContext } from "@/lib/org";
 import { prisma } from "@/lib/db";
@@ -69,6 +70,18 @@ export default async function SettingsPage() {
         </div>
       )}
 
+      {/* Homes for the things that used to sit in the sidebar. */}
+      <div className="card">
+        <div className="card-title">Workspace</div>
+        <div className="flex" style={{ gap: 8, flexWrap: "wrap" }}>
+          <Link className="btn sm" href="/team">👥 Team &amp; access</Link>
+          <Link className="btn sm" href="/trash">🗑️ Recycle bin</Link>
+        </div>
+        <p className="small muted" style={{ marginTop: 10, marginBottom: 0 }}>
+          Invite colleagues and set who can see which trips, or restore something you deleted.
+        </p>
+      </div>
+
       {org && (
         <div className="card">
           <div className="card-title">Payment plans <span className="small muted">set up once, then assign to any booking with one tap</span></div>
@@ -117,10 +130,10 @@ export default async function SettingsPage() {
                             <select name="kind" defaultValue="percent">
                               <option value="percent">% of total</option>
                               <option value="fixed">Flat amount ₹</option>
-                              <option value="balance">Whatever's left</option>
+                              <option value="balance">Whatever&apos;s left</option>
                             </select>
                           </label>
-                          <label className="field"><span className="lbl">Value <span className="small muted">% or ₹ (skip for "left")</span></span>
+                          <label className="field"><span className="lbl">Value <span className="small muted">% or ₹ (skip for &quot;left&quot;)</span></span>
                             <input name="percent" placeholder="25 (for %)" />
                           </label>
                         </div>

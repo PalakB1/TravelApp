@@ -10,6 +10,7 @@ import SaveToast from "@/components/SaveToast";
 import TableLabels from "@/components/TableLabels";
 import BottomNav from "@/components/BottomNav";
 import QuickEntryLauncher from "@/components/QuickEntryLauncher";
+import ThemeToggle from "@/components/ThemeToggle";
 import { logout } from "./actions";
 
 function TrialEndedScreen({ name, orgName }: { name: string; orgName?: string }) {
@@ -81,6 +82,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <TableLabels />
       <QuickEntryLauncher />
       <Sidebar name={ctx.session.name} isPlatformAdmin={ctx.isPlatformAdmin} actingOrgId={ctx.actingOrgId} customTrips={org?.customTripsEnabled ?? false} />
+      <div className="theme-fab no-print"><ThemeToggle compact /></div>
       <main className="main">
         {daysLeft != null && (
           <Link href="/pricing" className="between" style={{ display: "flex", background: daysLeft <= 5 ? "var(--warning-bg)" : "var(--accent-bg)", borderRadius: 10, padding: "9px 14px", marginBottom: 14, fontSize: 13.5 }}>
