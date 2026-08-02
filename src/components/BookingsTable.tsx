@@ -81,6 +81,18 @@ export default function BookingsTable({ rows, showTrip = false }: { rows: Bookin
   const filtering = q || status || visa;
   const capped = isMobile && !expanded ? view.slice(0, CAP) : view;
 
+  // Invoice action — shared by the desktop table and the mobile cards.
+  const invoiceAction = (b: BookingRow) =>
+    b.invoiceNo ? (
+      <Link className="btn sm" href={`/invoice/${b.id}`} target="_blank" rel="noopener" title={`Tax invoice ${b.invoiceNo}`}>🧾 {b.invoiceNo}</Link>
+    ) : b.status === "cancelled" ? (
+      <span className="small muted">—</span>
+    ) : b.tripOver ? (
+      <form action={generateInvoice}><input type="hidden" name="id" value={b.id} /><button type="submit" className="btn sm primary">Generate invoice</button></form>
+    ) : (
+      <button type="button" className="btn sm" disabled title="Available once the trip is over (all days done)">Invoice locked</button>
+    );
+
   return (
     <div>
       <div className="flex" style={{ gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
@@ -99,49 +111,68 @@ export default function BookingsTable({ rows, showTrip = false }: { rows: Bookin
         {filtering && <span className="small muted" style={{ marginLeft: "auto" }}>{view.length} of {rows.length}</span>}
       </div>
 
-      <table className="t">
-        <thead>
-          <tr>
-            <th>{showTrip ? "Customer" : "Party"}</th>
-            {showTrip && <th>Trip</th>}
-            <th>Pax</th>
-            <th>Status</th>
-            <th>Visa</th>
-            <th className="num">Total</th>
-            <th className="num">Paid</th>
-            <th className="num">Balance</th>
-            <th className="num">Invoice</th>
-          </tr>
-        </thead>
-        <tbody>
+      {isMobile ? (
+        /* Phone: one clean card per booking instead of a cramped 9-column table. */
+        <div className="stack" style={{ gap: 10 }}>
           {capped.map((b) => (
-            <tr key={b.id}>
-              <td>
-                <Link className="row-link" href={`/bookings/${b.id}`}>{b.name}</Link>
-                {b.discount ? <div className="small muted">−{formatINR(b.discount)} {b.discountReason || "discount"}</div> : null}
-              </td>
-              {showTrip && <td className="muted">{b.trip}</td>}
-              <td className="muted">{b.pax}</td>
-              <td>{statusBadge(b.status)}</td>
-              <td>{b.visaStatus === "not_required" ? <span className="small muted">—</span> : <span className={`badge ${visaMeta(b.visaStatus).badge}`}>{visaMeta(b.visaStatus).short}</span>}</td>
-              <td className="num">{formatINR(b.total)}</td>
-              <td className="num">{formatINR(b.paid)}</td>
-              <td className="num">{b.balance > 0 ? <span className="badge amber">{formatINR(b.balance)}</span> : <span className="badge green">paid</span>}</td>
-              <td className="num">
-                {b.invoiceNo ? (
-                  <Link className="btn sm" href={`/invoice/${b.id}`} target="_blank" rel="noopener" title={`Tax invoice ${b.invoiceNo}`}>🧾 {b.invoiceNo}</Link>
-                ) : b.status === "cancelled" ? (
-                  <span className="small muted">—</span>
-                ) : b.tripOver ? (
-                  <form action={generateInvoice}><input type="hidden" name="id" value={b.id} /><button type="submit" className="btn sm primary">Generate</button></form>
-                ) : (
-                  <button type="button" className="btn sm" disabled title="Available once the trip is over (all days done)">Generate</button>
-                )}
-              </td>
-            </tr>
+            <div key={b.id} className="form-box">
+              <div className="between" style={{ alignItems: "flex-start", gap: 8 }}>
+                <div>
+                  <Link className="row-link" href={`/bookings/${b.id}`} style={{ fontWeight: 600 }}>{b.name}</Link>
+                  {showTrip && b.trip && <div className="small muted">{b.trip}</div>}
+                  {b.discount ? <div className="small muted">−{formatINR(b.discount)} {b.discountReason || "discount"}</div> : null}
+                </div>
+                {statusBadge(b.status)}
+              </div>
+              <div className="between" style={{ marginTop: 10, alignItems: "center" }}>
+                <div>
+                  <div className="small muted" style={{ marginBottom: 3 }}>Balance</div>
+                  {b.balance > 0 ? <span className="badge amber">{formatINR(b.balance)}</span> : <span className="badge green">paid</span>}
+                </div>
+                <div className="small muted" style={{ textAlign: "right" }}>
+                  {b.pax} pax · {formatINR(b.paid)} / {formatINR(b.total)}
+                  {b.visaStatus !== "not_required" && <div style={{ marginTop: 4 }}><span className={`badge ${visaMeta(b.visaStatus).badge}`}>{visaMeta(b.visaStatus).short}</span></div>}
+                </div>
+              </div>
+              <div style={{ marginTop: 10 }}>{invoiceAction(b)}</div>
+            </div>
           ))}
-        </tbody>
-      </table>
+        </div>
+      ) : (
+        <table className="t">
+          <thead>
+            <tr>
+              <th>{showTrip ? "Customer" : "Party"}</th>
+              {showTrip && <th>Trip</th>}
+              <th>Pax</th>
+              <th>Status</th>
+              <th>Visa</th>
+              <th className="num">Total</th>
+              <th className="num">Paid</th>
+              <th className="num">Balance</th>
+              <th className="num">Invoice</th>
+            </tr>
+          </thead>
+          <tbody>
+            {capped.map((b) => (
+              <tr key={b.id}>
+                <td>
+                  <Link className="row-link" href={`/bookings/${b.id}`}>{b.name}</Link>
+                  {b.discount ? <div className="small muted">−{formatINR(b.discount)} {b.discountReason || "discount"}</div> : null}
+                </td>
+                {showTrip && <td className="muted">{b.trip}</td>}
+                <td className="muted">{b.pax}</td>
+                <td>{statusBadge(b.status)}</td>
+                <td>{b.visaStatus === "not_required" ? <span className="small muted">—</span> : <span className={`badge ${visaMeta(b.visaStatus).badge}`}>{visaMeta(b.visaStatus).short}</span>}</td>
+                <td className="num">{formatINR(b.total)}</td>
+                <td className="num">{formatINR(b.paid)}</td>
+                <td className="num">{b.balance > 0 ? <span className="badge amber">{formatINR(b.balance)}</span> : <span className="badge green">paid</span>}</td>
+                <td className="num">{invoiceAction(b)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
       {view.length === 0 && <div className="empty">No bookings match these filters.</div>}
       {isMobile && view.length > CAP && (
         <button type="button" className="btn sm showall-btn" onClick={() => setExpanded((v) => !v)}>

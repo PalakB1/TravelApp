@@ -98,6 +98,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
           <h1>Payments</h1>
           <p className="sub">{formatINR(totalCollected)} collected · {formatINR(totalDue)} outstanding{pending.length > 0 ? ` · ${pending.length} awaiting approval` : ""}</p>
         </div>
+        <a className="btn sm" href="/api/export/payments" title="Download all payments as a spreadsheet (CSV)">⬇ Download CSV</a>
       </div>
 
       <div className="card" style={{ background: "var(--accent-bg)", borderColor: "transparent" }}>

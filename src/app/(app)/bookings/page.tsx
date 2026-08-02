@@ -33,6 +33,9 @@ export default async function BookingsPage() {
           <h1>Bookings</h1>
           <p className="sub">{bookings.length} bookings · {formatINR(totalDue)} outstanding</p>
         </div>
+        {bookings.length > 0 && (
+          <a className="btn sm" href="/api/export/bookings" title="Download all bookings as a spreadsheet (CSV)">⬇ Download CSV</a>
+        )}
       </div>
 
       {bookings.length === 0 ? (
