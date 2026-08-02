@@ -69,3 +69,16 @@ export async function changePassword(_prev: PwResult | undefined, formData: Form
   await prisma.user.update({ where: { id: user.id }, data: { passwordHash: await bcrypt.hash(next, 10) } });
   return { ok: true, message: "Password updated. Use it next time you sign in." };
 }
+
+// Save the org-wide cancellation & refund terms. These auto-fill on every new
+// booking (each booking can still override them with its own wording).
+export async function updateRefundPolicy(formData: FormData) {
+  const ctx = await getOrgContext();
+  if (!ctx?.orgId) redirect("/login");
+  await prisma.organization.update({
+    where: { id: ctx.orgId },
+    data: { defaultRefundPolicy: str(formData.get("defaultRefundPolicy")) },
+  });
+  revalidatePath("/settings");
+  revalidatePath("/", "layout");
+}

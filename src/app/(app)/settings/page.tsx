@@ -4,7 +4,8 @@ import { getOrgContext } from "@/lib/org";
 import { prisma } from "@/lib/db";
 import { formatINR } from "@/lib/money";
 import ChangePasswordForm from "./ChangePasswordForm";
-import { updateOrgProfile } from "./actions";
+import { updateOrgProfile, updateRefundPolicy } from "./actions";
+import { STANDARD_REFUND_POLICY } from "@/lib/policy";
 import { createPlanTemplate, deletePlanTemplate, setDefaultPlanTemplate, addTemplateStep, deleteTemplateStep } from "../data-actions";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,7 @@ export default async function SettingsPage() {
   const org = ctx?.orgId
     ? await prisma.organization.findUnique({
         where: { id: ctx.orgId },
-        select: { name: true, legalName: true, gstin: true, gstAddress: true, gstState: true, gstStateCode: true, sacCode: true, invoiceNote: true, logo: true },
+        select: { name: true, legalName: true, gstin: true, gstAddress: true, gstState: true, gstStateCode: true, sacCode: true, invoiceNote: true, logo: true, defaultRefundPolicy: true },
       })
     : null;
 
@@ -67,6 +68,40 @@ export default async function SettingsPage() {
             <label className="field"><span className="lbl">Invoice note / declaration</span><input name="invoiceNote" defaultValue={org.invoiceNote || ""} placeholder="e.g. Subject to Pune jurisdiction. E.&O.E." /></label>
             <button className="primary sm" type="submit">Save business details</button>
           </form>
+        </div>
+      )}
+
+      {org && (
+        <div className="card">
+          <div className="card-title">Cancellation &amp; refund policy <span className="small muted">auto-fills on every new booking · each booking can still override it</span></div>
+          <form action={updateRefundPolicy}>
+            <label className="field">
+              <span className="lbl">Your standard terms</span>
+              <textarea
+                name="defaultRefundPolicy"
+                rows={16}
+                defaultValue={org.defaultRefundPolicy ?? STANDARD_REFUND_POLICY}
+                style={{ fontFamily: "inherit", lineHeight: 1.55 }}
+              />
+            </label>
+            <div className="flex" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <button className="primary sm" type="submit">Save policy</button>
+              {org.defaultRefundPolicy && org.defaultRefundPolicy !== STANDARD_REFUND_POLICY && (
+                <span className="small muted">Edited from the standard wording.</span>
+              )}
+            </div>
+          </form>
+          {org.defaultRefundPolicy && org.defaultRefundPolicy !== STANDARD_REFUND_POLICY && (
+            <form action={updateRefundPolicy} style={{ marginTop: 8 }}>
+              <input type="hidden" name="defaultRefundPolicy" value={STANDARD_REFUND_POLICY} />
+              <button className="sm" type="submit" title="Replace your wording with the standard policy">↺ Restore standard wording</button>
+            </form>
+          )}
+          {!org.defaultRefundPolicy && (
+            <p className="small muted" style={{ marginTop: 10, marginBottom: 0 }}>
+              You&apos;re seeing the standard policy. Save it as-is to lock it in, or edit it first.
+            </p>
+          )}
         </div>
       )}
 

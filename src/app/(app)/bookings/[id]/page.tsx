@@ -6,6 +6,7 @@ import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookin
 import { formatINR } from "@/lib/money";
 import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, generateInvoice, renameBooking, updateBookingVisa, addScheduleItem, deleteScheduleItem, updateBookingPolicy, applyPlanToBooking, tidyOverdueDates } from "../../data-actions";
 import { scheduleStatus, scheduleTotal } from "@/lib/schedule";
+import { STANDARD_REFUND_POLICY } from "@/lib/policy";
 import { VISA_STATUSES, visaMeta } from "@/lib/visaStatus";
 import ShareInvoice from "@/components/ShareInvoice";
 import InlineTitle from "@/components/InlineTitle";
@@ -74,7 +75,8 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
   const behindByNow = planLines.filter((l) => !l.covered && l.item.dueDate && new Date(l.item.dueDate) <= new Date()).reduce((s, l) => s + l.remaining, 0);
   const hasPastDates = planLines.some((l) => l.item.dueDate && new Date(l.item.dueDate).setHours(0, 0, 0, 0) < _today0.getTime());
   const planAllPaid = b.schedule.length > 0 && planLines.every((l) => l.covered);
-  const policyValue = b.refundPolicy ?? org?.defaultRefundPolicy ?? "";
+  // This booking's own wording wins; else the org default; else the standard terms.
+  const policyValue = b.refundPolicy ?? org?.defaultRefundPolicy ?? STANDARD_REFUND_POLICY;
   const toInput = (d: Date | null | undefined) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 
   const Line = ({ label, value, strong, muted }: { label: string; value: string; strong?: boolean; muted?: boolean }) => (
