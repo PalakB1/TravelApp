@@ -10,6 +10,7 @@ import { formatINR, formatINRShort } from "@/lib/money";
 import { addBooking, addPayment, addVendorBooking } from "../../data-actions";
 import AutoFill from "@/components/AutoFill";
 import TableSearch from "@/components/TableSearch";
+import SubmitButton from "@/components/SubmitButton";
 
 export const dynamic = "force-dynamic";
 
@@ -185,7 +186,7 @@ export default async function Report({ params }: { params: Promise<{ key: string
                     <label className="field"><span className="lbl">Note</span><input name="note" placeholder="advance / installment" /></label>
                     <span />
                   </div>
-                  <button className="primary sm" type="submit">Record payment</button>
+                  <SubmitButton className="primary sm" pendingLabel="Recording…">Record payment</SubmitButton>
                 </form>
               </div>
             </details>

@@ -12,6 +12,7 @@ import RemindPayment from "@/components/RemindPayment";
 import RemindCancelWindow from "@/components/RemindCancelWindow";
 import { scheduleStatus } from "@/lib/schedule";
 import { addPayment, approvePendingPayment, rejectPendingPayment } from "../data-actions";
+import SubmitButton from "@/components/SubmitButton";
 
 export const dynamic = "force-dynamic";
 
@@ -241,7 +242,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
               </label>
               <label className="field"><span className="lbl">Note</span><input name="note" placeholder="advance / installment 2" /></label>
               <div className="flex" style={{ alignItems: "flex-end", paddingBottom: 12 }}>
-                <button className="primary" type="submit">Record payment</button>
+                <SubmitButton className="primary" pendingLabel="Recording…">Record payment</SubmitButton>
               </div>
             </div>
             <p className="small muted" style={{ margin: 0 }}>Don’t see someone? They need a booking on a trip first — that’s the only place a new customer is created.</p>

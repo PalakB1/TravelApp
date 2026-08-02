@@ -1,7 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { settleExpenses } from "@/app/(app)/expenses/actions";
+
+// Settle button: blocked when nothing is ticked, and while the transfer is
+// saving — so a slow tap can't record the same reimbursement twice.
+function SettleButton({ count, total }: { count: number; total: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <button className="primary" type="submit" disabled={pending || count === 0} aria-busy={pending}>
+      {pending ? "Settling…" : `Settle ${count} selected · ${total}`}
+    </button>
+  );
+}
 
 export type PersonalRow = {
   id: string;
@@ -71,9 +83,7 @@ function PersonGroup({ person, rows }: { person: string; rows: PersonalRow[] }) 
             <label className="field"><span className="lbl">Reimbursed to</span><input name="paidTo" defaultValue={person === "Unattributed" ? "" : person} placeholder="Person's name" /></label>
             <label className="field" style={{ gridColumn: "span 2" }}><span className="lbl">Notes <span className="small muted">optional</span></span><input name="notes" placeholder="Aug reimbursements…" /></label>
           </div>
-          <button className="primary" type="submit" disabled={selectedIds.length === 0}>
-            Settle {selectedIds.length} selected · {inr(total)}
-          </button>
+          <SettleButton count={selectedIds.length} total={inr(total)} />
         </form>
       </div>
     </details>

@@ -7,6 +7,7 @@ import TableSearch from "@/components/TableSearch";
 import ActivityLog from "@/components/ActivityLog";
 import SettlePersonal, { type PersonalRow } from "@/components/SettlePersonal";
 import { addExpense, deleteExpense, undoSettlement } from "./actions";
+import SubmitButton from "@/components/SubmitButton";
 
 export const dynamic = "force-dynamic";
 
@@ -187,7 +188,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
             <label className="field"><span className="lbl">Paid by <span className="small muted">if personal</span></span><input name="paidBy" defaultValue={myName} placeholder="Who fronted the money" /></label>
             <label className="field"><span className="lbl">Invoice / receipt <span className="small muted">optional</span></span><input name="file" type="file" accept="image/*,application/pdf" /></label>
           </div>
-          <button className="primary" type="submit">Add spend</button>
+          <SubmitButton className="primary" pendingLabel="Saving…">Add spend</SubmitButton>
         </form>
       </div>
 

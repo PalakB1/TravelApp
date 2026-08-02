@@ -11,6 +11,7 @@ import ShareInvoice from "@/components/ShareInvoice";
 import InlineTitle from "@/components/InlineTitle";
 import AutoFill from "@/components/AutoFill";
 import CopyLink from "@/components/CopyLink";
+import SubmitButton from "@/components/SubmitButton";
 
 export const dynamic = "force-dynamic";
 
@@ -355,7 +356,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                   {planTemplates.map((t) => <option key={t.id} value={t.id}>{t.name}{t.isDefault ? " (default)" : ""}</option>)}
                 </select>
               </label>
-              <button className="primary sm" type="submit">Apply</button>
+              <SubmitButton className="primary sm" pendingLabel="Applying…">Apply</SubmitButton>
             </form>
           ) : (
             <p className="small muted" style={{ marginBottom: 12 }}>Tip: create reusable plans in <Link href="/settings" style={{ color: "var(--accent)" }}>Settings → Payment plans</Link>, then assign them here in one tap.</p>
@@ -467,7 +468,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                   <label className="field"><span className="lbl">Date</span><input name="date" type="date" /></label>
                 </div>
                 <label className="field"><span className="lbl">Note</span><input name="note" placeholder="Advance / balance / installment 2" /></label>
-                <button className="primary sm" type="submit">Record payment</button>
+                <SubmitButton className="primary sm" pendingLabel="Recording…">Record payment</SubmitButton>
               </form>
             </div>
           </details>

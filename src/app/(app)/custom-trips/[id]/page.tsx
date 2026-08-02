@@ -8,6 +8,7 @@ import {
 } from "../lib";
 import { addItem, updateItem, deleteItem, addPayment, deletePayment, updateCustomTrip, deleteCustomTrip } from "../actions";
 import StatusPicker from "../StatusPicker";
+import SubmitButton from "@/components/SubmitButton";
 
 export const dynamic = "force-dynamic";
 
@@ -169,7 +170,7 @@ export default async function CustomTripDetail({ params }: { params: Promise<{ i
               <label className="field"><span className="lbl">Date</span><input name="date" type="date" /></label>
             </div>
             <label className="field"><span className="lbl">Note (optional)</span><input name="note" placeholder="advance / balance / UTR…" /></label>
-            <button className="primary" type="submit">+ Record payment</button>
+            <SubmitButton className="primary" pendingLabel="Recording…">+ Record payment</SubmitButton>
           </form>
         </div>
       </div>
