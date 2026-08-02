@@ -979,6 +979,23 @@ export async function deleteScheduleItem(formData: FormData) {
   refresh();
 }
 
+// Pull every past-dated installment forward to today. For a near-term trip the
+// standard plan's "90 / 60 days before travel" steps can land months in the past
+// and glow "overdue" even for on-track customers — this collapses that noise into
+// a clean "due now" without changing the amounts.
+export async function tidyOverdueDates(formData: FormData) {
+  const orgId = await guard();
+  const bookingId = String(formData.get("bookingId"));
+  if (!(await ownBooking(orgId, bookingId))) { refresh(); return; }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  await prisma.paymentScheduleItem.updateMany({
+    where: { bookingId, dueDate: { lt: today } },
+    data: { dueDate: new Date() },
+  });
+  refresh();
+}
+
 // ---- Cancellation / refund policy ----
 export async function updateBookingPolicy(formData: FormData) {
   const orgId = await guard();

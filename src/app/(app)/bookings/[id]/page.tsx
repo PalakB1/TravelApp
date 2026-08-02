@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookingTotal, bookingPaid, bookingBalance, bookingInclTaxCharge, bookingInclNonTaxCharge, bookingInclusionCost } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
-import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, generateInvoice, renameBooking, updateBookingVisa, addScheduleItem, deleteScheduleItem, updateBookingPolicy, applyPlanToBooking } from "../../data-actions";
+import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, generateInvoice, renameBooking, updateBookingVisa, addScheduleItem, deleteScheduleItem, updateBookingPolicy, applyPlanToBooking, tidyOverdueDates } from "../../data-actions";
 import { scheduleStatus, scheduleTotal } from "@/lib/schedule";
 import { VISA_STATUSES, visaMeta } from "@/lib/visaStatus";
 import ShareInvoice from "@/components/ShareInvoice";
@@ -68,6 +68,11 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
   const planTotal = scheduleTotal(b.schedule);
   const planMismatch = b.schedule.length > 0 ? planTotal - total : 0; // ≠0 means the plan doesn't add up to the invoice
   const nextDue = planLines.find((l) => !l.covered); // the next unpaid line
+  // Payment health: how much SHOULD be in by today, and is anything past-dated.
+  const _today0 = new Date(); _today0.setHours(0, 0, 0, 0);
+  const behindByNow = planLines.filter((l) => !l.covered && l.item.dueDate && new Date(l.item.dueDate) <= new Date()).reduce((s, l) => s + l.remaining, 0);
+  const hasPastDates = planLines.some((l) => l.item.dueDate && new Date(l.item.dueDate).setHours(0, 0, 0, 0) < _today0.getTime());
+  const planAllPaid = b.schedule.length > 0 && planLines.every((l) => l.covered);
   const policyValue = b.refundPolicy ?? org?.defaultRefundPolicy ?? "";
   const toInput = (d: Date | null | undefined) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 
@@ -353,6 +358,22 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
             </form>
           ) : (
             <p className="small muted" style={{ marginBottom: 12 }}>Tip: create reusable plans in <Link href="/settings" style={{ color: "var(--accent)" }}>Settings → Payment plans</Link>, then assign them here in one tap.</p>
+          )}
+
+          {/* Payment health verdict — one honest line instead of a wall of red. */}
+          {b.schedule.length > 0 && (
+            <div className="between" style={{ padding: "10px 12px", borderRadius: 10, marginBottom: 12, flexWrap: "wrap", gap: 8,
+              background: planAllPaid ? "var(--success-bg)" : behindByNow > 0 ? "var(--warning-bg)" : "var(--success-bg)" }}>
+              <span style={{ fontWeight: 600, color: planAllPaid ? "var(--success)" : behindByNow > 0 ? "var(--warning)" : "var(--success)" }}>
+                {planAllPaid ? "✅ Fully paid" : behindByNow > 0 ? `🔴 Behind by ${formatINR(behindByNow)}` : "✅ On track — nothing due yet"}
+              </span>
+              {hasPastDates && !planAllPaid && (
+                <form action={tidyOverdueDates}>
+                  <input type="hidden" name="bookingId" value={b.id} />
+                  <button className="sm" type="submit" title="Move installments dated in the past to today, so on-track customers stop showing as overdue">Tidy past dates → today</button>
+                </form>
+              )}
+            </div>
           )}
 
           {b.schedule.length === 0 ? (
