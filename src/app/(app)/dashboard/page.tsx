@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
-import { tripFinancials, bookingBalance, bookingPaid, bookingTotal, bookingRevenue, bookingTax, isActive } from "@/lib/calc";
+import { tripFinancials, bookingBalance, bookingPaid, bookingTotal, bookingRevenue, bookingTax, isActive, tripIsOver } from "@/lib/calc";
+import { scheduleStatus } from "@/lib/schedule";
 import { formatINR, formatINRShort } from "@/lib/money";
 import QuickAddButton from "@/components/QuickAddButton";
 import { Donut, HBars } from "@/components/Charts";
@@ -147,6 +148,39 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     include: { booking: { include: { trip: true } } },
   });
 
+  // ---- "Needs you today" — actionable items across the WHOLE org (ignores the
+  // date-range filter above, so nothing that needs chasing slips off-screen). ----
+  const nowA = new Date();
+  const startTodayA = new Date(nowA.getFullYear(), nowA.getMonth(), nowA.getDate());
+  const in7d = new Date(startTodayA.getTime() + 7 * 864e5);
+  const dayStartA = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
+
+  const actionBookings = await prisma.booking.findMany({
+    where: { ...scope.viaTrip, deletedAt: null, status: { not: "cancelled" } },
+    include: { trip: { select: { departureDate: true, nights: true, days: true } }, payments: { select: { amount: true, date: true } }, schedule: true },
+  });
+  const VISA_ACTION = new Set(["required", "initiated", "submitted", "rejected"]);
+  let overdueAmt = 0, overdueCustomers = 0, invoicesReady = 0, visasStuck = 0;
+  for (const b of actionBookings) {
+    if (b.schedule.length) {
+      const lines = scheduleStatus(b.schedule.map((s) => ({ id: s.id, label: s.label, amount: s.amount, dueDate: s.dueDate, order: s.order })), bookingPaid(b), nowA);
+      const dueNow = lines.filter((l) => !l.covered && l.item.dueDate && dayStartA(new Date(l.item.dueDate)) <= startTodayA.getTime());
+      if (dueNow.length) { overdueCustomers++; overdueAmt += dueNow.reduce((s, l) => s + l.remaining, 0); }
+    }
+    if (!b.invoiceNo && tripIsOver(b.trip, nowA)) invoicesReady++;
+    if (VISA_ACTION.has(b.visaStatus)) visasStuck++;
+  }
+  const departingSoon = await prisma.trip.count({ where: { ...scope.tripWhere, departureDate: { gte: startTodayA, lte: in7d } } });
+  const pendingApprovals = await prisma.pendingPayment.count({ where: { OR: [{ booking: { ...scope.viaTrip, deletedAt: null } }, { trip: scope.tripWhere }] } });
+
+  type ActionTile = { emoji: string; n: string; label: string; href: string; tone: string };
+  const actionTiles: ActionTile[] = [];
+  if (overdueAmt > 0) actionTiles.push({ emoji: "💸", n: formatINRShort(overdueAmt), label: `overdue · ${overdueCustomers} to chase`, href: "/payments?due=amount", tone: "c-rose" });
+  if (departingSoon > 0) actionTiles.push({ emoji: "✈️", n: String(departingSoon), label: departingSoon === 1 ? "trip departs ≤7 days" : "trips depart ≤7 days", href: "/trips", tone: "c-sky" });
+  if (visasStuck > 0) actionTiles.push({ emoji: "🛂", n: String(visasStuck), label: "visas need action", href: "/visas", tone: "c-amber" });
+  if (invoicesReady > 0) actionTiles.push({ emoji: "🧾", n: String(invoicesReady), label: invoicesReady === 1 ? "invoice ready" : "invoices ready", href: "/bookings", tone: "c-violet" });
+  if (pendingApprovals > 0) actionTiles.push({ emoji: "✅", n: String(pendingApprovals), label: "to approve", href: "/payments", tone: "c-emerald" });
+
   return (
     <>
       <div className="page-head">
@@ -159,6 +193,28 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           <Link className="btn primary" href="/trips/new">+ New trip</Link>
         </div>
       </div>
+
+      {/* NEEDS YOU TODAY — the morning to-do list; each tile jumps to the action. */}
+      {actionTiles.length > 0 ? (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div className="card-title">Needs you today <span className="small muted">tap any tile to act on it</span></div>
+          <div className="flex" style={{ gap: 10, flexWrap: "wrap" }}>
+            {actionTiles.map((a) => (
+              <Link key={a.href + a.label} href={a.href} className={`metric ${a.tone}`} style={{ flex: "1 1 150px", minWidth: 140 }}>
+                <div className="value" style={{ fontSize: 21 }}>{a.emoji} {a.n}</div>
+                <div className="foot">{a.label}</div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div className="flex" style={{ gap: 10, alignItems: "center" }}>
+            <span style={{ fontSize: 22 }}>✨</span>
+            <div><b>You&apos;re all caught up.</b> <span className="small muted">No overdue money, visas, invoices or approvals waiting.</span></div>
+          </div>
+        </div>
+      )}
 
       <QuickAddButton className="qe-launch" ariaLabel="Open quick entry">
         <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
