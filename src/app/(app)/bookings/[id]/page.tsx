@@ -96,6 +96,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           </p>
         </div>
         <div className="flex" style={{ gap: 8, flexWrap: "wrap" }}>
+          <a className="btn sm primary" href="#payments" title="Jump to payments & history">💳 Payments</a>
           {b.invoiceNo
             ? <><Link className="btn sm" href={`/invoice/${b.id}`} target="_blank">🧾 Invoice {b.invoiceNo}</Link><ShareInvoice bookingId={b.id} customerName={b.customerName} invoiceNo={b.invoiceNo} phone={b.customerPhone} /></>
             : <form action={generateInvoice}><input type="hidden" name="id" value={b.id} /><button className="btn sm" type="submit">🧾 Generate GST invoice</button></form>}
@@ -426,7 +427,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           </details>
         </div>
 
-        <div className="card">
+        <div className="card" id="payments" style={{ scrollMarginTop: 72 }}>
           <div className="card-title">Payments</div>
           <div className="bar" style={{ marginBottom: 6 }}><span className={balance > 0 ? "amber" : ""} style={{ width: `${pct}%` }} /></div>
           <div className="small muted" style={{ marginBottom: 12 }}>{pct}% collected · {formatINR(balance)} remaining</div>
