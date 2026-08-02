@@ -24,7 +24,7 @@ export default async function OrgPayPage({ params }: { params: Promise<{ orgId: 
   const list = trips.map((t) => ({ id: t.id, name: `${t.name}${t.departureDate ? ` — ${fmtDate(t.departureDate)}` : ""}` }));
 
   return (
-    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20 }}>
+    <div className="doc-light" style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20 }}>
       <div className="card" style={{ width: 460, maxWidth: "100%" }}>
         {org.logo ? (
           /* eslint-disable-next-line @next/next/no-img-element */

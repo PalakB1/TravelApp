@@ -19,7 +19,7 @@ export default async function PublicPayPage({ params }: { params: Promise<{ id: 
   const balance = bookingBalance(b);
 
   return (
-    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20 }}>
+    <div className="doc-light" style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20 }}>
       <div className="card" style={{ width: 460, maxWidth: "100%" }}>
         <div className="brand" style={{ paddingLeft: 0, marginBottom: 4 }}>
           <span className="dot">✦</span> Trip Desk

@@ -277,12 +277,37 @@ details.add > summary:hover { background: #e4e1ff; transform: translateY(-1px); 
 .log-row:last-child { border-bottom: none; }
 .log-row:hover { background: var(--surface-2); }
 
-/* Printable document sheet (visa cover letter / checklist) */
-.sheet { padding: 38px 44px; color: #1b1c2b; }
+/* Customer-facing documents (invoice / receipt / pay) always render on a clean
+   light "paper" look, regardless of the viewer's dark/light theme — they're
+   documents, not app chrome. .doc-light pins the palette to light values so
+   nothing goes dark-on-dark for a customer whose phone is in dark mode. */
+.doc-light {
+  --bg: #eef0fe; --surface: #ffffff; --surface-2: #f6f7fc;
+  --border: #e6e7f1; --border-strong: #d2d4e6;
+  --text: #1b1c2b; --text-2: #5a5d74; --text-3: #9094ac;
+  --accent: #5b50e6; --accent-2: #7b6ff2; --accent-bg: #eceaff;
+  --success: #0f9d6b; --success-bg: #e3f7ef; --warning: #b9760a; --warning-bg: #fdf0d8; --danger: #e0435b;
+  color-scheme: light;
+  background: linear-gradient(160deg, #eef0fe 0%, #f3f1fb 40%, #eaf3fc 100%);
+}
+
+/* Printable document sheet — a premium white "card" with a brand accent stripe. */
+.sheet {
+  padding: 40px 46px; color: #1b1c2b; background: #ffffff;
+  border: 1px solid #ecebf5; border-radius: 16px;
+  box-shadow: 0 12px 44px rgba(27, 28, 43, 0.10); position: relative; overflow: hidden;
+}
+.sheet::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 5px;
+  background: linear-gradient(135deg, #7b6ff2 0%, #5b50e6 100%);
+}
+.sheet .doc-total { font-size: 15px; }
+.sheet .doc-total td { padding: 9px 0 !important; }
 @media print {
   .no-print, .sidebar, .mobile-topbar { display: none !important; }
-  html, body { background: #fff !important; }
+  html, body, .doc-light { background: #fff !important; }
   .card, .sheet { box-shadow: none !important; border: none !important; border-radius: 0 !important; }
+  .sheet::before { display: none; }
   .main { padding: 0 !important; }
 }
 

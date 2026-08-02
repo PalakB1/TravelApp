@@ -45,7 +45,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   );
 
   return (
-    <div style={{ minHeight: "100vh", display: "grid", placeItems: "start center", padding: "24px 16px" }}>
+    <div className="doc-light" style={{ minHeight: "100vh", display: "grid", placeItems: "start center", padding: "24px 16px" }}>
       <div style={{ width: 620, maxWidth: "100%" }}>
         <div className="between no-print" style={{ marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
           <div className="brand" style={{ paddingLeft: 0 }}><span className="dot">✦</span> {agency}</div>
@@ -102,9 +102,9 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                 <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>SGST @ {rate / 2}%</td><td style={{ textAlign: "right" }}>{formatINR(gst - gstHalf)}</td></tr>
                 <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>TCS @ {b.tcsRate ?? 2}%</td><td style={{ textAlign: "right" }}>{formatINR(tcs)}</td></tr>
                 {nonTax > 0 && <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>Non-taxable</td><td style={{ textAlign: "right" }}>{formatINR(nonTax)}</td></tr>}
-                <tr style={{ borderTop: "1px solid var(--border-strong)", fontWeight: 700 }}><td style={{ padding: "6px 0" }}>Total</td><td style={{ textAlign: "right" }}>{formatINR(total)}</td></tr>
-                <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>Received</td><td style={{ textAlign: "right", color: "var(--text-2)" }}>−{formatINR(paid)}</td></tr>
-                <tr style={{ fontWeight: 700 }}><td style={{ padding: "3px 0" }}>Balance due</td><td style={{ textAlign: "right" }}>{formatINR(balance)}</td></tr>
+                <tr className="doc-total" style={{ borderTop: "2px solid var(--border-strong)", fontWeight: 700, color: "var(--accent)" }}><td>Total</td><td style={{ textAlign: "right" }}>{formatINR(total)}</td></tr>
+                <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>Received</td><td style={{ textAlign: "right", color: "var(--success)" }}>−{formatINR(paid)}</td></tr>
+                <tr style={{ fontWeight: 700 }}><td style={{ padding: "4px 0" }}>Balance due</td><td style={{ textAlign: "right", color: balance > 0 ? "var(--danger)" : "var(--success)" }}>{formatINR(balance)}</td></tr>
               </tbody>
             </table>
           </div>
