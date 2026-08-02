@@ -1098,7 +1098,7 @@ export async function applyPlanToBooking(formData: FormData) {
   });
   const booking = await prisma.booking.findFirst({
     where: { id: bookingId, trip: { orgId } },
-    include: { trip: { select: { departureDate: true } }, payments: { orderBy: { date: "asc" }, take: 1, select: { date: true } } },
+    include: { trip: { select: { departureDate: true } }, payments: { orderBy: { date: "asc" }, select: { date: true, amount: true } } },
   });
   if (!template || !booking) { refresh(); return; }
 
