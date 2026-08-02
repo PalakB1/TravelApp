@@ -7,6 +7,7 @@ import { getOrgContext } from "@/lib/org";
 import { getScope } from "@/lib/scope";
 import { parseAmount, formatINR } from "@/lib/money";
 import { financialYear } from "@/lib/invoice";
+import { bookingTotal } from "@/lib/calc";
 
 // Every mutation runs through guard(), which returns the EFFECTIVE org id. All
 // reads/writes below are scoped to it so one org can never touch another's data.
@@ -993,6 +994,135 @@ export async function updateBookingPolicy(formData: FormData) {
   if (String(formData.get("saveDefault") || "") === "on" && policy) {
     await prisma.organization.update({ where: { id: orgId }, data: { defaultRefundPolicy: policy } });
   }
+  refresh();
+}
+
+// ---- Reusable payment plan templates ----
+
+// Ready-made starter plans (steps: percent OR fixed OR balance; days before travel).
+const PLAN_PRESETS: Record<string, { name: string; steps: { label: string; kind: string; percent?: number; amount?: number; daysBeforeTravel?: number | null }[] }> = {
+  standard: { name: "Standard (25% + balance)", steps: [
+    { label: "Advance", kind: "percent", percent: 25, daysBeforeTravel: null },
+    { label: "Balance", kind: "balance", daysBeforeTravel: 21 },
+  ] },
+  half: { name: "50% now, 50% before travel", steps: [
+    { label: "Advance", kind: "percent", percent: 50, daysBeforeTravel: null },
+    { label: "Balance", kind: "balance", daysBeforeTravel: 21 },
+  ] },
+  full: { name: "Full payment on booking", steps: [
+    { label: "Full payment", kind: "percent", percent: 100, daysBeforeTravel: null },
+  ] },
+};
+
+export async function createPlanTemplate(formData: FormData) {
+  const orgId = await guard();
+  const preset = String(formData.get("preset") || "");
+  const p = PLAN_PRESETS[preset];
+  const name = String(formData.get("name") || "").trim() || p?.name || "New plan";
+  const count = await prisma.paymentPlanTemplate.count({ where: { orgId } });
+  await prisma.paymentPlanTemplate.create({
+    data: {
+      orgId,
+      name,
+      isDefault: count === 0, // first plan becomes the default automatically
+      order: count,
+      steps: p ? { create: p.steps.map((s, i) => ({ label: s.label, kind: s.kind, percent: s.percent ?? null, amount: s.amount ?? null, daysBeforeTravel: s.daysBeforeTravel ?? null, order: i })) } : undefined,
+    },
+  });
+  refresh();
+}
+
+export async function deletePlanTemplate(formData: FormData) {
+  const orgId = await guard();
+  const id = String(formData.get("id"));
+  const t = await prisma.paymentPlanTemplate.findFirst({ where: { id, orgId }, select: { id: true, isDefault: true } });
+  if (!t) { refresh(); return; }
+  await prisma.paymentPlanTemplate.delete({ where: { id } });
+  // If we removed the default, promote the next remaining plan.
+  if (t.isDefault) {
+    const next = await prisma.paymentPlanTemplate.findFirst({ where: { orgId }, orderBy: { order: "asc" }, select: { id: true } });
+    if (next) await prisma.paymentPlanTemplate.update({ where: { id: next.id }, data: { isDefault: true } });
+  }
+  refresh();
+}
+
+export async function setDefaultPlanTemplate(formData: FormData) {
+  const orgId = await guard();
+  const id = String(formData.get("id"));
+  if (!(await prisma.paymentPlanTemplate.findFirst({ where: { id, orgId }, select: { id: true } }))) { refresh(); return; }
+  await prisma.paymentPlanTemplate.updateMany({ where: { orgId }, data: { isDefault: false } });
+  await prisma.paymentPlanTemplate.update({ where: { id }, data: { isDefault: true } });
+  refresh();
+}
+
+export async function addTemplateStep(formData: FormData) {
+  const orgId = await guard();
+  const templateId = String(formData.get("templateId"));
+  if (!(await prisma.paymentPlanTemplate.findFirst({ where: { id: templateId, orgId }, select: { id: true } }))) { refresh(); return; }
+  const kind = String(formData.get("kind") || "percent"); // percent | fixed | balance
+  const label = String(formData.get("label") || "").trim() || "Installment";
+  const daysStr = String(formData.get("daysBeforeTravel") || "").trim();
+  const daysBeforeTravel = daysStr === "" ? null : Math.max(0, parseInt(daysStr, 10) || 0);
+  let percent: number | null = null;
+  let amount: number | null = null;
+  if (kind === "percent") percent = Math.max(0, Math.min(100, parseInt(String(formData.get("percent") || "0"), 10) || 0));
+  else if (kind === "fixed") amount = parseAmount(String(formData.get("amount") || "0"));
+  const last = await prisma.paymentPlanTemplateStep.findFirst({ where: { templateId }, orderBy: { order: "desc" }, select: { order: true } });
+  await prisma.paymentPlanTemplateStep.create({
+    data: { templateId, label, kind, percent, amount, daysBeforeTravel, order: (last?.order ?? -1) + 1 },
+  });
+  refresh();
+}
+
+export async function deleteTemplateStep(formData: FormData) {
+  const orgId = await guard();
+  const id = String(formData.get("id"));
+  const step = await prisma.paymentPlanTemplateStep.findFirst({ where: { id, template: { orgId } }, select: { id: true } });
+  if (!step) { refresh(); return; }
+  await prisma.paymentPlanTemplateStep.delete({ where: { id } });
+  refresh();
+}
+
+// Assign a plan to a booking: turn the template's steps into real installments,
+// working out amounts from the booking total and dates from the trip's departure.
+// Replaces any existing plan on the booking.
+export async function applyPlanToBooking(formData: FormData) {
+  const orgId = await guard();
+  const bookingId = String(formData.get("bookingId"));
+  const templateId = String(formData.get("templateId"));
+  if (!bookingId || !templateId || !(await ownBooking(orgId, bookingId))) { refresh(); return; }
+
+  const template = await prisma.paymentPlanTemplate.findFirst({
+    where: { id: templateId, orgId },
+    include: { steps: { orderBy: { order: "asc" } } },
+  });
+  const booking = await prisma.booking.findFirst({ where: { id: bookingId, trip: { orgId } }, include: { trip: { select: { departureDate: true } } } });
+  if (!template || !booking) { refresh(); return; }
+
+  const total = bookingTotal(booking);
+  const departure = booking.trip.departureDate ? new Date(booking.trip.departureDate) : null;
+  const dayMs = 24 * 60 * 60 * 1000;
+
+  let allocated = 0;
+  const items = template.steps.map((s, i) => {
+    let amt = 0;
+    if (s.kind === "fixed") amt = s.amount ?? 0;
+    else if (s.kind === "balance") amt = Math.max(0, total - allocated);
+    else amt = Math.round((total * (s.percent ?? 0)) / 100); // percent
+    allocated += amt;
+    const dueDate = s.daysBeforeTravel == null
+      ? new Date() // due now / at booking
+      : departure
+        ? new Date(departure.getTime() - s.daysBeforeTravel * dayMs)
+        : null; // no departure date on file → leave the date blank to fill in
+    return { bookingId, label: s.label, amount: amt, dueDate, order: i };
+  });
+
+  await prisma.$transaction([
+    prisma.paymentScheduleItem.deleteMany({ where: { bookingId } }),
+    ...items.map((it) => prisma.paymentScheduleItem.create({ data: it })),
+  ]);
+  await logActivity(orgId, "payment", "plan", `Applied "${template.name}" payment plan to ${booking.customerName}`, `/bookings/${bookingId}`);
   refresh();
 }
 

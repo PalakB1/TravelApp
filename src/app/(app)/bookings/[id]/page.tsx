@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookingTotal, bookingPaid, bookingBalance, bookingInclTaxCharge, bookingInclNonTaxCharge, bookingInclusionCost } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
-import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, generateInvoice, renameBooking, updateBookingVisa, addScheduleItem, deleteScheduleItem, updateBookingPolicy } from "../../data-actions";
+import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, generateInvoice, renameBooking, updateBookingVisa, addScheduleItem, deleteScheduleItem, updateBookingPolicy, applyPlanToBooking } from "../../data-actions";
 import { scheduleStatus, scheduleTotal } from "@/lib/schedule";
 import { VISA_STATUSES, visaMeta } from "@/lib/visaStatus";
 import ShareInvoice from "@/components/ShareInvoice";
@@ -37,6 +37,9 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
 
   // Org's default cancellation terms — used to prefill this booking's policy box.
   const org = await prisma.organization.findUnique({ where: { id: scope.orgId }, select: { defaultRefundPolicy: true } });
+  // Reusable payment plans to assign with one tap (default pre-selected).
+  const planTemplates = await prisma.paymentPlanTemplate.findMany({ where: { orgId: scope.orgId }, orderBy: { order: "asc" }, select: { id: true, name: true, isDefault: true } });
+  const defaultPlanId = planTemplates.find((t) => t.isDefault)?.id ?? planTemplates[0]?.id ?? "";
 
   // Known ages from every traveller ever added, so the same person's age
   // auto-fills next time they're entered on any trip (most recent age wins).
@@ -336,6 +339,21 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
         {/* PAYMENT PLAN — planned installments with due dates (drives reminders). */}
         <div className="card">
           <div className="card-title">Payment plan <span className="small muted">what&apos;s due and by when · money received fills the plan in date order</span></div>
+
+          {/* One-tap: assign a reusable plan (set them up in Settings → Payment plans). */}
+          {planTemplates.length > 0 ? (
+            <form action={applyPlanToBooking} className="form-box flex" style={{ gap: 8, alignItems: "end", marginBottom: 12, flexWrap: "wrap" }}>
+              <input type="hidden" name="bookingId" value={b.id} />
+              <label className="field" style={{ flex: 1, minWidth: 180 }}><span className="lbl">Apply a plan {b.schedule.length > 0 && <span className="small muted">— replaces the current one</span>}</span>
+                <select name="templateId" defaultValue={defaultPlanId}>
+                  {planTemplates.map((t) => <option key={t.id} value={t.id}>{t.name}{t.isDefault ? " (default)" : ""}</option>)}
+                </select>
+              </label>
+              <button className="primary sm" type="submit">Apply</button>
+            </form>
+          ) : (
+            <p className="small muted" style={{ marginBottom: 12 }}>Tip: create reusable plans in <Link href="/settings" style={{ color: "var(--accent)" }}>Settings → Payment plans</Link>, then assign them here in one tap.</p>
+          )}
 
           {b.schedule.length === 0 ? (
             <div className="empty" style={{ padding: "16px 8px" }}>No plan yet. Add the advance and balance below so reminders know what&apos;s due.</div>

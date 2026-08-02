@@ -43,6 +43,37 @@ model Organization {
 
   // Default cancellation / refund terms — auto-fills on new bookings, editable per booking.
   defaultRefundPolicy String?
+  paymentPlanTemplates PaymentPlanTemplate[]
+}
+
+// A reusable payment plan an agency defines once (e.g. "25% now, balance 21 days
+// before travel") and then assigns to any booking with one tap. Assigning turns
+// these template steps into real installments (PaymentScheduleItem) using the
+// booking's total and its trip's departure date.
+model PaymentPlanTemplate {
+  id        String                    @id @default(cuid())
+  orgId     String
+  org       Organization              @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name      String
+  isDefault Boolean                   @default(false) // pre-selected on bookings
+  order     Int                       @default(0)
+  createdAt DateTime                  @default(now())
+  steps     PaymentPlanTemplateStep[]
+
+  @@index([orgId])
+}
+
+model PaymentPlanTemplateStep {
+  id         String              @id @default(cuid())
+  templateId String
+  template   PaymentPlanTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  label      String              @default("Installment") // "Advance", "Balance"…
+  kind       String              @default("percent") // percent | fixed | balance
+  percent    Int? // when kind = percent (0–100 of the booking total)
+  amount     Int? // when kind = fixed (flat rupees)
+  // When it's due, relative to the trip's departure. null = due now (at booking).
+  daysBeforeTravel Int?
+  order      Int                 @default(0)
 }
 
 // Costing ledger: any money YOU spend — supplier invoices, ground costs, fuel,

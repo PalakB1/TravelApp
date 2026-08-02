@@ -1,10 +1,19 @@
 import { getSession } from "@/lib/auth";
 import { getOrgContext } from "@/lib/org";
 import { prisma } from "@/lib/db";
+import { formatINR } from "@/lib/money";
 import ChangePasswordForm from "./ChangePasswordForm";
 import { updateOrgProfile } from "./actions";
+import { createPlanTemplate, deletePlanTemplate, setDefaultPlanTemplate, addTemplateStep, deleteTemplateStep } from "../data-actions";
 
 export const dynamic = "force-dynamic";
+
+// Plain-English description of a template step.
+function stepDesc(s: { kind: string; percent: number | null; amount: number | null; daysBeforeTravel: number | null }) {
+  const amt = s.kind === "fixed" ? formatINR(s.amount ?? 0) : s.kind === "balance" ? "remaining balance" : `${s.percent ?? 0}%`;
+  const when = s.daysBeforeTravel == null ? "due now" : `${s.daysBeforeTravel} days before travel`;
+  return `${amt} · ${when}`;
+}
 
 export default async function SettingsPage() {
   const session = await getSession();
@@ -15,6 +24,10 @@ export default async function SettingsPage() {
         select: { name: true, legalName: true, gstin: true, gstAddress: true, gstState: true, gstStateCode: true, sacCode: true, invoiceNote: true, logo: true },
       })
     : null;
+
+  const planTemplates = ctx?.orgId
+    ? await prisma.paymentPlanTemplate.findMany({ where: { orgId: ctx.orgId }, orderBy: { order: "asc" }, include: { steps: { orderBy: { order: "asc" } } } })
+    : [];
 
   return (
     <>
@@ -53,6 +66,89 @@ export default async function SettingsPage() {
             <label className="field"><span className="lbl">Invoice note / declaration</span><input name="invoiceNote" defaultValue={org.invoiceNote || ""} placeholder="e.g. Subject to Pune jurisdiction. E.&O.E." /></label>
             <button className="primary sm" type="submit">Save business details</button>
           </form>
+        </div>
+      )}
+
+      {org && (
+        <div className="card">
+          <div className="card-title">Payment plans <span className="small muted">set up once, then assign to any booking with one tap</span></div>
+
+          {planTemplates.length === 0 ? (
+            <div className="empty" style={{ padding: "12px 8px" }}>No plans yet. Start from a common one below, or build your own.</div>
+          ) : (
+            <div className="stack" style={{ gap: 12 }}>
+              {planTemplates.map((t) => (
+                <div key={t.id} className="form-box">
+                  <div className="between" style={{ marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
+                    <div className="flex" style={{ gap: 8, alignItems: "center" }}>
+                      <b>{t.name}</b>
+                      {t.isDefault && <span className="badge accent">default</span>}
+                    </div>
+                    <div className="flex" style={{ gap: 6 }}>
+                      {!t.isDefault && <form action={setDefaultPlanTemplate}><input type="hidden" name="id" value={t.id} /><button className="sm" type="submit">Make default</button></form>}
+                      <form action={deletePlanTemplate}><input type="hidden" name="id" value={t.id} /><button className="sm" type="submit" title="Delete this plan">Delete</button></form>
+                    </div>
+                  </div>
+
+                  {t.steps.length === 0 ? (
+                    <p className="small muted">No steps yet — add the first below.</p>
+                  ) : (
+                    <table className="t" style={{ marginBottom: 8 }}>
+                      <tbody>
+                        {t.steps.map((s) => (
+                          <tr key={s.id}>
+                            <td style={{ fontWeight: 500 }}>{s.label}</td>
+                            <td className="muted small">{stepDesc(s)}</td>
+                            <td className="num"><form action={deleteTemplateStep}><input type="hidden" name="id" value={s.id} /><button className="sm" type="submit" aria-label="Delete step">✕</button></form></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+
+                  <details className="add">
+                    <summary>+ Add a step</summary>
+                    <div className="form-box">
+                      <form action={addTemplateStep}>
+                        <input type="hidden" name="templateId" value={t.id} />
+                        <div className="row-3">
+                          <label className="field"><span className="lbl">Name</span><input name="label" placeholder="Advance / Balance" /></label>
+                          <label className="field"><span className="lbl">Type</span>
+                            <select name="kind" defaultValue="percent">
+                              <option value="percent">% of total</option>
+                              <option value="fixed">Flat amount ₹</option>
+                              <option value="balance">Whatever's left</option>
+                            </select>
+                          </label>
+                          <label className="field"><span className="lbl">Value <span className="small muted">% or ₹ (skip for "left")</span></span>
+                            <input name="percent" placeholder="25 (for %)" />
+                          </label>
+                        </div>
+                        <div className="row-3" style={{ alignItems: "end" }}>
+                          <label className="field"><span className="lbl">Flat ₹ <span className="small muted">only if type = flat</span></span><input name="amount" placeholder="15000 or 15k" /></label>
+                          <label className="field"><span className="lbl">Due <span className="small muted">days before travel · blank = now</span></span><input name="daysBeforeTravel" type="number" min="0" placeholder="21 (blank = due now)" /></label>
+                          <button className="primary sm" type="submit">Add step</button>
+                        </div>
+                      </form>
+                    </div>
+                  </details>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
+            <div className="small muted" style={{ marginBottom: 8 }}>Quick start — creates a ready-made plan you can rename or tweak:</div>
+            <div className="flex" style={{ gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+              <form action={createPlanTemplate}><input type="hidden" name="preset" value="standard" /><button className="sm" type="submit">＋ 25% + balance</button></form>
+              <form action={createPlanTemplate}><input type="hidden" name="preset" value="half" /><button className="sm" type="submit">＋ 50% + 50%</button></form>
+              <form action={createPlanTemplate}><input type="hidden" name="preset" value="full" /><button className="sm" type="submit">＋ Full on booking</button></form>
+            </div>
+            <form action={createPlanTemplate} className="flex" style={{ gap: 8, alignItems: "end" }}>
+              <label className="field" style={{ flex: 1 }}><span className="lbl">Or a blank plan</span><input name="name" placeholder="Plan name, e.g. Honeymoon terms" /></label>
+              <button className="primary sm" type="submit">Create plan</button>
+            </form>
+          </div>
         </div>
       )}
 
