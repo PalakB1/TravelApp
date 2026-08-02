@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-// On phones every data table (.main table.t) is restyled into stacked cards by
+// On phones every data table (.main / .stack-tables) is restyled into stacked cards by
 // CSS. For each cell to show which column it is, we copy the matching <th> text
 // onto the cell as data-label (read by `td::before` in globals.css). Done in the
 // client so we never have to hand-annotate 20-odd tables — and re-run when a
@@ -10,7 +10,7 @@ import { useEffect } from "react";
 export default function TableLabels() {
   useEffect(() => {
     const label = () => {
-      document.querySelectorAll<HTMLTableElement>(".main table.t").forEach((t) => {
+      document.querySelectorAll<HTMLTableElement>(".main table.t, .stack-tables table.t").forEach((t) => {
         const heads = [...t.querySelectorAll("thead th")].map((h) => h.textContent?.trim() || "");
         if (!heads.length) return;
         t.querySelectorAll("tbody tr").forEach((tr) => {

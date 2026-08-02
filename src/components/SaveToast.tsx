@@ -36,7 +36,10 @@ export default function SaveToast() {
       aria-live="polite"
       style={{
         position: "fixed", bottom: 24, left: "50%", zIndex: 2000,
-        background: saved ? "var(--success)" : "var(--text)", color: "#fff",
+        // "Saving" uses the text colour as a pill; its label must be the page
+        // background so it stays readable when the theme flips (in dark mode
+        // --text is near-white, so white-on-white would vanish).
+        background: saved ? "var(--success)" : "var(--text)", color: saved ? "#fff" : "var(--bg)",
         padding: "9px 20px", borderRadius: 999, fontSize: 13.5, fontWeight: 600,
         boxShadow: "0 10px 30px rgba(0,0,0,0.28)", pointerEvents: "none",
         transition: "background .25s ease",

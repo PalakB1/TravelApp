@@ -320,7 +320,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                     { v: Math.max(0, f.profit), c: "var(--emerald)" },
                   ].filter((s) => s.v > 0);
                   const pct = Math.round(f.margin * 100);
-                  const pcol = pct >= 35 ? "var(--emerald)" : pct >= 20 ? "#9a6109" : "var(--rose)";
+                  const pcol = pct >= 35 ? "var(--emerald)" : pct >= 20 ? "var(--amber-fg)" : "var(--rose)";
                   return (
                     <Link key={trip.id} href={`/trips/${trip.id}`} className="hbar-row" style={{ padding: "7px 8px" }}>
                       <div className="between" style={{ marginBottom: 6, gap: 10 }}>

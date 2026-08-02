@@ -183,7 +183,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
         <div className="card" style={{ borderColor: rec.variance > 0 ? "var(--warning-bg)" : "var(--emerald-bg)" }}>
           <div className="between" style={{ flexWrap: "wrap", gap: 8 }}>
             <div className="card-title" style={{ margin: 0 }}>Estimate vs actual <span className="small muted">from invoices logged in <Link href="/expenses" className="row-link">Costing</Link></span></div>
-            <span className="badge" style={{ background: rec.variance > 0 ? "var(--warning-bg)" : "var(--emerald-bg)", color: rec.variance > 0 ? "var(--warning)" : "#0b7a52" }}>
+            <span className="badge" style={{ background: rec.variance > 0 ? "var(--warning-bg)" : "var(--emerald-bg)", color: rec.variance > 0 ? "var(--warning)" : "var(--emerald-fg)" }}>
               {rec.variance === 0 ? "on budget" : rec.variance > 0 ? `₹${formatINR(rec.variance).replace("₹", "")} over the hold` : `${formatINR(-rec.variance)} under the hold`}
             </span>
           </div>
@@ -230,20 +230,20 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
           <div className="sec-body" style={{ padding: 0 }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10, padding: "14px 20px 6px" }}>
               <div style={{ background: "var(--sky-bg)", borderRadius: 10, padding: "10px 14px" }}>
-                <div className="small" style={{ color: "#0277b6", fontWeight: 600 }}>Travellers</div>
-                <div style={{ fontSize: 21, fontWeight: 600, color: "#0277b6" }}>{f.pax}</div>
+                <div className="small" style={{ color: "var(--sky-fg)", fontWeight: 600 }}>Travellers</div>
+                <div style={{ fontSize: 21, fontWeight: 600, color: "var(--sky-fg)" }}>{f.pax}</div>
               </div>
               <div style={{ background: "var(--amber-bg)", borderRadius: 10, padding: "10px 14px" }}>
-                <div className="small" style={{ color: "#9a6109", fontWeight: 600 }}>Drivers</div>
-                <div style={{ fontSize: 21, fontWeight: 600, color: "#9a6109" }}>{f.hiredDrivers}</div>
+                <div className="small" style={{ color: "var(--amber-fg)", fontWeight: 600 }}>Drivers</div>
+                <div style={{ fontSize: 21, fontWeight: 600, color: "var(--amber-fg)" }}>{f.hiredDrivers}</div>
               </div>
               <div style={{ background: "var(--violet-bg)", borderRadius: 10, padding: "10px 14px" }}>
-                <div className="small" style={{ color: "#6d28d9", fontWeight: 600 }}>Total people</div>
-                <div style={{ fontSize: 21, fontWeight: 600, color: "#6d28d9" }}>{f.totalPeople}</div>
+                <div className="small" style={{ color: "var(--violet-fg)", fontWeight: 600 }}>Total people</div>
+                <div style={{ fontSize: 21, fontWeight: 600, color: "var(--violet-fg)" }}>{f.totalPeople}</div>
               </div>
               <div style={{ background: "var(--emerald-bg)", borderRadius: 10, padding: "10px 14px" }}>
-                <div className="small" style={{ color: "#0b7a52", fontWeight: 600 }}>Rooms / night</div>
-                <div style={{ fontSize: 21, fontWeight: 600, color: "#0b7a52" }}>{f.roomsNeeded}</div>
+                <div className="small" style={{ color: "var(--emerald-fg)", fontWeight: 600 }}>Rooms / night</div>
+                <div style={{ fontSize: 21, fontWeight: 600, color: "var(--emerald-fg)" }}>{f.roomsNeeded}</div>
               </div>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, padding: "6px 20px 12px" }}>
@@ -307,7 +307,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                                 {rec.hotelActualBy.has(h.id) ? (() => {
                                   const actual = rec.hotelActualBy.get(h.id)!;
                                   const over = actual > h.cost;
-                                  return <div className="small" style={{ color: over ? "var(--danger)" : "#0b7a52", fontWeight: 500 }}>Actual invoiced {formatINR(actual)}{h.cost > 0 ? (actual === h.cost ? " · on the hold" : over ? ` · ${formatINR(actual - h.cost)} over hold` : ` · ${formatINR(h.cost - actual)} under hold`) : ""}</div>;
+                                  return <div className="small" style={{ color: over ? "var(--danger)" : "var(--emerald-fg)", fontWeight: 500 }}>Actual invoiced {formatINR(actual)}{h.cost > 0 ? (actual === h.cost ? " · on the hold" : over ? ` · ${formatINR(actual - h.cost)} over hold` : ` · ${formatINR(h.cost - actual)} under hold`) : ""}</div>;
                                 })() : null}
                                 {h.notes ? <div className="small" style={{ color: "var(--text-3)" }}>{h.notes}</div> : null}
                               </div>
@@ -499,7 +499,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                       const actual = rec.carActualBy.get(c.id)!;
                       const est = carCost(c);
                       const over = actual > est;
-                      return <div className="small" style={{ color: over ? "var(--danger)" : "#0b7a52", fontWeight: 500 }}>Actual invoiced {formatINR(actual)}{est > 0 ? (actual === est ? " · on the hold" : over ? ` · ${formatINR(actual - est)} over hold` : ` · ${formatINR(est - actual)} under hold`) : ""}</div>;
+                      return <div className="small" style={{ color: over ? "var(--danger)" : "var(--emerald-fg)", fontWeight: 500 }}>Actual invoiced {formatINR(actual)}{est > 0 ? (actual === est ? " · on the hold" : over ? ` · ${formatINR(actual - est)} over hold` : ` · ${formatINR(est - actual)} under hold`) : ""}</div>;
                     })() : null}
                     {c.seats > 0 ? <div className="small muted">{c.seats} seats · {carPassengerSeats(c)} for guests</div> : null}
                     {c.status === "hold" && c.holdUntil ? <div className="small" style={{ color: expiring ? "var(--danger)" : "var(--warning)", marginTop: 4 }}>hold till {fmtDate(c.holdUntil)}{c.source ? ` · ${c.source}` : ""}</div> : null}

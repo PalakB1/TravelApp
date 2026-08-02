@@ -29,6 +29,12 @@
   --emerald: #0f9d6b; --emerald-bg: #e3f7ef;
   --orange: #e1670a;  --orange-bg: #fdeede;
 
+  /* Readable INK for text sitting on the matching -bg tint (badges, metric
+     values). Kept separate from the base hue because the tint inverts in dark
+     mode — the ink has to invert with it or it goes dark-on-dark. */
+  --sky-fg: #01628f; --violet-fg: #6d28d9; --rose-fg: #be2740;
+  --amber-fg: #9a6109; --emerald-fg: #0b7a52; --orange-fg: #a34606;
+
   --radius: 10px;
 }
 
@@ -119,12 +125,12 @@ a.up-trip:hover { background: var(--surface-2); }
 a.hbar-row { display: block; padding: 6px 8px; margin: 0 -8px; border-radius: 9px; transition: background .12s; }
 a.hbar-row:hover { background: var(--surface-2); }
 .hbar-go { color: var(--text-3); font-weight: 400; }
-.metric.c-emerald { background: var(--emerald-bg); } .metric.c-emerald::before { background: var(--emerald); } .metric.c-emerald .value { color: #0b7a52; }
-.metric.c-amber   { background: var(--amber-bg); }   .metric.c-amber::before { background: var(--amber); }   .metric.c-amber .value { color: #9a6109; }
-.metric.c-violet  { background: var(--violet-bg); }  .metric.c-violet::before { background: var(--violet); }  .metric.c-violet .value { color: #6d28d9; }
-.metric.c-sky     { background: var(--sky-bg); }     .metric.c-sky::before { background: var(--sky); }     .metric.c-sky .value { color: #0277b6; }
-.metric.c-rose    { background: var(--rose-bg); }    .metric.c-rose::before { background: var(--rose); }    .metric.c-rose .value { color: #be2740; }
-.metric.c-orange  { background: var(--orange-bg); }  .metric.c-orange::before { background: var(--orange); }  .metric.c-orange .value { color: #c2560a; }
+.metric.c-emerald { background: var(--emerald-bg); } .metric.c-emerald::before { background: var(--emerald); } .metric.c-emerald .value { color: var(--emerald-fg); }
+.metric.c-amber   { background: var(--amber-bg); }   .metric.c-amber::before { background: var(--amber); }   .metric.c-amber .value { color: var(--amber-fg); }
+.metric.c-violet  { background: var(--violet-bg); }  .metric.c-violet::before { background: var(--violet); }  .metric.c-violet .value { color: var(--violet-fg); }
+.metric.c-sky     { background: var(--sky-bg); }     .metric.c-sky::before { background: var(--sky); }     .metric.c-sky .value { color: var(--sky-fg); }
+.metric.c-rose    { background: var(--rose-bg); }    .metric.c-rose::before { background: var(--rose); }    .metric.c-rose .value { color: var(--rose-fg); }
+.metric.c-orange  { background: var(--orange-bg); }  .metric.c-orange::before { background: var(--orange); }  .metric.c-orange .value { color: var(--orange-fg); }
 
 /* Tables */
 table.t { width: 100%; border-collapse: collapse; font-size: 13.5px; }
@@ -139,13 +145,15 @@ table.t a.row-link { color: var(--accent); font-weight: 600; }
 
 /* Badges */
 .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; padding: 3px 9px; border-radius: 7px; font-weight: 600; letter-spacing: 0.01em; }
-.badge.green  { background: var(--emerald-bg); color: #0b7a52; }
-.badge.amber  { background: var(--amber-bg); color: #9a6109; }
-.badge.red    { background: var(--rose-bg); color: #be2740; }
+.badge.green  { background: var(--emerald-bg); color: var(--emerald-fg); }
+.badge.amber  { background: var(--amber-bg); color: var(--amber-fg); }
+.badge.red    { background: var(--rose-bg); color: var(--rose-fg); }
+.badge.rose   { background: var(--rose-bg); color: var(--rose-fg); }
+.badge.emerald{ background: var(--emerald-bg); color: var(--emerald-fg); }
 .badge.gray   { background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border); }
 .badge.accent { background: var(--accent-bg); color: var(--accent); }
-.badge.sky    { background: var(--sky-bg); color: #0277b6; }
-.badge.violet { background: var(--violet-bg); color: #6d28d9; }
+.badge.sky    { background: var(--sky-bg); color: var(--sky-fg); }
+.badge.violet { background: var(--violet-bg); color: var(--violet-fg); }
 
 .chip { font-size: 12px; background: var(--surface-2); border: 1px solid var(--border); padding: 4px 10px; border-radius: 8px; color: var(--text-2); }
 button.chip { cursor: pointer; font-weight: 600; transition: background .12s, color .12s, border-color .12s; }
@@ -385,37 +393,37 @@ details.section[open] > .sec-body, details.add[open] .form-box { animation: fade
    its column via `data-label` (injected by <TableLabels/>). Scoped
    to `.main` so public invoice/pay documents keep their table layout.
    ============================================================ */
-@media (max-width: 640px) {
-  .main table.t { display: block; width: 100%; font-size: 14px; }
-  .main table.t thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
-  .main table.t tbody { display: block; }
-  .main table.t tbody tr {
+@media (max-width: 760px) {
+  :is(.main, .stack-tables) table.t { display: block; width: 100%; font-size: 14px; }
+  :is(.main, .stack-tables) table.t thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
+  :is(.main, .stack-tables) table.t tbody { display: block; }
+  :is(.main, .stack-tables) table.t tbody tr {
     display: block; background: var(--surface); border: 1px solid var(--border);
     border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; box-shadow: var(--shadow-xs);
   }
-  .main table.t tbody tr:hover { background: var(--surface); }
-  .main table.t td {
+  :is(.main, .stack-tables) table.t tbody tr:hover { background: var(--surface); }
+  :is(.main, .stack-tables) table.t td {
     display: flex; justify-content: space-between; align-items: baseline; gap: 14px;
     padding: 6px 0; border: none; text-align: right;
   }
-  .main table.t td:last-child { padding-bottom: 0; }
+  :is(.main, .stack-tables) table.t td:last-child { padding-bottom: 0; }
   /* Column name on the left of each value row. */
-  .main table.t td::before {
+  :is(.main, .stack-tables) table.t td::before {
     content: attr(data-label); text-align: left; color: var(--text-2);
     font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
     white-space: nowrap; flex-shrink: 0;
   }
   /* Unlabelled cells (e.g. action buttons) keep the value pushed right, no prefix. */
-  .main table.t td:not([data-label])::before, .main table.t td[data-label=""]::before { content: ""; }
+  :is(.main, .stack-tables) table.t td:not([data-label])::before, :is(.main, .stack-tables) table.t td[data-label=""]::before { content: ""; }
   /* First cell becomes the card's title. */
-  .main table.t td:first-child {
+  :is(.main, .stack-tables) table.t td:first-child {
     display: block; text-align: left; font-size: 15.5px; font-weight: 600;
     padding: 0 0 8px; margin-bottom: 6px; border-bottom: 1px solid var(--border);
   }
-  .main table.t td:first-child::before { content: none; }
-  .main table.t td.num { font-variant-numeric: tabular-nums; }
+  :is(.main, .stack-tables) table.t td:first-child::before { content: none; }
+  :is(.main, .stack-tables) table.t td.num { font-variant-numeric: tabular-nums; }
   /* Comfortable tap targets for row actions on touch screens. */
-  .main table.t td .btn, .main table.t td button { min-height: 34px; }
+  :is(.main, .stack-tables) table.t td .btn, :is(.main, .stack-tables) table.t td button { min-height: 34px; }
 }
 
 /* ============================================================
@@ -566,6 +574,10 @@ details.section[open] > .sec-body, details.add[open] .form-box { animation: fade
   --emerald: #34d399; --emerald-bg: #0f2a20;
   --orange: #f4894a;  --orange-bg: #2e1d10;
 
+  /* Ink flips bright so badges/metrics stay readable on the dark tints. */
+  --sky-fg: #7dd3fc; --violet-fg: #c4b5fd; --rose-fg: #fda4af;
+  --amber-fg: #fcd34d; --emerald-fg: #6ee7b7; --orange-fg: #fdba74;
+
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -594,6 +606,10 @@ details.section[open] > .sec-body, details.add[open] .form-box { animation: fade
     --amber: #e0a53c;   --amber-bg: #2c2410;
     --emerald: #34d399; --emerald-bg: #0f2a20;
     --orange: #f4894a;  --orange-bg: #2e1d10;
+
+    /* Ink flips bright so badges/metrics stay readable on the dark tints. */
+    --sky-fg: #7dd3fc; --violet-fg: #c4b5fd; --rose-fg: #fda4af;
+    --amber-fg: #fcd34d; --emerald-fg: #6ee7b7; --orange-fg: #fdba74;
 
     color-scheme: dark;
   }

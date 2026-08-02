@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { approveOrg, rejectOrg, suspendOrg, enterOrgAction, toggleCustomTrips, setPlan } from "./actions";
 import { PLAN_LABEL, trialDaysLeft } from "@/lib/billing";
+import TableLabels from "@/components/TableLabels";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,8 @@ export default async function AdminPage() {
   const leads = await prisma.lead.findMany({ orderBy: { createdAt: "desc" }, take: 100 });
 
   return (
-    <div style={{ maxWidth: 960, margin: "0 auto", padding: "28px 20px 60px" }}>
+    <div className="stack-tables" style={{ maxWidth: 960, margin: "0 auto", padding: "28px 20px 60px" }}>
+      <TableLabels />
       <div className="page-head">
         <div>
           <h1>🛡️ Platform admin</h1>
