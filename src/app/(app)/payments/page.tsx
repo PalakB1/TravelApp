@@ -19,9 +19,10 @@ function fmtDate(d: Date) {
   return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
-export default async function PaymentsPage() {
+export default async function PaymentsPage({ searchParams }: { searchParams: Promise<{ due?: string }> }) {
   const scope = await requireScope();
   const orgId = scope.orgId;
+  const dueSort = (await searchParams).due === "amount" ? "amount" : "date";
   const bookings = await prisma.booking.findMany({
     where: scope.viaTrip,
     include: { trip: true, variant: true, payments: true, schedule: true },
@@ -68,7 +69,7 @@ export default async function PaymentsPage() {
       return { b, amount: nextUp.remaining, date: new Date(nextUp.item.dueDate!), count: 1, overdue: false, label: nextUp.item.label };
     })
     .filter((x): x is NonNullable<typeof x> => x !== null)
-    .sort((a, c) => a.date.getTime() - c.date.getTime());
+    .sort((a, c) => dueSort === "amount" ? c.amount - a.amount : a.date.getTime() - c.date.getTime());
   const overdueCount = dueRows.filter((r) => r.overdue).length;
 
   // Free-cancellation windows closing within the next 10 days — nudge the customer
@@ -108,7 +109,14 @@ export default async function PaymentsPage() {
       {/* MONEY DUE — total currently owed per customer, with a WhatsApp nudge. */}
       {dueRows.length > 0 && (
         <div className="card">
-          <div className="card-title">Money due <span className="small muted">total owed now per customer{overdueCount > 0 ? ` · ${overdueCount} overdue` : ""} · tap Remind to send on WhatsApp</span></div>
+          <div className="between" style={{ marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
+            <div className="card-title" style={{ margin: 0 }}>Money due <span className="small muted">total owed now per customer{overdueCount > 0 ? ` · ${overdueCount} overdue` : ""}</span></div>
+            <div className="flex" style={{ gap: 6 }}>
+              <span className="small muted" style={{ alignSelf: "center" }}>Sort:</span>
+              <Link href="/payments?due=date" className={`btn sm ${dueSort === "date" ? "primary" : ""}`}>By date</Link>
+              <Link href="/payments?due=amount" className={`btn sm ${dueSort === "amount" ? "primary" : ""}`}>Owes most</Link>
+            </div>
+          </div>
           <table className="t">
             <thead><tr><th>Due date</th><th>Customer</th><th>Trip</th><th>For</th><th className="num">Amount due</th><th></th></tr></thead>
             <tbody>
