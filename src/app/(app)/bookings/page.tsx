@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
-import { bookingTotal, bookingPaid, bookingBalance } from "@/lib/calc";
+import { bookingTotal, bookingPaid, bookingBalance, tripIsOver } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import ActivityLog from "@/components/ActivityLog";
 import BookingsTable from "@/components/BookingsTable";
@@ -16,12 +16,14 @@ export default async function BookingsPage() {
     orderBy: { createdAt: "desc" },
   });
 
+  const now = new Date();
   const totalDue = bookings.filter((b) => b.status !== "cancelled").reduce((s, b) => s + bookingBalance(b), 0);
   const rows = bookings.map((b) => ({
     id: b.id, name: b.customerName, trip: b.trip.name, pax: b.pax, status: b.status,
     visaStatus: b.visaStatus, visaHandledBy: b.visaHandledBy,
     total: bookingTotal(b), paid: bookingPaid(b), balance: bookingBalance(b),
     discount: b.discount, discountReason: b.discountReason,
+    invoiceNo: b.invoiceNo, tripOver: tripIsOver(b.trip, now),
   }));
 
   return (

@@ -290,3 +290,17 @@ export function reconcileTrip(args: {
     hasActuals: totalActual > 0,
   };
 }
+
+// A trip is "over" once its last travel day has passed. Last day = departure +
+// nights (or days − 1 when nights isn't set). No departure date → unknown, treated
+// as not over. Used to gate invoice generation until the trip is genuinely done.
+export function tripIsOver(trip: { departureDate: Date | null; nights: number; days: number }, now: Date = new Date()): boolean {
+  if (!trip.departureDate) return false;
+  const span = trip.nights > 0 ? trip.nights : Math.max(0, trip.days - 1);
+  const last = new Date(trip.departureDate);
+  last.setDate(last.getDate() + span);
+  last.setHours(0, 0, 0, 0);
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  return today.getTime() > last.getTime();
+}

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
-import { tripFinancials, reconcileTrip, bookingTotal, bookingPaid, bookingBalance, isNightGap, holdExpiringSoon, carCost, pricePerRoom, nightCost, nightBookedRooms, carPassengerSeats } from "@/lib/calc";
+import { tripFinancials, reconcileTrip, bookingTotal, bookingPaid, bookingBalance, isNightGap, holdExpiringSoon, carCost, pricePerRoom, nightCost, nightBookedRooms, carPassengerSeats, tripIsOver } from "@/lib/calc";
 import BookingsTable from "@/components/BookingsTable";
 import { formatINR, formatINRShort } from "@/lib/money";
 import {
@@ -706,6 +706,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
             visaStatus: b.visaStatus, visaHandledBy: b.visaHandledBy,
             total: bookingTotal(b), paid: bookingPaid(b), balance: bookingBalance(b),
             discount: b.discount, discountReason: b.discountReason,
+            invoiceNo: b.invoiceNo, tripOver: tripIsOver(trip),
           }))} />
         )}
         <details className="add">

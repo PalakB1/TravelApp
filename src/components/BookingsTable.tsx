@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatINR } from "@/lib/money";
 import { visaMeta, VISA_STATUSES } from "@/lib/visaStatus";
+import { generateInvoice } from "@/app/(app)/data-actions";
 
 export type BookingRow = {
   id: string;
@@ -18,6 +19,8 @@ export type BookingRow = {
   balance: number;
   discount?: number;
   discountReason?: string | null;
+  invoiceNo?: string | null;
+  tripOver?: boolean;
 };
 
 const STATUSES = ["confirmed", "enquiry", "travelled", "cancelled"];
@@ -107,6 +110,7 @@ export default function BookingsTable({ rows, showTrip = false }: { rows: Bookin
             <th className="num">Total</th>
             <th className="num">Paid</th>
             <th className="num">Balance</th>
+            <th className="num">Invoice</th>
           </tr>
         </thead>
         <tbody>
@@ -123,6 +127,17 @@ export default function BookingsTable({ rows, showTrip = false }: { rows: Bookin
               <td className="num">{formatINR(b.total)}</td>
               <td className="num">{formatINR(b.paid)}</td>
               <td className="num">{b.balance > 0 ? <span className="badge amber">{formatINR(b.balance)}</span> : <span className="badge green">paid</span>}</td>
+              <td className="num">
+                {b.invoiceNo ? (
+                  <Link className="btn sm" href={`/invoice/${b.id}`} target="_blank" rel="noopener" title={`Tax invoice ${b.invoiceNo}`}>🧾 {b.invoiceNo}</Link>
+                ) : b.status === "cancelled" ? (
+                  <span className="small muted">—</span>
+                ) : b.tripOver ? (
+                  <form action={generateInvoice}><input type="hidden" name="id" value={b.id} /><button type="submit" className="btn sm primary">Generate</button></form>
+                ) : (
+                  <button type="button" className="btn sm" disabled title="Available once the trip is over (all days done)">Generate</button>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
