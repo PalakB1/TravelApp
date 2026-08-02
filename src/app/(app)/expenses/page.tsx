@@ -134,8 +134,14 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
         <div className={`metric ${owedTotal > 0 ? "c-amber" : "c-emerald"}`}><div className="label">Owed to staff</div><div className="value">{formatINR(owedTotal)}</div><div className="foot">{personalOwed.length} personal spend{personalOwed.length === 1 ? "" : "s"} to reimburse</div></div>
       </div>
 
-      <div className="card">
-        <div className="card-title">Add a spend <span className="small muted">tag it to a trip or leave it general · attach the invoice if you have it</span></div>
+      {/* 12 fields is a lot to face every visit — tucked behind a toggle like the
+          rest of the app's add-forms, but opened by default when there's nothing
+          logged yet (so a new user still lands on the thing to do). */}
+      <details className="card" open={expenses.length === 0}>
+        <summary style={{ cursor: "pointer", listStyle: "none" }}>
+          <span className="card-title" style={{ margin: 0 }}>+ Add a spend <span className="small muted">tag it to a trip or leave it general · attach the invoice if you have it</span></span>
+        </summary>
+        <div style={{ marginTop: 14 }}>
         <form action={addExpense}>
           <div className="row-3">
             <label className="field"><span className="lbl">Which trip?</span>
@@ -190,7 +196,8 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
           </div>
           <SubmitButton className="primary" pendingLabel="Saving…">Add spend</SubmitButton>
         </form>
-      </div>
+        </div>
+      </details>
 
       {/* One datalist, referenced by both the spend form and the settle forms. */}
       <datalist id="bank-names">{banks.map((b) => <option key={b} value={b} />)}</datalist>

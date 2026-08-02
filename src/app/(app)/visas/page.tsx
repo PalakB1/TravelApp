@@ -4,6 +4,7 @@ import { requireScope } from "@/lib/scope";
 import VisaTripFilter from "@/components/VisaTripFilter";
 import VisaLinkBuilder from "@/components/VisaLinkBuilder";
 import { visaLabel } from "@/lib/visa";
+import TableSearch from "@/components/TableSearch";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,7 @@ export default async function VisasPage({ searchParams }: { searchParams: Promis
         {applicants.length === 0 ? (
           <div className="empty">No visa forms filled yet. Share the form link with your travellers.</div>
         ) : (
+          <TableSearch placeholder="Search traveller or trip…">
           <table className="t">
             <thead>
               <tr>
@@ -76,6 +78,7 @@ export default async function VisasPage({ searchParams }: { searchParams: Promis
               ))}
             </tbody>
           </table>
+          </TableSearch>
         )}
       </div>
     </>

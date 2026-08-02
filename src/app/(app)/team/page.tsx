@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import AddMemberForm from "./AddMemberForm";
 import ResetPasswordForm from "./ResetPasswordForm";
 import { removeMember, setTripAccess } from "./actions";
+import TableSearch from "@/components/TableSearch";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,7 @@ export default async function TeamPage() {
       </div>
 
       <div className="card" style={{ padding: 0 }}>
+        <TableSearch placeholder="Search member…">
         <table className="t">
           <thead><tr><th style={{ paddingLeft: 20 }}>Member</th><th>Email</th><th>Role</th><th>Trip access</th><th>Added</th><th></th></tr></thead>
           <tbody>
@@ -96,6 +98,7 @@ export default async function TeamPage() {
             ))}
           </tbody>
         </table>
+        </TableSearch>
       </div>
 
       <div className="card">

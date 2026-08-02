@@ -181,7 +181,9 @@ button:active, .btn:active { transform: scale(0.98); }
 button.primary, .btn.primary { background: var(--accent-grad); border: none; color: #fff; box-shadow: 0 3px 9px rgba(91,80,230,0.3); }
 button.primary:hover, .btn.primary:hover { filter: brightness(1.06); background: var(--accent-grad); }
 button.danger { color: var(--danger); border-color: var(--danger-bg); background: var(--danger-bg); }
-button.sm { padding: 6px 11px; font-size: 13px; }
+/* Link-buttons (<a class="btn sm">) must match real small buttons — without the
+   .btn.sm half of this they rendered full-size next to them (41px vs 33.5px). */
+button.sm, .btn.sm { padding: 6px 11px; font-size: 13px; }
 button:disabled { opacity: 0.55; cursor: default; }
 
 .muted { color: var(--text-2); }

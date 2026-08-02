@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { formatINR } from "@/lib/money";
 import { createProposal } from "./actions";
+import TableSearch from "@/components/TableSearch";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,7 @@ export default async function ProposalsPage() {
         </div>
       ) : (
         <div className="card" style={{ padding: "18px 20px" }}>
+          <TableSearch placeholder="Search proposal, customer or destination…">
           <table className="t">
             <thead><tr><th>Proposal</th><th>Customer</th><th>Trip</th><th>Status</th><th className="num">Price</th><th></th></tr></thead>
             <tbody>
@@ -61,6 +63,7 @@ export default async function ProposalsPage() {
               ))}
             </tbody>
           </table>
+          </TableSearch>
         </div>
       )}
     </>

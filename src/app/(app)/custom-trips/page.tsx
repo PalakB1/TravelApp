@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { formatINRShort } from "@/lib/money";
 import { customOrgId, ctRevenue, ctOutstanding, ctCost, ctProfit } from "./lib";
 import { createCustomTrip } from "./actions";
+import TableSearch from "@/components/TableSearch";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +72,7 @@ export default async function CustomTripsPage() {
         {trips.length === 0 ? (
           <div className="empty">No custom trips yet. Create one above — then add flights, hotels, transfers or anything you’re booking.</div>
         ) : (
+          <TableSearch placeholder="Search trip or client…">
           <table className="t">
             <thead><tr><th style={{ paddingLeft: 20 }}>Client</th><th>Trip</th><th>Dates</th><th>Status</th><th className="num">Revenue</th><th className="num">Outstanding</th><th></th></tr></thead>
             <tbody>
@@ -91,6 +93,7 @@ export default async function CustomTripsPage() {
               })}
             </tbody>
           </table>
+          </TableSearch>
         )}
       </div>
     </>

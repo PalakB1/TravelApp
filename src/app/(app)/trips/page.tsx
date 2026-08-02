@@ -5,6 +5,7 @@ import { tripFinancials } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import { duplicateTrip } from "../data-actions";
 import ActivityLog from "@/components/ActivityLog";
+import TableSearch from "@/components/TableSearch";
 
 export const dynamic = "force-dynamic";
 
@@ -36,9 +37,17 @@ export default async function TripsPage() {
       </div>
 
       {trips.length === 0 ? (
-        <div className="card"><div className="empty">No trips yet. Create your first trip.</div></div>
+        <div className="card">
+          <div className="empty-cta">
+            <span className="emoji">🗺️</span>
+            <div className="t">No trips yet</div>
+            <div className="d">A trip holds your itinerary, hotels, cars and every booking on it. Create one and the costing, payments and profit follow automatically.</div>
+            <Link className="btn primary sm" href="/trips/new">+ New trip</Link>
+          </div>
+        </div>
       ) : (
         <div className="card" style={{ padding: 0 }}>
+          <TableSearch placeholder="Search trip or destination…">
           <table className="t">
             <thead>
               <tr>
@@ -73,6 +82,7 @@ export default async function TripsPage() {
               })}
             </tbody>
           </table>
+          </TableSearch>
         </div>
       )}
 
