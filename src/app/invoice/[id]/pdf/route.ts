@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { bookingTaxable, bookingGst, bookingTcs, bookingTotal, bookingPaid, bookingBalance, bookingInclNonTaxCharge } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import { amountInWords } from "@/lib/invoice";
+import { STANDARD_REFUND_POLICY } from "@/lib/policy";
 import InvoiceDoc from "../InvoiceDoc";
 
 export const dynamic = "force-dynamic";
@@ -54,8 +55,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     gstHalfRate: rate / 2,
     tcsRate: b.tcsRate ?? 2,
     amountWords: amountInWords(total).replace(/ Rupees Only$/, ""),
+    policy: ascii((b.refundPolicy ?? org?.defaultRefundPolicy ?? STANDARD_REFUND_POLICY)
+      .replace(/[•]/g, "-").replace(/[–—]/g, "-")),
   }) as unknown as Parameters<typeof renderToBuffer>[0];
-
   const buffer = await renderToBuffer(element);
   return new Response(new Uint8Array(buffer), {
     headers: {

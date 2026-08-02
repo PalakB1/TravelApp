@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { bookingTaxable, bookingGst, bookingTcs, bookingTotal, bookingPaid, bookingBalance, bookingInclNonTaxCharge } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import { amountInWords } from "@/lib/invoice";
+import { STANDARD_REFUND_POLICY } from "@/lib/policy";
 import PrintButton from "@/components/PrintButton";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +40,8 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   const balance = bookingBalance(b);
   const gstHalf = Math.round(gst / 2);
   const rate = b.gstRate ?? 5;
+  // This booking's own wording wins; else the org default; else the standard terms.
+  const policy = b.refundPolicy ?? org?.defaultRefundPolicy ?? STANDARD_REFUND_POLICY;
 
   const Cell = ({ children, num, head, bold }: { children: React.ReactNode; num?: boolean; head?: boolean; bold?: boolean }) => (
     <td style={{ padding: "7px 10px", borderBottom: "1px solid var(--border)", textAlign: num ? "right" : "left", fontWeight: head || bold ? 600 : 400, fontSize: head ? 11 : 13, color: head ? "var(--text-2)" : "var(--text)", textTransform: head ? "uppercase" : "none" }}>{children}</td>
@@ -111,6 +114,15 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
 
           <p className="small" style={{ marginTop: 14, fontStyle: "italic" }}>Amount chargeable (in words): Rupees {amountInWords(total).replace(/ Rupees Only$/, "")} only.</p>
           <p className="small muted" style={{ marginTop: 6 }}>CGST/SGST shown assuming intra-state supply. {org?.invoiceNote || "This is a computer-generated invoice."}</p>
+
+          {/* Cancellation & refund terms — the customer's copy of what applies. */}
+          {policy && (
+            <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
+              <div className="small" style={{ fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 8 }}>Cancellation &amp; refund terms</div>
+              <div className="small muted" style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{policy}</div>
+            </div>
+          )}
+
           <p className="small muted" style={{ marginTop: 10, textAlign: "right" }}>For {agency}</p>
         </div>
       </div>

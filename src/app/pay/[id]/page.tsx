@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { bookingTotal, bookingPaid, bookingBalance } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import PayForm from "./PayForm";
+import { STANDARD_REFUND_POLICY } from "@/lib/policy";
 
 export const dynamic = "force-dynamic";
 
@@ -10,13 +11,15 @@ export default async function PublicPayPage({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const b = await prisma.booking.findUnique({
     where: { id },
-    include: { trip: { select: { name: true, destination: true } }, payments: true },
+    include: { trip: { select: { name: true, destination: true, org: { select: { defaultRefundPolicy: true } } } }, payments: true },
   });
   if (!b) notFound();
 
   const total = bookingTotal(b);
   const paid = bookingPaid(b);
   const balance = bookingBalance(b);
+  // Booking's own wording wins; else the org default; else the standard terms.
+  const policy = b.refundPolicy ?? b.trip.org?.defaultRefundPolicy ?? STANDARD_REFUND_POLICY;
 
   return (
     <div className="doc-light" style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20 }}>
@@ -34,6 +37,14 @@ export default async function PublicPayPage({ params }: { params: Promise<{ id: 
         </div>
 
         <PayForm bookingId={b.id} customerName={b.customerName} suggested={balance > 0 ? balance : undefined} />
+
+        {/* Terms are available but collapsed — the payment form stays the focus. */}
+        {policy && (
+          <details style={{ marginTop: 16, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+            <summary className="small muted" style={{ cursor: "pointer" }}>Cancellation &amp; refund policy</summary>
+            <div className="small muted" style={{ whiteSpace: "pre-wrap", lineHeight: 1.6, marginTop: 10 }}>{policy}</div>
+          </details>
+        )}
       </div>
     </div>
   );

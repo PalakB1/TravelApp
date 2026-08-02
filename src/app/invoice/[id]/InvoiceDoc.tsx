@@ -9,6 +9,7 @@ export type InvoiceProps = {
   taxable: string; nonTax: string; cgst: string; sgst: string; tcs: string; total: string; paid: string; balance: string;
   gstHalfRate: number; tcsRate: number; nonTaxNum: number;
   amountWords: string;
+  policy?: string | null;
 };
 
 const s = StyleSheet.create({
@@ -77,6 +78,12 @@ export default function InvoiceDoc(p: InvoiceProps) {
 
         <Text style={s.words}>Amount chargeable (in words): Rupees {p.amountWords} only.</Text>
         <Text style={[s.muted, { marginTop: 6 }]}>CGST/SGST shown assuming intra-state supply. {p.note || "This is a computer-generated invoice."}</Text>
+        {p.policy ? (
+          <View style={{ marginTop: 16, borderTopWidth: 1, borderTopColor: "#e6e7f1", paddingTop: 10 }}>
+            <Text style={[s.bold, { fontSize: 8, letterSpacing: 1, marginBottom: 5 }]}>CANCELLATION &amp; REFUND TERMS</Text>
+            <Text style={[s.muted, { fontSize: 8, lineHeight: 1.5 }]}>{p.policy}</Text>
+          </View>
+        ) : null}
         <Text style={[s.muted, { marginTop: 18, textAlign: "right" }]}>For {p.agency}</Text>
       </Page>
     </Document>
