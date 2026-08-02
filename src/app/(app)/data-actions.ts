@@ -1096,11 +1096,17 @@ export async function applyPlanToBooking(formData: FormData) {
     where: { id: templateId, orgId },
     include: { steps: { orderBy: { order: "asc" } } },
   });
-  const booking = await prisma.booking.findFirst({ where: { id: bookingId, trip: { orgId } }, include: { trip: { select: { departureDate: true } } } });
+  const booking = await prisma.booking.findFirst({
+    where: { id: bookingId, trip: { orgId } },
+    include: { trip: { select: { departureDate: true } }, payments: { orderBy: { date: "asc" }, take: 1, select: { date: true } } },
+  });
   if (!template || !booking) { refresh(); return; }
 
   const total = bookingTotal(booking);
   const departure = booking.trip.departureDate ? new Date(booking.trip.departureDate) : null;
+  // The booking date = when they first paid (the advance). Falls back to when the
+  // booking was created if no payment is recorded yet. "Due at booking" steps use this.
+  const bookingDate = booking.payments[0]?.date ? new Date(booking.payments[0].date) : new Date(booking.createdAt);
   const dayMs = 24 * 60 * 60 * 1000;
 
   let allocated = 0;
@@ -1111,7 +1117,7 @@ export async function applyPlanToBooking(formData: FormData) {
     else amt = Math.round((total * (s.percent ?? 0)) / 100); // percent
     allocated += amt;
     const dueDate = s.daysBeforeTravel == null
-      ? new Date() // due now / at booking
+      ? bookingDate // due at booking (= first payment date)
       : departure
         ? new Date(departure.getTime() - s.daysBeforeTravel * dayMs)
         : null; // no departure date on file → leave the date blank to fill in
