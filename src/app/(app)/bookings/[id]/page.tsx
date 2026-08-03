@@ -84,6 +84,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
     ? `Full trip — ${coreNights} night${coreNights === 1 ? "" : "s"}`
     : `${nightsHere} of ${coreNights} nights — not counted on the rest`;
   const policyValue = b.refundPolicy ?? org?.defaultRefundPolicy ?? STANDARD_REFUND_POLICY;
+  const usesCustomPolicy = !!b.refundPolicy && b.refundPolicy !== (org?.defaultRefundPolicy ?? STANDARD_REFUND_POLICY);
   const toInput = (d: Date | null | undefined) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 
   const Line = ({ label, value, strong, muted }: { label: string; value: string; strong?: boolean; muted?: boolean }) => (
@@ -490,27 +491,43 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           </details>
         </div>
 
-        {/* CANCELLATION & REFUND POLICY — prefilled from the org default, editable. */}
-        <div className="card">
-          <div className="card-title">Cancellation &amp; refund policy <span className="small muted">shown to the customer · sets the free-cancel reminder</span></div>
-          <form action={updateBookingPolicy}>
-            <input type="hidden" name="id" value={b.id} />
-            <label className="field"><span className="lbl">Terms</span>
-              <textarea name="refundPolicy" rows={4} defaultValue={policyValue} placeholder="e.g. Free cancellation up to 30 days before departure. 50% refund 15–30 days before. No refund within 15 days." />
-            </label>
-            <div className="row-3" style={{ alignItems: "end" }}>
-              <label className="field"><span className="lbl">Free cancellation until <span className="small muted">optional</span></span><input name="freeCancelUntil" type="date" defaultValue={toInput(b.freeCancelUntil)} /></label>
-              <label className="field" style={{ justifyContent: "center" }}>
-                <span className="flex" style={{ gap: 8, alignItems: "center", cursor: "pointer" }}>
-                  <input type="checkbox" name="saveDefault" style={{ width: "auto" }} />
-                  <span className="lbl" style={{ margin: 0 }}>Save as my default <span className="small muted">for future bookings</span></span>
-                </span>
+        {/* CANCELLATION & REFUND POLICY — one line by default. It's the same terms
+            for nearly every customer, so the editor stays folded away until wanted. */}
+        <details className="section">
+          <summary>
+            <span className="sec-title">Cancellation policy</span>
+            <span className="sec-hi" style={{ marginLeft: "auto", marginRight: 12 }}>
+              {usesCustomPolicy
+                ? <span className="badge amber">Custom for {b.customerName.split(" ")[0]}</span>
+                : <span className="badge gray">Standard terms</span>}
+              {b.freeCancelUntil && <span style={{ marginLeft: 8 }}>free until {fmtDate(b.freeCancelUntil)}</span>}
+            </span>
+          </summary>
+          <div className="sec-body">
+            {!usesCustomPolicy && (
+              <p className="small muted" style={{ marginTop: 0 }}>
+                Using your standard terms — <Link href="/settings" style={{ color: "var(--accent)" }}>edit them in Settings</Link> to change them everywhere.
+                Edit below to write different terms for {b.customerName} only.
+              </p>
+            )}
+            <form action={updateBookingPolicy}>
+              <input type="hidden" name="id" value={b.id} />
+              <label className="field"><span className="lbl">Terms</span>
+                <textarea name="refundPolicy" rows={8} defaultValue={policyValue} style={{ fontFamily: "inherit", lineHeight: 1.55 }} />
               </label>
-              <button className="primary sm" type="submit">Save policy</button>
-            </div>
-          </form>
-          {!b.refundPolicy && org?.defaultRefundPolicy && <p className="small muted" style={{ marginTop: 8 }}>Showing your saved default — edit and save to customise it for {b.customerName}.</p>}
-        </div>
+              <div className="row-3" style={{ alignItems: "end" }}>
+                <label className="field"><span className="lbl">Free cancellation until <span className="small muted">drives the reminder</span></span><input name="freeCancelUntil" type="date" defaultValue={toInput(b.freeCancelUntil)} /></label>
+                <label className="field" style={{ justifyContent: "center" }}>
+                  <span className="flex" style={{ gap: 8, alignItems: "center", cursor: "pointer" }}>
+                    <input type="checkbox" name="saveDefault" style={{ width: "auto" }} />
+                    <span className="lbl" style={{ margin: 0 }}>Save as my default <span className="small muted">for future bookings</span></span>
+                  </span>
+                </label>
+                <SubmitButton className="primary sm" pendingLabel="Saving…">Save policy</SubmitButton>
+              </div>
+            </form>
+          </div>
+        </details>
       </div>
     </>
   );
