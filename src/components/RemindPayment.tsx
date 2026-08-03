@@ -15,7 +15,7 @@ export default function RemindPayment({
   phone?: string | null;
   customerName: string;
   amount: string; // pre-formatted, e.g. "₹40,000"
-  dueLabel: string; // e.g. "20 Sep 2026" or "today"
+  dueLabel?: string | null; // null when they simply carry a balance with no plan date
   tripName: string;
   payPath: string; // e.g. "/pay/abc123"
   overdue?: boolean;
@@ -34,9 +34,12 @@ export default function RemindPayment({
   function send() {
     const url = `${window.location.origin}${payPath}`;
     const many = count > 1 ? ` (${count} installments)` : "";
-    const msg = overdue
-      ? `Hi ${customerName}, a gentle reminder — a total of ${amount}${many} for your ${tripName} trip is now due (from ${dueLabel}). You can pay securely here: ${url}`
-      : `Hi ${customerName}, a friendly reminder — ${amount} for your ${tripName} trip is due on ${dueLabel}. You can pay securely here: ${url}`;
+    const msg = !dueLabel
+      // No scheduled date — just an outstanding balance.
+      ? `Hi ${customerName}, a gentle reminder — there's a balance of ${amount} on your ${tripName} trip. You can pay securely here: ${url}`
+      : overdue
+        ? `Hi ${customerName}, a gentle reminder — a total of ${amount}${many} for your ${tripName} trip is now due (from ${dueLabel}). You can pay securely here: ${url}`
+        : `Hi ${customerName}, a friendly reminder — ${amount} for your ${tripName} trip is due on ${dueLabel}. You can pay securely here: ${url}`;
     const wa = waNumber();
     const link = wa
       ? `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`

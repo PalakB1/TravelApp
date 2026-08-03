@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
-import { bookingTotal, bookingPaid, bookingBalance, isActive } from "@/lib/calc";
+import { bookingPaid, bookingBalance, isActive } from "@/lib/calc";
 import { formatINR, formatINRShort } from "@/lib/money";
 import TableSearch from "@/components/TableSearch";
 import Combobox from "@/components/Combobox";
@@ -20,7 +20,7 @@ function fmtDate(d: Date) {
   return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
-const VIEWS = ["due", "approve", "record", "owing", "history"] as const;
+const VIEWS = ["due", "record", "history", "approve"] as const;
 type View = (typeof VIEWS)[number];
 
 export default async function PaymentsPage({ searchParams }: { searchParams: Promise<{ due?: string; view?: string }> }) {
@@ -78,6 +78,33 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     .sort((a, c) => dueSort === "amount" ? c.amount - a.amount : a.date.getTime() - c.date.getTime());
   const overdueCount = dueRows.filter((r) => r.overdue).length;
 
+  // "Money due" (what should be in today, from the payment plan) and
+  // "Outstanding" (everything still unpaid) answered the same question — who owes
+  // me — so they're one list with both figures side by side. Bookings without a
+  // payment plan still appear, they just have nothing "due now".
+  const dueById = new Map(dueRows.map((r) => [r.b.id, r]));
+  const moneyRows = bookings
+    .filter((b) => isActive(b.status) && !b.deletedAt)
+    .map((b) => {
+      const d = dueById.get(b.id);
+      return {
+        b,
+        balance: bookingBalance(b),
+        dueNow: d?.amount ?? 0,
+        date: d?.date ?? null,
+        overdue: d?.overdue ?? false,
+        label: d?.label ?? null,
+        count: d?.count ?? 1,
+      };
+    })
+    .filter((r) => r.balance > 0 || r.dueNow > 0)
+    .sort((a, c) => {
+      if (dueSort === "amount") return c.balance - a.balance;
+      const at = a.date ? a.date.getTime() : Infinity; // undated (no plan) last
+      const ct = c.date ? c.date.getTime() : Infinity;
+      return at - ct;
+    });
+
   // Free-cancellation windows closing within the next 10 days — nudge the customer
   // before their free-cancel date passes. Soonest first.
   const CANCEL_WINDOW_DAYS = 10;
@@ -98,9 +125,8 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     .sort((a, c) => (c.bal - a.bal) || a.b.customerName.localeCompare(c.b.customerName));
 
   const TABS: { key: View; label: string; count: number; alert?: boolean }[] = [
-    { key: "due", label: "Money due", count: dueRows.length, alert: overdueCount > 0 },
+    { key: "due", label: "Who owes you", count: moneyRows.length, alert: overdueCount > 0 },
     { key: "record", label: "Record a payment", count: 0 },
-    { key: "owing", label: "Outstanding", count: owing.length },
     { key: "history", label: "Payment receipts", count: 0 },
     { key: "approve", label: "To approve", count: pending.length, alert: pending.length > 0 },
   ];
@@ -131,37 +157,49 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
       </div>
 
       {view === "due" && (<>
-      {dueRows.length === 0 && closingRows.length === 0 && (
-        <div className="card"><div className="empty">No planned installments are due. Set a payment plan on a booking and what&apos;s owed shows up here.</div></div>
+      {moneyRows.length === 0 && closingRows.length === 0 && (
+        <div className="card"><div className="empty">Everyone&apos;s paid up. Nice.</div></div>
       )}
-      {/* MONEY DUE — total currently owed per customer, with a WhatsApp nudge. */}
-      {dueRows.length > 0 && (
+      {/* WHO OWES YOU — what's due right now plus the full remaining balance. */}
+      {moneyRows.length > 0 && (
         <div className="card">
           <div className="between" style={{ marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
-            <div className="card-title" style={{ margin: 0 }}>Money due <span className="small muted">total owed now per customer{overdueCount > 0 ? ` · ${overdueCount} overdue` : ""}</span></div>
+            <div className="card-title" style={{ margin: 0 }}>Who owes you <span className="small muted">{formatINR(totalDue)} outstanding{overdueCount > 0 ? ` · ${overdueCount} overdue` : ""}</span></div>
             <div className="flex" style={{ gap: 6 }}>
               <span className="small muted" style={{ alignSelf: "center" }}>Sort:</span>
-              <Link href="/payments?view=due&due=date" className={`btn sm ${dueSort === "date" ? "primary" : ""}`}>By date</Link>
+              <Link href="/payments?view=due&due=date" className={`btn sm ${dueSort === "date" ? "primary" : ""}`}>By due date</Link>
               <Link href="/payments?view=due&due=amount" className={`btn sm ${dueSort === "amount" ? "primary" : ""}`}>Owes most</Link>
             </div>
           </div>
           <TableSearch placeholder="Search customer or trip…">
           <table className="t">
-            <thead><tr><th>Due date</th><th>Customer</th><th>Trip</th><th>For</th><th className="num">Amount due</th><th></th></tr></thead>
+            <thead><tr><th>Due date</th><th>Customer</th><th>Trip</th><th>For</th><th className="num">Due now</th><th className="num">Total left</th><th></th></tr></thead>
             <tbody>
-              {dueRows.map((r) => (
+              {moneyRows.map((r) => (
                 <tr key={r.b.id}>
                   <td className="small">
-                    {r.overdue
-                      ? <span className="badge rose">{fmtDate(r.date)}</span>
-                      : <span className="muted">{fmtDate(r.date)}</span>}
+                    {r.date
+                      ? (r.overdue ? <span className="badge rose">{fmtDate(r.date)}</span> : <span className="muted">{fmtDate(r.date)}</span>)
+                      : <span className="muted small">no plan</span>}
                   </td>
                   <td><Link className="row-link" href={`/bookings/${r.b.id}`}>{r.b.customerName}</Link></td>
                   <td className="muted small">{r.b.trip.name}</td>
-                  <td className="muted small">{r.label}</td>
-                  <td className="num" style={{ fontWeight: 500 }}>{formatINR(r.amount)}</td>
+                  <td className="muted small">{r.label ?? "—"}</td>
+                  <td className="num" style={{ fontWeight: 600, color: r.dueNow > 0 ? (r.overdue ? "var(--rose-fg)" : "var(--text)") : "var(--text-3)" }}>
+                    {r.dueNow > 0 ? formatINR(r.dueNow) : "—"}
+                  </td>
+                  <td className="num">{r.balance > 0 ? <span className="badge amber">{formatINR(r.balance)}</span> : <span className="badge green">paid</span>}</td>
                   <td className="num">
-                    <RemindPayment phone={r.b.customerPhone} customerName={r.b.customerName} amount={formatINR(r.amount)} dueLabel={fmtDate(r.date)} tripName={r.b.trip.name} payPath={`/pay/${r.b.id}`} overdue={r.overdue} count={r.count} />
+                    <RemindPayment
+                      phone={r.b.customerPhone}
+                      customerName={r.b.customerName}
+                      amount={formatINR(r.dueNow > 0 ? r.dueNow : r.balance)}
+                      dueLabel={r.date ? fmtDate(r.date) : null}
+                      tripName={r.b.trip.name}
+                      payPath={`/pay/${r.b.id}`}
+                      overdue={r.overdue}
+                      count={r.count}
+                    />
                   </td>
                 </tr>
               ))}
@@ -287,33 +325,6 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         <div className="card-title">🔗 Universal payment link <span className="small muted">one link for everyone — they pick their trip &amp; name</span></div>
         <CopyLink path={`/pay/o/${orgId}`} label="Copy link" waText="Please confirm your payment here:" />
         <p className="small muted" style={{ margin: "8px 0 0" }}>Share this once (WhatsApp group, email signature, anywhere). Each person selects their trip and name, then reports what they paid — it lands below for your approval.</p>
-      </div>
-
-      </>)}
-
-      {view === "owing" && (<>
-      <div className="card">
-        <div className="card-title">Outstanding — who still owes you</div>
-        {owing.length === 0 ? (
-          <div className="empty">Everyone’s paid up. Nice.</div>
-        ) : (
-          <TableSearch placeholder="Search customer or trip…">
-          <table className="t">
-            <thead><tr><th>Customer</th><th>Trip</th><th className="num">Total</th><th className="num">Paid</th><th className="num">Balance</th></tr></thead>
-            <tbody>
-              {owing.map((b) => (
-                <tr key={b.id}>
-                  <td><Link className="row-link" href={`/bookings/${b.id}`}>{b.customerName}</Link></td>
-                  <td className="muted">{b.trip.name}</td>
-                  <td className="num">{formatINR(bookingTotal(b))}</td>
-                  <td className="num">{formatINR(bookingPaid(b))}</td>
-                  <td className="num"><span className="badge amber">{formatINR(bookingBalance(b))}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </TableSearch>
-        )}
       </div>
 
       </>)}
