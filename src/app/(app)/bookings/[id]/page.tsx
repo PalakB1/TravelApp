@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookingTotal, bookingPaid, bookingBalance, bookingInclTaxCharge, bookingInclNonTaxCharge, bookingInclusionCost } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
-import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, generateInvoice, renameBooking, updateBookingVisa, addScheduleItem, deleteScheduleItem, updateBookingPolicy, applyPlanToBooking, tidyOverdueDates } from "../../data-actions";
+import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, generateInvoice, renameBooking, updateBookingVisa, addScheduleItem, deleteScheduleItem, updateBookingPolicy, applyPlanToBooking, tidyOverdueDates, updateBookingStay } from "../../data-actions";
 import { scheduleStatus, scheduleTotal } from "@/lib/schedule";
 import { bookingCoversNight } from "@/lib/calc";
 import { STANDARD_REFUND_POLICY } from "@/lib/policy";
@@ -132,6 +132,22 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
             <button className="sm" type="submit">Save</button>
           </form>
         </div></div>
+      </div>
+
+      {/* STAY DATES — visible, not buried in the invoice editor: these decide how
+          many rooms each night needs, so they're operational, not pricing. */}
+      <div className="card">
+        <form action={updateBookingStay}>
+          <input type="hidden" name="id" value={b.id} />
+          <div className="row-3" style={{ alignItems: "end" }}>
+            <label className="field"><span className="lbl">Arrives <span className="small muted">blank = trip start</span></span><input name="stayStart" type="date" defaultValue={toInput(b.stayStart)} /></label>
+            <label className="field"><span className="lbl">Checks out <span className="small muted">blank = trip end</span></span><input name="stayEnd" type="date" defaultValue={toInput(b.stayEnd)} /></label>
+            <div className="flex" style={{ gap: 10, alignItems: "center", justifyContent: "flex-end" }}>
+              <span className="small" style={{ color: nightsHere === coreNights ? "var(--text-2)" : "var(--warning)", fontWeight: nightsHere === coreNights ? 400 : 600 }}>{stayNote}</span>
+              <SubmitButton className="primary sm" pendingLabel="Saving…">Save stay</SubmitButton>
+            </div>
+          </div>
+        </form>
       </div>
 
       {bookingTax(b) > 0 && (
@@ -344,13 +360,6 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                   <label className="field"><span className="lbl">Non-taxable amount</span><input name="nonTaxable" defaultValue={b.nonTaxable || ""} placeholder="embassy fee, etc." /></label>
                   <label className="field"><span className="lbl">GST %</span><input name="gstRate" type="number" min="0" step="0.01" defaultValue={b.gstRate} /></label>
                   <label className="field"><span className="lbl">TCS %</span><input name="tcsRate" type="number" min="0" step="0.01" defaultValue={b.tcsRate} /></label>
-                </div>
-                <div className="row-3">
-                  <label className="field"><span className="lbl">Arrives <span className="small muted">blank = trip start</span></span><input name="stayStart" type="date" defaultValue={toInput(b.stayStart)} /></label>
-                  <label className="field"><span className="lbl">Checks out <span className="small muted">blank = trip end</span></span><input name="stayEnd" type="date" defaultValue={toInput(b.stayEnd)} /></label>
-                  <div className="field" style={{ justifyContent: "flex-end" }}>
-                    <span className="small muted">{stayNote}</span>
-                  </div>
                 </div>
                 <label className="field"><span className="lbl">Remarks</span><input name="notes" defaultValue={b.notes || ""} placeholder="e.g. 1 night less, Perlan paid extra" /></label>
                 <button className="primary sm" type="submit">Save invoice</button>

@@ -488,6 +488,19 @@ export async function addBooking(formData: FormData) {
   refresh();
 }
 
+// Just this party's arrival/checkout dates. Kept separate from the invoice form
+// because it drives how many rooms each night needs, not the price.
+export async function updateBookingStay(formData: FormData) {
+  const orgId = await guard();
+  const id = String(formData.get("id"));
+  if (!(await ownBooking(orgId, id))) { refresh(); return; }
+  await prisma.booking.updateMany({
+    where: { id, trip: { orgId } },
+    data: { stayStart: toDate(formData.get("stayStart")), stayEnd: toDate(formData.get("stayEnd")) },
+  });
+  refresh();
+}
+
 export async function updateBookingInvoice(formData: FormData) {
   const orgId = await guard();
   const id = String(formData.get("id"));
