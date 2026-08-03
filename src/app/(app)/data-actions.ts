@@ -387,6 +387,9 @@ export async function toggleBookingInclusion(formData: FormData) {
     await prisma.bookingInclusion.deleteMany({ where: { bookingId, inclusionId } });
   }
   await recomputeBookingInclusions(bookingId);
+  // Inclusions change the total, so a previously unpriced booking may now qualify
+  // for its default plan. No-ops if it already has one.
+  await applyDefaultPlan(orgId, bookingId);
   refresh();
 }
 
@@ -889,6 +892,9 @@ export async function addTraveller(formData: FormData) {
     },
   });
   await recomputeTravellerExtra(bookingId);
+  // Traveller surcharges move the total too — pick up the default plan if this
+  // booking still hasn't got one.
+  await applyDefaultPlan(orgId, bookingId);
   refresh();
 }
 
@@ -907,6 +913,7 @@ export async function updateTraveller(formData: FormData) {
     },
   });
   await recomputeTravellerExtra(tr.bookingId);
+  await applyDefaultPlan(orgId, tr.bookingId);
   refresh();
 }
 
