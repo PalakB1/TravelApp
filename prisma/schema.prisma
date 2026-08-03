@@ -295,6 +295,10 @@ model User {
   orgId           String? // owning organization (null only for the platform admin)
   org             Organization? @relation(fields: [orgId], references: [id])
   isPlatformAdmin Boolean  @default(false)
+  // Admin OF THEIR OWN COMPANY: can invite/remove colleagues, set trip access,
+  // reset their passwords and promote others. Distinct from isPlatformAdmin,
+  // which is us and spans every company.
+  isOrgAdmin      Boolean  @default(false)
   // When true this member only sees the trips listed in tripAccess (else: all org trips).
   tripScoped      Boolean  @default(false)
   email           String   @unique

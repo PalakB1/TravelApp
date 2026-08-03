@@ -9,11 +9,45 @@ import { logActivity } from "../data-actions";
 
 export type MemberResult = { ok?: boolean; error?: string; message?: string };
 
-// Add a new member to the CURRENT org. Equal access — any member can add.
-export async function addMember(_prev: MemberResult | undefined, formData: FormData): Promise<MemberResult> {
+// Managing the team is admin-only. A company admin runs their own workspace; the
+// platform admin (us) can act anywhere. Returns the org id, or null if refused.
+async function requireOrgAdmin(): Promise<{ orgId: string; userId: string } | null> {
   const ctx = await getOrgContext();
   if (!ctx || !ctx.orgId) redirect("/login");
-  const orgId = ctx.orgId;
+  const userId = ctx.session.userId;
+  if (ctx.isPlatformAdmin) return { orgId: ctx.orgId, userId };
+  const me = await prisma.user.findUnique({ where: { id: userId }, select: { isOrgAdmin: true } });
+  return me?.isOrgAdmin ? { orgId: ctx.orgId, userId } : null;
+}
+
+// Promote a colleague to admin, or step them back down. Admins can invite,
+// remove, set trip access and reset passwords.
+export async function setOrgAdmin(formData: FormData) {
+  const allowed = await requireOrgAdmin();
+  if (!allowed) { revalidatePath("/team"); return; }
+  const { orgId } = allowed;
+  const id = String(formData.get("id"));
+  const makeAdmin = String(formData.get("makeAdmin")) === "1";
+
+  const target = await prisma.user.findFirst({ where: { id, orgId }, select: { id: true, name: true, isOrgAdmin: true } });
+  if (!target) { revalidatePath("/team"); return; }
+
+  // Never leave a workspace with no one who can manage it.
+  if (!makeAdmin) {
+    const admins = await prisma.user.count({ where: { orgId, isOrgAdmin: true } });
+    if (admins <= 1 && target.isOrgAdmin) { revalidatePath("/team"); return; }
+  }
+
+  await prisma.user.update({ where: { id }, data: { isOrgAdmin: makeAdmin } });
+  await logActivity(orgId, "team", "updated", `${makeAdmin ? "Made" : "Removed"} ${target.name} ${makeAdmin ? "an admin" : "as admin"}`);
+  revalidatePath("/team");
+}
+
+// Add a new member to the CURRENT org. Admins only.
+export async function addMember(_prev: MemberResult | undefined, formData: FormData): Promise<MemberResult> {
+  const allowed = await requireOrgAdmin();
+  if (!allowed) return { error: "Only an admin can add team members." };
+  const { orgId } = allowed;
 
   const name = String(formData.get("name") || "").trim();
   const email = String(formData.get("email") || "").trim().toLowerCase();
@@ -35,9 +69,9 @@ export async function addMember(_prev: MemberResult | undefined, formData: FormD
 
 // Give a member access to all trips, or only to specific ones.
 export async function setTripAccess(formData: FormData) {
-  const ctx = await getOrgContext();
-  if (!ctx || !ctx.orgId) redirect("/login");
-  const orgId = ctx.orgId;
+  const allowed = await requireOrgAdmin();
+  if (!allowed) { revalidatePath("/team"); return; }
+  const { orgId } = allowed;
   const userId = String(formData.get("userId"));
   const scoped = String(formData.get("scoped")) === "limited";
 
@@ -64,9 +98,9 @@ export async function setTripAccess(formData: FormData) {
 // Reset a teammate's password (for when they're locked out). Any org member can
 // do this for another member; they set a temporary password to hand over.
 export async function resetMemberPassword(_prev: MemberResult | undefined, formData: FormData): Promise<MemberResult> {
-  const ctx = await getOrgContext();
-  if (!ctx || !ctx.orgId) redirect("/login");
-  const orgId = ctx.orgId;
+  const allowed = await requireOrgAdmin();
+  if (!allowed) return { error: "Only an admin can reset a colleague's password." };
+  const { orgId } = allowed;
   const id = String(formData.get("id"));
   const password = String(formData.get("password") || "");
   if (password.length < 8) return { error: "Temporary password must be at least 8 characters." };
@@ -82,11 +116,11 @@ export async function resetMemberPassword(_prev: MemberResult | undefined, formD
 
 // Remove a member from the current org (can't remove yourself).
 export async function removeMember(formData: FormData) {
-  const ctx = await getOrgContext();
-  if (!ctx || !ctx.orgId) redirect("/login");
-  const orgId = ctx.orgId;
+  const allowed = await requireOrgAdmin();
+  if (!allowed) { revalidatePath("/team"); return; }
+  const { orgId, userId } = allowed;
   const id = String(formData.get("id"));
-  if (id === ctx.session.userId) return; // never remove yourself
+  if (id === userId) return; // never remove yourself
 
   const member = await prisma.user.findFirst({ where: { id, orgId, isPlatformAdmin: false }, select: { id: true, name: true, email: true } });
   if (!member) return;

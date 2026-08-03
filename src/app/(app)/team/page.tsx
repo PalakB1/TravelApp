@@ -2,7 +2,7 @@ import { getOrgContext } from "@/lib/org";
 import { prisma } from "@/lib/db";
 import AddMemberForm from "./AddMemberForm";
 import ResetPasswordForm from "./ResetPasswordForm";
-import { removeMember, setTripAccess } from "./actions";
+import { removeMember, setTripAccess, setOrgAdmin } from "./actions";
 import TableSearch from "@/components/TableSearch";
 
 export const dynamic = "force-dynamic";
@@ -20,10 +20,13 @@ export default async function TeamPage() {
     ? await prisma.user.findMany({
         where: { orgId },
         orderBy: { createdAt: "asc" },
-        select: { id: true, name: true, email: true, isPlatformAdmin: true, createdAt: true, tripScoped: true, tripAccess: { select: { tripId: true } } },
+        select: { id: true, name: true, email: true, isPlatformAdmin: true, isOrgAdmin: true, createdAt: true, tripScoped: true, tripAccess: { select: { tripId: true } } },
       })
     : [];
   const org = orgId ? await prisma.organization.findUnique({ where: { id: orgId }, select: { name: true } }) : null;
+  // Only admins can invite, remove, change access or promote.
+  const canManage = !!ctx?.isPlatformAdmin || members.some((m) => m.id === meId && m.isOrgAdmin);
+  const adminCount = members.filter((m) => m.isOrgAdmin).length;
   const trips = orgId
     ? await prisma.trip.findMany({ where: { orgId }, orderBy: [{ departureDate: "desc" }], select: { id: true, name: true } })
     : [];
@@ -33,7 +36,7 @@ export default async function TeamPage() {
       <div className="page-head">
         <div>
           <h1>Team</h1>
-          <p className="sub">{members.length} member{members.length === 1 ? "" : "s"}{org ? ` in ${org.name}` : ""} · everyone has equal access</p>
+          <p className="sub">{members.length} member{members.length === 1 ? "" : "s"}{org ? ` in ${org.name}` : ""} · {adminCount} admin{adminCount === 1 ? "" : "s"}{canManage ? "" : " · only an admin can make changes here"}</p>
         </div>
       </div>
 
@@ -46,10 +49,32 @@ export default async function TeamPage() {
               <tr key={m.id}>
                 <td style={{ paddingLeft: 20 }}><b>{m.name}</b>{m.id === meId ? <span className="small muted"> · you</span> : ""}</td>
                 <td className="muted small">{m.email}</td>
-                <td>{m.isPlatformAdmin ? <span className="badge violet">platform admin</span> : <span className="badge gray">member</span>}</td>
+                <td>
+                  <div className="flex" style={{ gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                    {m.isPlatformAdmin
+                      ? <span className="badge violet">platform admin</span>
+                      : m.isOrgAdmin ? <span className="badge accent">admin</span> : <span className="badge gray">member</span>}
+                    {canManage && !m.isPlatformAdmin && (
+                      <form action={setOrgAdmin}>
+                        <input type="hidden" name="id" value={m.id} />
+                        <input type="hidden" name="makeAdmin" value={m.isOrgAdmin ? "0" : "1"} />
+                        <button
+                          className="sm"
+                          type="submit"
+                          disabled={m.isOrgAdmin && adminCount <= 1}
+                          title={m.isOrgAdmin && adminCount <= 1 ? "There must always be at least one admin" : m.isOrgAdmin ? "Step this person back down to member" : "Let this person manage the team"}
+                        >
+                          {m.isOrgAdmin ? "Make member" : "Make admin"}
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                </td>
                 <td>
                   {m.isPlatformAdmin ? (
                     <span className="muted small">All trips</span>
+                  ) : !canManage ? (
+                    <span className="muted small">{m.tripScoped ? `${m.tripAccess.length} of ${trips.length} trips` : "All trips"}</span>
                   ) : (
                     <details className="menu-pop" style={{ position: "relative" }}>
                       <summary className="btn sm" style={{ listStyle: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }} title="Change what this member can see">
@@ -82,7 +107,7 @@ export default async function TeamPage() {
                 </td>
                 <td className="muted small">{fmt(m.createdAt)}</td>
                 <td className="num">
-                  {m.isPlatformAdmin ? <span className="muted small">—</span> : (
+                  {m.isPlatformAdmin || !canManage ? <span className="muted small">—</span> : (
                     <div className="flex" style={{ gap: 6, justifyContent: "flex-end" }}>
                       <ResetPasswordForm id={m.id} name={m.name} />
                       {m.id !== meId && (
@@ -101,6 +126,7 @@ export default async function TeamPage() {
         </TableSearch>
       </div>
 
+      {canManage && (
       <div className="card">
         <div className="card-title">Add a team member</div>
         <p className="muted small" style={{ marginTop: -4, marginBottom: 16 }}>
@@ -108,6 +134,7 @@ export default async function TeamPage() {
         </p>
         <AddMemberForm />
       </div>
+      )}
     </>
   );
 }

@@ -63,7 +63,9 @@ export async function signup(_prev: { error?: string } | undefined, formData: Fo
       gstAddress: s("gstAddress"),
       gstState: s("gstState"),
       gstStateCode: s("gstStateCode"),
-      users: { create: { name, email, passwordHash } },
+      // Whoever signs the company up runs it — they can invite colleagues and
+      // promote others from the Team page.
+      users: { create: { name, email, passwordHash, isOrgAdmin: true } },
     },
     include: { users: true },
   });
