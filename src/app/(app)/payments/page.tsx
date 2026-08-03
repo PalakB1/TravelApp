@@ -99,10 +99,10 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
   const TABS: { key: View; label: string; count: number; alert?: boolean }[] = [
     { key: "due", label: "Money due", count: dueRows.length, alert: overdueCount > 0 },
-    { key: "approve", label: "To approve", count: pending.length, alert: pending.length > 0 },
     { key: "record", label: "Record a payment", count: 0 },
     { key: "owing", label: "Outstanding", count: owing.length },
-    { key: "history", label: "History", count: 0 },
+    { key: "history", label: "Payment receipts", count: 0 },
+    { key: "approve", label: "To approve", count: pending.length, alert: pending.length > 0 },
   ];
 
   return (
@@ -320,7 +320,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
       {view === "history" && (<>
       <div className="card">
-        <div className="card-title">Payment history</div>
+        <div className="card-title">Payment receipts <span className="small muted">every payment recorded · share a receipt with the customer</span></div>
         {recent.length === 0 ? (
           <div className="empty">No payments recorded yet.</div>
         ) : (
