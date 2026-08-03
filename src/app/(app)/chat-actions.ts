@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getOrgContext } from "@/lib/org";
 import { parseCommand } from "@/lib/chat";
-import { matchCustomer } from "./data-actions";
+import { matchCustomer, applyDefaultPlan } from "./data-actions";
 import { bookingBalance, bookingTotal } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 
@@ -116,6 +116,8 @@ export async function interpretCommand(text: string): Promise<ChatResult> {
         },
         include: { variant: true, payments: true },
       });
+      // Same as the booking form — start it on the default payment plan.
+      await applyDefaultPlan(orgId, booking.id);
       const total = bookingTotal(booking);
       revalidatePath("/", "layout");
       const variantNote = variant ? ` (${variant.name})` : trip.variants.length ? " — pick a variant on the booking" : "";

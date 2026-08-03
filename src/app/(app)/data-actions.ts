@@ -478,6 +478,9 @@ export async function addBooking(formData: FormData) {
     });
     await recomputeBookingInclusions(booking.id);
   }
+  // Give it the org's default payment plan straight away — previously the plan
+  // dropdown showed "standard" but nothing was actually due until you pressed Apply.
+  await applyDefaultPlan(orgId, booking.id);
   await logActivity(orgId, "booking", "added", `New booking — ${booking.customerName} · ${booking.pax} pax · ${booking.trip.name}`, `/bookings/${booking.id}`);
   refresh();
 }
@@ -508,6 +511,10 @@ export async function updateBookingInvoice(formData: FormData) {
       stayEnd: toDate(formData.get("stayEnd")),
     },
   });
+  // A booking added before its price was set gets no plan (a plan of zeros is
+  // useless). Once it's priced, give it the default — but never overwrite a plan
+  // that already exists.
+  await applyDefaultPlan(orgId, id);
   refresh();
 }
 
@@ -1095,15 +1102,10 @@ export async function deleteTemplateStep(formData: FormData) {
   refresh();
 }
 
-// Assign a plan to a booking: turn the template's steps into real installments,
-// working out amounts from the booking total and dates from the trip's departure.
-// Replaces any existing plan on the booking.
-export async function applyPlanToBooking(formData: FormData) {
-  const orgId = await guard();
-  const bookingId = String(formData.get("bookingId"));
-  const templateId = String(formData.get("templateId"));
-  if (!bookingId || !templateId || !(await ownBooking(orgId, bookingId))) { refresh(); return; }
-
+// Build a booking's installments from a payment plan template. Shared by the
+// manual "Apply" button and the automatic application when a booking is created,
+// so both behave identically. Replaces any existing schedule.
+async function buildScheduleFromTemplate(orgId: string, bookingId: string, templateId: string): Promise<string | null> {
   const template = await prisma.paymentPlanTemplate.findFirst({
     where: { id: templateId, orgId },
     include: { steps: { orderBy: { order: "asc" } } },
@@ -1112,35 +1114,64 @@ export async function applyPlanToBooking(formData: FormData) {
     where: { id: bookingId, trip: { orgId } },
     include: { trip: { select: { departureDate: true } }, payments: { orderBy: { date: "asc" }, select: { date: true, amount: true } } },
   });
-  if (!template || !booking) { refresh(); return; }
+  if (!template || !booking || template.steps.length === 0) return null;
 
   const total = bookingTotal(booking);
+  if (total <= 0) return null; // nothing priced yet — a plan of zeros helps nobody
+
   const departure = booking.trip.departureDate ? new Date(booking.trip.departureDate) : null;
-  // The booking date = when they first paid (the advance). Falls back to when the
-  // booking was created if no payment is recorded yet. "Due at booking" steps use this.
+  // "Due at booking" = when they first paid, else when the booking was created.
   const bookingDate = booking.payments[0]?.date ? new Date(booking.payments[0].date) : new Date(booking.createdAt);
   const dayMs = 24 * 60 * 60 * 1000;
 
   let allocated = 0;
-  const items = template.steps.map((s, i) => {
+  const items = template.steps.map((st, i) => {
     let amt = 0;
-    if (s.kind === "fixed") amt = s.amount ?? 0;
-    else if (s.kind === "balance") amt = Math.max(0, total - allocated);
-    else amt = Math.round((total * (s.percent ?? 0)) / 100); // percent
+    if (st.kind === "fixed") amt = st.amount ?? 0;
+    else if (st.kind === "balance") amt = Math.max(0, total - allocated);
+    else amt = Math.round((total * (st.percent ?? 0)) / 100);
     allocated += amt;
-    const dueDate = s.daysBeforeTravel == null
-      ? bookingDate // due at booking (= first payment date)
+    const dueDate = st.daysBeforeTravel == null
+      ? bookingDate
       : departure
-        ? new Date(departure.getTime() - s.daysBeforeTravel * dayMs)
-        : null; // no departure date on file → leave the date blank to fill in
-    return { bookingId, label: s.label, amount: amt, dueDate, order: i };
+        ? new Date(departure.getTime() - st.daysBeforeTravel * dayMs)
+        : null;
+    return { bookingId, label: st.label, amount: amt, dueDate, order: i };
   });
 
   await prisma.$transaction([
     prisma.paymentScheduleItem.deleteMany({ where: { bookingId } }),
     ...items.map((it) => prisma.paymentScheduleItem.create({ data: it })),
   ]);
-  await logActivity(orgId, "payment", "plan", `Applied "${template.name}" payment plan to ${booking.customerName}`, `/bookings/${bookingId}`);
+  return template.name;
+}
+
+// Give a booking the org's default plan, but never overwrite one that already
+// exists. Used when a booking is created (and once it first gets a price).
+export async function applyDefaultPlan(orgId: string, bookingId: string): Promise<void> {
+  const already = await prisma.paymentScheduleItem.count({ where: { bookingId } });
+  if (already > 0) return;
+  const def = await prisma.paymentPlanTemplate.findFirst({
+    where: { orgId, isDefault: true },
+    select: { id: true },
+  });
+  if (!def) return;
+  await buildScheduleFromTemplate(orgId, bookingId, def.id);
+}
+
+// Assign a plan to a booking (the manual "Apply" button). Replaces any existing
+// schedule with one built from the chosen template.
+export async function applyPlanToBooking(formData: FormData) {
+  const orgId = await guard();
+  const bookingId = String(formData.get("bookingId"));
+  const templateId = String(formData.get("templateId"));
+  if (!bookingId || !templateId || !(await ownBooking(orgId, bookingId))) { refresh(); return; }
+
+  const name = await buildScheduleFromTemplate(orgId, bookingId, templateId);
+  if (name) {
+    const b = await prisma.booking.findUnique({ where: { id: bookingId }, select: { customerName: true } });
+    await logActivity(orgId, "payment", "plan", `Applied "${name}" payment plan to ${b?.customerName ?? "booking"}`, `/bookings/${bookingId}`);
+  }
   refresh();
 }
 
