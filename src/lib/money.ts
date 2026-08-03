@@ -15,6 +15,22 @@ export function formatINRShort(amount: number): string {
   return "₹" + n.toLocaleString("en-IN");
 }
 
+// Tax rates (GST / TCS %) off a form. Three cases have to stay distinct:
+//   • absent (null)   — the form doesn't collect a rate at all (Quick entry,
+//                       Reports), so fall back to the default.
+//   • present + blank — the user deliberately cleared the box. That means ZERO,
+//                       not "default": some customers don't pay GST/TCS.
+//   • anything else   — what they typed, never negative.
+// Rate columns are Int, so round rather than let Prisma reject a float.
+export function parseRate(input: unknown, fallback: number): number {
+  if (input === null || input === undefined) return fallback;
+  const s = String(input).trim();
+  if (s === "") return 0;
+  const n = Number(s);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.round(n));
+}
+
 export function parseAmount(input: string | number | null | undefined): number {
   if (input == null) return 0;
   if (typeof input === "number") return Math.round(input);

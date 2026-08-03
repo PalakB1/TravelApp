@@ -40,6 +40,18 @@ export default async function SettingsPage() {
         </div>
       </div>
 
+      {/* Homes for the things that used to sit in the sidebar. */}
+      <div className="card">
+        <div className="card-title">Workspace</div>
+        <div className="flex" style={{ gap: 8, flexWrap: "wrap" }}>
+          <Link className="btn sm" href="/team">👥 Team &amp; access</Link>
+          <Link className="btn sm" href="/trash">🗑️ Recycle bin</Link>
+        </div>
+        <p className="small muted" style={{ marginTop: 10, marginBottom: 0 }}>
+          Invite colleagues and set who can see which trips, or restore something you deleted.
+        </p>
+      </div>
+
       {org && (
         <div className="card">
           <div className="card-title">Business &amp; branding <span className="small muted">shown on pay pages, receipts &amp; tax invoices</span></div>
@@ -104,18 +116,6 @@ export default async function SettingsPage() {
           )}
         </div>
       )}
-
-      {/* Homes for the things that used to sit in the sidebar. */}
-      <div className="card">
-        <div className="card-title">Workspace</div>
-        <div className="flex" style={{ gap: 8, flexWrap: "wrap" }}>
-          <Link className="btn sm" href="/team">👥 Team &amp; access</Link>
-          <Link className="btn sm" href="/trash">🗑️ Recycle bin</Link>
-        </div>
-        <p className="small muted" style={{ marginTop: 10, marginBottom: 0 }}>
-          Invite colleagues and set who can see which trips, or restore something you deleted.
-        </p>
-      </div>
 
       {org && (
         <div className="card">

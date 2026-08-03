@@ -23,9 +23,12 @@ type BookingLite = {
   travellerExtra?: number;
   variant?: VariantLite;
   payments?: PaymentLite[];
+  // Stay window. Null = the whole trip.
+  stayStart?: Date | null;
+  stayEnd?: Date | null;
 };
 type HotelBookingLite = { cost: number; rooms: number; status: string; holdUntil?: Date | null };
-type NightLite = { hotels: HotelBookingLite[]; extra?: boolean };
+type NightLite = { hotels: HotelBookingLite[]; extra?: boolean; date?: Date | null };
 type CarLite = { rentalCost: number; driverMode: string; driverCost: number; status: string; holdUntil?: Date | null; driverNeedsStay?: boolean; seats?: number };
 
 // Seats available to travellers in a car (a hired driver takes one seat).
@@ -125,6 +128,36 @@ export function holdExpiringSoon(status: string, holdUntil: Date | null | undefi
   return new Date(holdUntil).getTime() <= limit;
 }
 
+
+// --- Who is actually there on a given night ---------------------------------
+// The itinerary is a list of NIGHTS. A night dated 4 Oct is the night you sleep
+// through into 5 Oct. So someone checking out on 4 Oct does NOT occupy it:
+// a stay covers a night when  stayStart <= night.date < stayEnd.
+const dayStamp = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
+
+export function bookingCoversNight(b: BookingLite, nightDate?: Date | null): boolean {
+  if (!nightDate) return true; // undated night — nobody can be ruled out
+  const n = dayStamp(nightDate);
+  if (b.stayStart && dayStamp(b.stayStart) > n) return false; // arrives after this night
+  if (b.stayEnd && dayStamp(b.stayEnd) <= n) return false;    // leaves before sleeping it
+  return true;
+}
+
+// Travellers sleeping on a night (cancelled bookings excluded).
+export function paxOnNight(bookings: BookingLite[], nightDate?: Date | null): number {
+  return bookings.filter((b) => isActive(b.status) && bookingCoversNight(b, nightDate)).reduce((s, b) => s + b.pax, 0);
+}
+
+// Rooms this night needs: whoever is there, plus any driver who needs a bed.
+export function roomsNeededOnNight(bookings: BookingLite[], nightDate: Date | null | undefined, driverRooms: number, maxPerRoom: number): number {
+  return roomsNeeded(paxOnNight(bookings, nightDate) + driverRooms, maxPerRoom);
+}
+
+// Does this booking stay for less than the whole trip?
+export function isShortStay(b: BookingLite): boolean {
+  return b.stayStart != null || b.stayEnd != null;
+}
+
 export function tripFinancials(args: {
   bookings: BookingLite[];
   nights?: NightLite[];
@@ -183,15 +216,21 @@ export function tripFinancials(args: {
   const carSeats = cars.reduce((s, c) => s + carPassengerSeats(c), 0);
   const seatsSet = cars.some((c) => (c.seats ?? 0) > 0);
   const seatsShort = seatsSet ? Math.max(0, pax - carSeats) : 0;
-  const shortRoomNights = needRooms > 0
-    ? coreNights.filter((n) => !isNightGap(n) && nightBookedRooms(n) < needRooms).length
-    : 0;
+  // Rooms are worked out PER NIGHT, because travellers who join late or leave
+  // early shouldn't inflate the requirement on nights they aren't there.
+  const maxPer = args.maxPerRoom ?? 2;
+  const nightNeed = (n: NightLite) => roomsNeededOnNight(args.bookings, n.date, driverRooms, maxPer);
+  const peakRooms = coreNights.length > 0 ? Math.max(...coreNights.map(nightNeed)) : needRooms;
+  const shortRoomNights = coreNights.filter((n) => {
+    const need = nightNeed(n);
+    return need > 0 && !isNightGap(n) && nightBookedRooms(n) < need;
+  }).length;
 
   // Assumed cost of the rooms still to book: room-nights short × the average rate
   // of rooms already booked. Lets us project a profit that includes the rooms we
   // haven't sourced yet.
   const bookedRoomNights = nights.reduce((s, n) => s + nightBookedRooms(n), 0);
-  const roomNightsToBook = needRooms > 0 ? coreNights.reduce((s, n) => s + Math.max(0, needRooms - nightBookedRooms(n)), 0) : 0;
+  const roomNightsToBook = coreNights.reduce((s, n) => s + Math.max(0, nightNeed(n) - nightBookedRooms(n)), 0);
   const avgRoomCost = bookedRoomNights > 0 ? hotelCost / bookedRoomNights : 0;
   const assumedRoomCost = Math.round(roomNightsToBook * avgRoomCost);
   const assumedCost = cost + assumedRoomCost;
@@ -226,7 +265,8 @@ export function tripFinancials(args: {
     nightCount: nights.length,
     unbookedNights,
     expiringHolds,
-    roomsNeeded: needRooms,
+    roomsNeeded: needRooms, // whole-group figure (everyone staying the full trip)
+    peakRooms, // the most rooms any single night needs — what to plan capacity on
     guestRooms,
     driverRooms,
     shortRoomNights,

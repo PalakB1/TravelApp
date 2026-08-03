@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { parseAmount } from "@/lib/money";
+import { parseAmount, parseRate } from "@/lib/money";
 import { logActivity, findOrCreateCustomer } from "../data-actions";
 import { customOrgId } from "./lib";
 
@@ -80,8 +80,8 @@ export async function updateCustomTrip(formData: FormData) {
       startDate: toDate(formData.get("startDate")),
       endDate: toDate(formData.get("endDate")),
       discount: parseAmount(String(formData.get("discount"))),
-      gstRate: parseInt(String(formData.get("gstRate") || "5")) || 0,
-      tcsRate: parseInt(String(formData.get("tcsRate") || "2")) || 0,
+      gstRate: parseRate(formData.get("gstRate"), 5),
+      tcsRate: parseRate(formData.get("tcsRate"), 2),
       notes: String(formData.get("notes") || "").trim() || null,
     },
   });

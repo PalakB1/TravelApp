@@ -6,6 +6,7 @@ import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookin
 import { formatINR } from "@/lib/money";
 import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, generateInvoice, renameBooking, updateBookingVisa, addScheduleItem, deleteScheduleItem, updateBookingPolicy, applyPlanToBooking, tidyOverdueDates } from "../../data-actions";
 import { scheduleStatus, scheduleTotal } from "@/lib/schedule";
+import { bookingCoversNight } from "@/lib/calc";
 import { STANDARD_REFUND_POLICY } from "@/lib/policy";
 import { VISA_STATUSES, visaMeta } from "@/lib/visaStatus";
 import ShareInvoice from "@/components/ShareInvoice";
@@ -27,7 +28,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
   const b = await prisma.booking.findFirst({
     where: { id, ...scope.viaTrip },
     include: {
-      trip: { include: { inclusions: { orderBy: { createdAt: "asc" } } } },
+      trip: { include: { inclusions: { orderBy: { createdAt: "asc" } }, itinerary: { orderBy: { order: "asc" }, select: { date: true, extra: true } } } },
       variant: true, customer: true,
       travellers: { orderBy: { createdAt: "asc" } },
       payments: { orderBy: { date: "asc" } },
@@ -76,6 +77,12 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
   const hasPastDates = planLines.some((l) => l.item.dueDate && new Date(l.item.dueDate).setHours(0, 0, 0, 0) < _today0.getTime());
   const planAllPaid = b.schedule.length > 0 && planLines.every((l) => l.covered);
   // This booking's own wording wins; else the org default; else the standard terms.
+  // How many itinerary nights this party actually sleeps, given their stay window.
+  const nightsHere = b.trip.itinerary.filter((n) => !n.extra && bookingCoversNight(b, n.date)).length;
+  const coreNights = b.trip.itinerary.filter((n) => !n.extra).length;
+  const stayNote = nightsHere === coreNights
+    ? `Full trip — ${coreNights} night${coreNights === 1 ? "" : "s"}`
+    : `${nightsHere} of ${coreNights} nights — not counted on the rest`;
   const policyValue = b.refundPolicy ?? org?.defaultRefundPolicy ?? STANDARD_REFUND_POLICY;
   const toInput = (d: Date | null | undefined) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 
@@ -336,6 +343,13 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                   <label className="field"><span className="lbl">Non-taxable amount</span><input name="nonTaxable" defaultValue={b.nonTaxable || ""} placeholder="embassy fee, etc." /></label>
                   <label className="field"><span className="lbl">GST %</span><input name="gstRate" type="number" min="0" step="0.01" defaultValue={b.gstRate} /></label>
                   <label className="field"><span className="lbl">TCS %</span><input name="tcsRate" type="number" min="0" step="0.01" defaultValue={b.tcsRate} /></label>
+                </div>
+                <div className="row-3">
+                  <label className="field"><span className="lbl">Arrives <span className="small muted">blank = trip start</span></span><input name="stayStart" type="date" defaultValue={toInput(b.stayStart)} /></label>
+                  <label className="field"><span className="lbl">Checks out <span className="small muted">blank = trip end</span></span><input name="stayEnd" type="date" defaultValue={toInput(b.stayEnd)} /></label>
+                  <div className="field" style={{ justifyContent: "flex-end" }}>
+                    <span className="small muted">{stayNote}</span>
+                  </div>
                 </div>
                 <label className="field"><span className="lbl">Remarks</span><input name="notes" defaultValue={b.notes || ""} placeholder="e.g. 1 night less, Perlan paid extra" /></label>
                 <button className="primary sm" type="submit">Save invoice</button>

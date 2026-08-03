@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
-import { tripFinancials, reconcileTrip, bookingTotal, bookingPaid, bookingBalance, isNightGap, holdExpiringSoon, carCost, pricePerRoom, nightCost, nightBookedRooms, carPassengerSeats, tripIsOver } from "@/lib/calc";
+import { tripFinancials, reconcileTrip, bookingTotal, bookingPaid, bookingBalance, isNightGap, holdExpiringSoon, carCost, pricePerRoom, nightCost, nightBookedRooms, carPassengerSeats, tripIsOver, roomsNeededOnNight, paxOnNight, isShortStay } from "@/lib/calc";
 import BookingsTable from "@/components/BookingsTable";
 import { formatINR, formatINRShort } from "@/lib/money";
 import {
@@ -108,6 +108,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
     carTypes.push(c.carType!.trim());
   }
 
+  const shortStayCount = trip.bookings.filter((b) => b.status !== "cancelled" && isShortStay(b)).length;
   const coreNightCount = trip.itinerary.filter((n) => !n.extra).length;
   const allHotels = trip.itinerary.flatMap((n) => n.hotels);
   const totalRooms = allHotels.reduce((s, h) => s + h.rooms, 0);
@@ -223,7 +224,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
           <summary>
             <span className="sec-title">Hotels — rooms per night</span>
             <span className="sec-hi" style={{ marginLeft: "auto", marginRight: 12 }}>
-              needs {f.roomsNeeded}/night{f.driverRooms > 0 ? ` for ${f.pax} travellers + ${f.driverRooms} driver${f.driverRooms > 1 ? "s" : ""}` : ""}
+              needs up to {f.peakRooms}/night{shortStayCount > 0 ? " (varies — some stay fewer nights)" : f.driverRooms > 0 ? ` for ${f.pax} travellers + ${f.driverRooms} driver${f.driverRooms > 1 ? "s" : ""}` : ""}
               {f.shortRoomNights > 0 ? <span style={{ color: "var(--danger)" }}> · {f.shortRoomNights} short</span> : <span style={{ color: "var(--success)" }}> · all covered</span>}
             </span>
           </summary>
@@ -242,8 +243,8 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                 <div style={{ fontSize: 21, fontWeight: 600, color: "var(--violet-fg)" }}>{f.totalPeople}</div>
               </div>
               <div style={{ background: "var(--emerald-bg)", borderRadius: 10, padding: "10px 14px" }}>
-                <div className="small" style={{ color: "var(--emerald-fg)", fontWeight: 600 }}>Rooms / night</div>
-                <div style={{ fontSize: 21, fontWeight: 600, color: "var(--emerald-fg)" }}>{f.roomsNeeded}</div>
+                <div className="small" style={{ color: "var(--emerald-fg)", fontWeight: 600 }}>Peak rooms/night</div>
+                <div style={{ fontSize: 21, fontWeight: 600, color: "var(--emerald-fg)" }}>{f.peakRooms}</div>
               </div>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, padding: "6px 20px 12px" }}>
@@ -274,7 +275,9 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
               const rows = trip.itinerary.map((n, i) => {
                 const isExtra = n.extra;
                 const booked = nightBookedRooms(n);
-                const req = isExtra ? booked : f.roomsNeeded; // add-on: required = whatever is booked
+                // Rooms are needed only for the people actually sleeping THIS night —
+                // late joiners and early leavers drop out automatically.
+                const req = isExtra ? booked : roomsNeededOnNight(trip.bookings, n.date, f.driverRooms, trip.maxPerRoom ?? 2);
                 const left = isExtra ? 0 : Math.max(0, req - booked); // add-on: to-book always 0
                 if (!isExtra) { totReq += req; totLeft += left; }
                 totBooked += booked;

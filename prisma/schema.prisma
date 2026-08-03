@@ -546,6 +546,12 @@ model Booking {
   visaHandledBy  String? // us (agency assists) | self (customer arranges it)
   visaValidUntil DateTime? // for held/approved visas — valid until this date
 
+  // Some travellers join late or leave early. Null = the whole trip. A booking
+  // occupies a night when stayStart <= night.date < stayEnd, so the departure
+  // date itself is never a night slept.
+  stayStart      DateTime?
+  stayEnd        DateTime?
+
   // Cancellation & refund terms shown to the customer, plus the last date they can
   // cancel free of charge (used to nudge them before the window closes).
   refundPolicy    String?

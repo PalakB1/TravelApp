@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTotal, bookingRevenue, bookingTax, bookingBalance, reconcileTrip } from "./calc";
+import { bookingCoversNight, paxOnNight, roomsNeededOnNight, bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTotal, bookingRevenue, bookingTax, bookingBalance, reconcileTrip } from "./calc";
 
 const base = { pax: 1, discount: 0, status: "confirmed" as const };
 
@@ -83,5 +83,54 @@ describe("costing reconciliation (estimate → actual)", () => {
     const r = reconcileTrip({ ...args, expenses: [{ amount: 30000, hotelId: "h1" }, { amount: 25000, hotelId: "h1" }] });
     expect(r.hotelActual).toBe(55000);
     expect(r.hotelReconciled).toBe(55000 + 40000);
+  });
+});
+
+// --- Short stays: who sleeps which night ------------------------------------
+// The real case: a 9-day / 8-night trip departing 27 Sep. Nights run 27 Sep →
+// 4 Oct; everyone checks out 5 Oct. One traveller leaves a day early (4 Oct),
+// so they must NOT be counted on the 8th night.
+describe("per-night occupancy for short stays", () => {
+  const d = (s: string) => new Date(s + "T00:00:00");
+  const full = { pax: 2, discount: 0, status: "confirmed" as const };            // whole trip
+  const early = { pax: 1, discount: 0, status: "confirmed" as const, stayEnd: d("2026-10-04") }; // leaves 4 Oct
+  const late = { pax: 1, discount: 0, status: "confirmed" as const, stayStart: d("2026-09-29") }; // joins 29 Sep
+
+  it("counts a full-trip booking on every night", () => {
+    expect(bookingCoversNight(full, d("2026-09-27"))).toBe(true);
+    expect(bookingCoversNight(full, d("2026-10-04"))).toBe(true);
+  });
+
+  it("excludes an early leaver from the night they check out on", () => {
+    expect(bookingCoversNight(early, d("2026-10-03"))).toBe(true);  // sleeps 3 Oct
+    expect(bookingCoversNight(early, d("2026-10-04"))).toBe(false); // checks out — no 8th night
+  });
+
+  it("excludes a late joiner from nights before they arrive", () => {
+    expect(bookingCoversNight(late, d("2026-09-28"))).toBe(false);
+    expect(bookingCoversNight(late, d("2026-09-29"))).toBe(true); // first night
+  });
+
+  it("adds up the right pax per night", () => {
+    const all = [full, early, late];
+    expect(paxOnNight(all, d("2026-09-27"))).toBe(3); // full(2) + early(1)
+    expect(paxOnNight(all, d("2026-09-29"))).toBe(4); // everyone
+    expect(paxOnNight(all, d("2026-10-04"))).toBe(3); // early has gone home
+  });
+
+  it("ignores cancelled bookings", () => {
+    const cancelled = { pax: 5, discount: 0, status: "cancelled" as const };
+    expect(paxOnNight([full, cancelled], d("2026-09-27"))).toBe(2);
+  });
+
+  it("turns per-night pax into per-night rooms at 2 per room", () => {
+    const all = [full, early, late];
+    expect(roomsNeededOnNight(all, d("2026-09-29"), 0, 2)).toBe(2); // 4 pax
+    expect(roomsNeededOnNight(all, d("2026-10-04"), 0, 2)).toBe(2); // 3 pax → 2 rooms
+    expect(roomsNeededOnNight(all, d("2026-10-04"), 1, 2)).toBe(2); // + driver = 4 → 2 rooms
+  });
+
+  it("counts everyone when the night has no date set", () => {
+    expect(paxOnNight([full, early, late], null)).toBe(4);
   });
 });

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getOrgContext } from "@/lib/org";
 import { getScope } from "@/lib/scope";
-import { parseAmount, formatINR } from "@/lib/money";
+import { parseAmount, parseRate, formatINR } from "@/lib/money";
 import { financialYear } from "@/lib/invoice";
 import { bookingTotal } from "@/lib/calc";
 
@@ -458,8 +458,8 @@ export async function addBooking(formData: FormData) {
       visaAmount: parseAmount(String(formData.get("visaAmount"))),
       flightAmount: parseAmount(String(formData.get("flightAmount"))),
       nonTaxable: parseAmount(String(formData.get("nonTaxable"))),
-      gstRate: gstRateFrom(formData.get("gstRate")),
-      tcsRate: tcsRateFrom(formData.get("tcsRate")),
+      gstRate: parseRate(formData.get("gstRate"), 5),
+      tcsRate: parseRate(formData.get("tcsRate"), 2),
       discount: parseAmount(String(formData.get("discount"))),
       discountReason: String(formData.get("discountReason") || "") || null,
       notes: String(formData.get("notes") || "") || null,
@@ -482,15 +482,6 @@ export async function addBooking(formData: FormData) {
   refresh();
 }
 
-function gstRateFrom(v: FormDataEntryValue | null): number {
-  const s = String(v ?? "").trim();
-  return s === "" ? 5 : Math.max(0, Number(s) || 0);
-}
-function tcsRateFrom(v: FormDataEntryValue | null): number {
-  const s = String(v ?? "").trim();
-  return s === "" ? 2 : Math.max(0, Number(s) || 0);
-}
-
 export async function updateBookingInvoice(formData: FormData) {
   const orgId = await guard();
   const id = String(formData.get("id"));
@@ -506,11 +497,15 @@ export async function updateBookingInvoice(formData: FormData) {
       visaAmount: parseAmount(String(formData.get("visaAmount"))),
       flightAmount: parseAmount(String(formData.get("flightAmount"))),
       nonTaxable: parseAmount(String(formData.get("nonTaxable"))),
-      gstRate: gstRateFrom(formData.get("gstRate")),
-      tcsRate: tcsRateFrom(formData.get("tcsRate")),
+      gstRate: parseRate(formData.get("gstRate"), 5),
+      tcsRate: parseRate(formData.get("tcsRate"), 2),
       discount: parseAmount(String(formData.get("discount"))),
       discountReason: String(formData.get("discountReason") || "") || null,
       notes: String(formData.get("notes") || "") || null,
+      // Blank = the whole trip. Set these when someone joins late or leaves early
+      // so they stop counting toward rooms on nights they aren't there.
+      stayStart: toDate(formData.get("stayStart")),
+      stayEnd: toDate(formData.get("stayEnd")),
     },
   });
   refresh();

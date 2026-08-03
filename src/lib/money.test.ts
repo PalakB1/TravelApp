@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseAmount, formatINR, formatINRShort } from "./money";
+import { parseAmount, parseRate, formatINR, formatINRShort } from "./money";
 
 describe("parseAmount", () => {
   it("parses plain numbers and strings", () => {
@@ -18,6 +18,37 @@ describe("parseAmount", () => {
     expect(parseAmount("abc")).toBe(0);
     expect(parseAmount(null)).toBe(0);
     expect(parseAmount(undefined)).toBe(0);
+  });
+});
+
+describe("parseRate", () => {
+  it("treats a CLEARED box as zero, not as the default", () => {
+    // The bug: a customer exempt from GST/TCS had the field emptied, and the
+    // rate silently sprang back to 5% / 2%.
+    expect(parseRate("", 5)).toBe(0);
+    expect(parseRate("   ", 2)).toBe(0);
+  });
+  it("still falls back when the form has no rate field at all", () => {
+    // Quick entry and the Reports booking form don't collect GST/TCS — those
+    // must keep the standard rates, not silently drop to zero.
+    expect(parseRate(null, 5)).toBe(5);
+    expect(parseRate(undefined, 2)).toBe(2);
+  });
+  it("keeps an explicit zero", () => {
+    expect(parseRate("0", 5)).toBe(0);
+    expect(parseRate(0, 5)).toBe(0);
+  });
+  it("reads normal rates", () => {
+    expect(parseRate("18", 5)).toBe(18);
+    expect(parseRate("5", 5)).toBe(5);
+  });
+  it("rounds to a whole percent (the DB column is an Int)", () => {
+    expect(parseRate("5.4", 5)).toBe(5);
+    expect(parseRate("5.6", 5)).toBe(6);
+  });
+  it("never goes negative, and junk means zero", () => {
+    expect(parseRate("-3", 5)).toBe(0);
+    expect(parseRate("abc", 5)).toBe(0);
   });
 });
 
