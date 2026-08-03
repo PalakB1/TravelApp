@@ -20,10 +20,15 @@ function fmtDate(d: Date) {
   return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
-export default async function PaymentsPage({ searchParams }: { searchParams: Promise<{ due?: string }> }) {
+const VIEWS = ["due", "approve", "record", "owing", "history"] as const;
+type View = (typeof VIEWS)[number];
+
+export default async function PaymentsPage({ searchParams }: { searchParams: Promise<{ due?: string; view?: string }> }) {
   const scope = await requireScope();
   const orgId = scope.orgId;
-  const dueSort = (await searchParams).due === "amount" ? "amount" : "date";
+  const sp = await searchParams;
+  const dueSort = sp.due === "amount" ? "amount" : "date";
+  const view: View = (VIEWS as readonly string[]).includes(sp.view ?? "") ? (sp.view as View) : "due";
   const bookings = await prisma.booking.findMany({
     where: scope.viaTrip,
     include: { trip: true, variant: true, payments: true, schedule: true },
@@ -92,6 +97,14 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     .map((b) => ({ b, bal: bookingBalance(b) }))
     .sort((a, c) => (c.bal - a.bal) || a.b.customerName.localeCompare(c.b.customerName));
 
+  const TABS: { key: View; label: string; count: number; alert?: boolean }[] = [
+    { key: "due", label: "Money due", count: dueRows.length, alert: overdueCount > 0 },
+    { key: "approve", label: "To approve", count: pending.length, alert: pending.length > 0 },
+    { key: "record", label: "Record a payment", count: 0 },
+    { key: "owing", label: "Outstanding", count: owing.length },
+    { key: "history", label: "History", count: 0 },
+  ];
+
   return (
     <>
       <div className="page-head">
@@ -102,12 +115,25 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         <a className="btn sm" href="/api/export/payments" title="Download all payments as a spreadsheet (CSV)">⬇ Download CSV</a>
       </div>
 
-      <div className="card" style={{ background: "var(--accent-bg)", borderColor: "transparent" }}>
-        <div className="card-title">🔗 Universal payment link <span className="small muted">one link for everyone — they pick their trip &amp; name</span></div>
-        <CopyLink path={`/pay/o/${orgId}`} label="Copy link" waText="Please confirm your payment here:" />
-        <p className="small muted" style={{ margin: "8px 0 0" }}>Share this once (WhatsApp group, email signature, anywhere). Each person selects their trip and name, then reports what they paid — it lands below for your approval.</p>
+      {/* One thing at a time — this page had seven stacked sections and was a
+          long scroll on a phone. Counts stay on the tabs so nothing gets missed. */}
+      <div className="flex" style={{ gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
+        {TABS.map((t) => (
+          <Link key={t.key} href={`/payments?view=${t.key}`} className={`btn sm ${view === t.key ? "primary" : ""}`}>
+            {t.label}
+            {t.count > 0 && (
+              <span style={{ marginLeft: 6, fontWeight: 700, opacity: view === t.key ? 0.9 : 1, color: view === t.key ? "#fff" : t.alert ? "var(--rose-fg)" : "var(--text-3)" }}>
+                {t.count}
+              </span>
+            )}
+          </Link>
+        ))}
       </div>
 
+      {view === "due" && (<>
+      {dueRows.length === 0 && closingRows.length === 0 && (
+        <div className="card"><div className="empty">No planned installments are due. Set a payment plan on a booking and what&apos;s owed shows up here.</div></div>
+      )}
       {/* MONEY DUE — total currently owed per customer, with a WhatsApp nudge. */}
       {dueRows.length > 0 && (
         <div className="card">
@@ -115,8 +141,8 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             <div className="card-title" style={{ margin: 0 }}>Money due <span className="small muted">total owed now per customer{overdueCount > 0 ? ` · ${overdueCount} overdue` : ""}</span></div>
             <div className="flex" style={{ gap: 6 }}>
               <span className="small muted" style={{ alignSelf: "center" }}>Sort:</span>
-              <Link href="/payments?due=date" className={`btn sm ${dueSort === "date" ? "primary" : ""}`}>By date</Link>
-              <Link href="/payments?due=amount" className={`btn sm ${dueSort === "amount" ? "primary" : ""}`}>Owes most</Link>
+              <Link href="/payments?view=due&due=date" className={`btn sm ${dueSort === "date" ? "primary" : ""}`}>By date</Link>
+              <Link href="/payments?view=due&due=amount" className={`btn sm ${dueSort === "amount" ? "primary" : ""}`}>Owes most</Link>
             </div>
           </div>
           <TableSearch placeholder="Search customer or trip…">
@@ -169,6 +195,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         </div>
       )}
 
+      </>)}
+
+      {view === "approve" && (<>
       {pending.length > 0 && (
         <div className="card" style={{ borderColor: "var(--warning)", background: "var(--warning-bg)" }}>
           <div className="card-title" style={{ color: "var(--warning)" }}>🔔 Customer-submitted payments — approve to record</div>
@@ -214,6 +243,10 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         </div>
       )}
 
+        {pending.length === 0 && <div className="card"><div className="empty">Nothing waiting for approval.</div></div>}
+      </>)}
+
+      {view === "record" && (<>
       <div className="card">
         <div className="card-title">Record a payment <span className="small muted">type a name to find an existing customer</span></div>
         {payable.length === 0 ? (
@@ -250,6 +283,15 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         )}
       </div>
 
+      <div className="card" style={{ background: "var(--accent-bg)", borderColor: "transparent" }}>
+        <div className="card-title">🔗 Universal payment link <span className="small muted">one link for everyone — they pick their trip &amp; name</span></div>
+        <CopyLink path={`/pay/o/${orgId}`} label="Copy link" waText="Please confirm your payment here:" />
+        <p className="small muted" style={{ margin: "8px 0 0" }}>Share this once (WhatsApp group, email signature, anywhere). Each person selects their trip and name, then reports what they paid — it lands below for your approval.</p>
+      </div>
+
+      </>)}
+
+      {view === "owing" && (<>
       <div className="card">
         <div className="card-title">Outstanding — who still owes you</div>
         {owing.length === 0 ? (
@@ -274,6 +316,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         )}
       </div>
 
+      </>)}
+
+      {view === "history" && (<>
       <div className="card">
         <div className="card-title">Payment history</div>
         {recent.length === 0 ? (
@@ -300,6 +345,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
       </div>
 
       <ActivityLog category="payment" title="Payment activity — recorded & removed" />
+      </>)}
     </>
   );
 }
