@@ -45,6 +45,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
   let revenue = 0, cost = 0, outstanding = 0, unbookedNights = 0, expiringHolds = 0, shortRoomNights = 0, seatIssues = 0, paxTotal = 0, bookingCount = 0;
   let hotelCost = 0, carRental = 0, driverCost = 0, extrasCost = 0, inclusionsCost = 0, driversTotal = 0, carsTotal = 0, taxCollectedAll = 0;
+  let roomsToBookCost = 0, roomNightsToBook = 0;
   const perTrip = trips.map((t) => {
     const f = tripFinancials({ bookings: t.bookings, nights: t.itinerary, cars: t.cars, vendorBookings: t.vendorBookings, maxPerRoom: t.maxPerRoom });
     revenue += f.revenue;
@@ -64,6 +65,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     driversTotal += f.hiredDrivers;
     carsTotal += t.cars.length;
     taxCollectedAll += f.taxCollected;
+    roomsToBookCost += f.assumedRoomCost;
+    roomNightsToBook += f.roomNightsToBook;
     return { trip: t, f };
   });
 
@@ -90,6 +93,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
   const profit = revenue - cost;
   const margin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
+  // Rooms not yet sourced are real money — leading with the booked-only figure
+  // flatters the profit. These match what each trip page shows.
+  const expectedCost = cost + roomsToBookCost;
+  const expectedProfit = revenue - expectedCost;
+  const expectedMargin = revenue > 0 ? Math.round((expectedProfit / revenue) * 100) : 0;
 
   const upcoming = perTrip.filter((p) => !p.trip.departureDate || p.trip.departureDate >= new Date(Date.now() - 864e5));
 
@@ -232,13 +240,16 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </Link>
         <Link className="metric c-amber" href="/reports/cost">
           <div className="label">Your cost</div>
-          <div className="value">{formatINRShort(cost)}</div>
-          <div className="foot">hotels {formatINRShort(hotelCost)} · cars {formatINRShort(carRental)}{driverCost > 0 ? ` · drivers ${formatINRShort(driverCost)}` : ""}{extrasCost > 0 ? ` · extras ${formatINRShort(extrasCost)}` : ""}{inclusionsCost > 0 ? ` · inclusions ${formatINRShort(inclusionsCost)}` : ""}</div>
+          <div className="value">{formatINRShort(expectedCost)}</div>
+          <div className="foot">
+            {roomsToBookCost > 0 && <><b>{formatINRShort(cost)}</b> booked so far · +{formatINRShort(roomsToBookCost)} for {roomNightsToBook} rooms still to book<br /></>}
+            hotels {formatINRShort(hotelCost)} · cars {formatINRShort(carRental)}{driverCost > 0 ? ` · drivers ${formatINRShort(driverCost)}` : ""}{extrasCost > 0 ? ` · extras ${formatINRShort(extrasCost)}` : ""}{inclusionsCost > 0 ? ` · inclusions ${formatINRShort(inclusionsCost)}` : ""}
+          </div>
         </Link>
         <Link className="metric c-violet" href="/reports/profit">
           <div className="label">Profit</div>
-          <div className="value">{formatINRShort(profit)}</div>
-          <div className="foot">{margin}% margin</div>
+          <div className="value">{formatINRShort(expectedProfit)}</div>
+          <div className="foot">{expectedMargin}% margin{roomsToBookCost > 0 ? ` · ${formatINRShort(profit)} (${margin}%) on what's booked so far` : ""}</div>
         </Link>
         <Link className="metric c-sky" href="/reports/outstanding">
           <div className="label">Outstanding</div>

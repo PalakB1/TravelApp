@@ -174,8 +174,25 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
 
       <div className="metrics">
         <div className="metric c-emerald"><div className="label">Revenue</div><div className="value">{formatINR(f.revenue)}</div><div className="foot">+ GST/TCS {formatINRShort(f.taxCollected)} → billed {formatINRShort(f.invoiced)}</div></div>
-        <div className="metric c-amber"><div className="label">Your cost{f.assumedRoomCost > 0 ? <span className="small muted" style={{ fontWeight: 400 }}> · assumed {formatINR(f.assumedCost)}</span> : null}</div><div className="value">{formatINR(f.cost)}</div><div className="foot">hotels {formatINR(f.hotelCost)} · cars {formatINR(f.carRental)}{f.driverCost > 0 ? ` · drivers ${formatINR(f.driverCost)}` : ""}{f.extrasCost > 0 ? ` · extras ${formatINR(f.extrasCost)}` : ""}{f.inclusionsCost > 0 ? ` · inclusions ${formatINR(f.inclusionsCost)}` : ""}{f.assumedRoomCost > 0 ? ` · +${formatINR(f.assumedRoomCost)} for ${f.roomNightsToBook} rooms to book (@ ${formatINR(f.avgRoomCost)})` : ""}</div></div>
-        <div className="metric c-violet"><div className="label">Profit</div><div className="value">{formatINR(f.profit)}</div><div className="foot">{Math.round(f.margin * 100)}% margin{rec.hasActuals ? ` · actual ${formatINR(rec.reconciledProfit)} (${Math.round(rec.reconciledMargin * 100)}%)` : f.assumedRoomCost > 0 ? ` · assumed ${formatINR(f.assumedProfit)} (${Math.round(f.assumedMargin * 100)}%)` : ""}</div></div>
+        {/* Lead with the full expected cost — the booked spend alone understates it
+            while rooms are still unbooked, which flatters the profit below. */}
+        <div className="metric c-amber">
+          <div className="label">Your cost</div>
+          <div className="value">{formatINR(f.assumedRoomCost > 0 ? f.assumedCost : f.cost)}</div>
+          <div className="foot">
+            {f.assumedRoomCost > 0 && <><b>{formatINR(f.cost)}</b> booked so far · +{formatINR(f.assumedRoomCost)} for {f.roomNightsToBook} rooms still to book (@ {formatINR(f.avgRoomCost)})<br /></>}
+            hotels {formatINR(f.hotelCost)} · cars {formatINR(f.carRental)}{f.driverCost > 0 ? ` · drivers ${formatINR(f.driverCost)}` : ""}{f.extrasCost > 0 ? ` · extras ${formatINR(f.extrasCost)}` : ""}{f.inclusionsCost > 0 ? ` · inclusions ${formatINR(f.inclusionsCost)}` : ""}
+          </div>
+        </div>
+        <div className="metric c-violet">
+          <div className="label">Profit</div>
+          <div className="value">{formatINR(f.assumedRoomCost > 0 ? f.assumedProfit : f.profit)}</div>
+          <div className="foot">
+            {Math.round((f.assumedRoomCost > 0 ? f.assumedMargin : f.margin) * 100)}% margin
+            {f.assumedRoomCost > 0 ? ` · ${formatINR(f.profit)} (${Math.round(f.margin * 100)}%) on what's booked so far` : ""}
+            {rec.hasActuals ? ` · actual ${formatINR(rec.reconciledProfit)} (${Math.round(rec.reconciledMargin * 100)}%)` : ""}
+          </div>
+        </div>
         <div className="metric c-sky"><div className="label">Outstanding</div><div className="value">{formatINR(f.outstanding)}</div><div className="foot">{formatINR(f.paid)} collected</div></div>
         <div className={`metric ${f.unbookedNights + f.expiringHolds + f.shortRoomNights > 0 ? "c-rose" : "c-emerald"}`}><div className="label">Needs attention</div><div className="value">{f.unbookedNights + f.expiringHolds + f.shortRoomNights}</div><div className="foot">{f.unbookedNights} unbooked · {f.shortRoomNights} short rooms · {f.expiringHolds} holds expiring</div></div>
       </div>
