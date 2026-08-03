@@ -304,8 +304,24 @@ model User {
   updatedAt DateTime @updatedAt
 
   tripAccess      TripAccess[]
+  resetTokens     PasswordResetToken[]
 
   @@index([orgId])
+}
+
+// A one-time "forgot password" link. Only a HASH of the token is stored, so a
+// database leak can't be used to seize accounts. Single-use and short-lived.
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique // sha256 of the token that went out in the email
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 // Grants one member access to one trip (only meaningful when user.tripScoped).

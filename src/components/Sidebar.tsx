@@ -41,7 +41,7 @@ function Icon({ name }: { name: string }) {
   return <svg {...common}>{paths[name]}</svg>;
 }
 
-export default function Sidebar({ name, isPlatformAdmin = false, actingOrgId = null, customTrips = false }: { name: string; isPlatformAdmin?: boolean; actingOrgId?: string | null; customTrips?: boolean }) {
+export default function Sidebar({ name, orgName, isPlatformAdmin = false, actingOrgId = null, customTrips = false }: { name: string; orgName?: string | null; isPlatformAdmin?: boolean; actingOrgId?: string | null; customTrips?: boolean }) {
   const path = usePathname();
   const isActive = (href: string) => (href === "/dashboard" ? path === "/dashboard" : path.startsWith(href));
 
@@ -78,16 +78,23 @@ export default function Sidebar({ name, isPlatformAdmin = false, actingOrgId = n
             </Link>
           )}
         </nav>
-        {/* One compact account row instead of five stacked buttons — the name is
-            the link to Settings (where Team + Recycle bin now live). */}
+        {/* One compact account row. The WORKSPACE leads — that's the context you
+            act in — with your own name underneath. Tapping it opens Settings. */}
         <div style={{ marginTop: "auto", paddingTop: 16, borderTop: "1px solid var(--border)" }}>
           <div className="flex" style={{ gap: 6, alignItems: "center" }}>
             <Link href="/settings" className="flex" title="Settings, team & recycle bin"
-              style={{ gap: 8, alignItems: "center", flex: 1, minWidth: 0, padding: "6px 8px", borderRadius: 9, color: "var(--text-2)" }}>
-              <span aria-hidden style={{ width: 26, height: 26, flexShrink: 0, borderRadius: "50%", background: "var(--accent-bg)", color: "var(--accent)", display: "grid", placeItems: "center", fontSize: 12, fontWeight: 700 }}>
-                {name.trim().charAt(0).toUpperCase() || "?"}
+              style={{ gap: 9, alignItems: "center", flex: 1, minWidth: 0, padding: "6px 8px", borderRadius: 9, color: "var(--text-2)" }}>
+              <span aria-hidden style={{ width: 28, height: 28, flexShrink: 0, borderRadius: 9, background: "var(--accent-grad)", color: "#fff", display: "grid", placeItems: "center", fontSize: 12, fontWeight: 700 }}>
+                {(orgName || name).trim().charAt(0).toUpperCase() || "?"}
               </span>
-              <span style={{ fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</span>
+              <span style={{ minWidth: 0, lineHeight: 1.25 }}>
+                <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {orgName || name}
+                </span>
+                <span style={{ display: "block", fontSize: 11.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {orgName ? name : "Signed in"}
+                </span>
+              </span>
             </Link>
             <form action={logout}>
               <button className="sm" type="submit" title="Sign out" aria-label="Sign out">↪</button>

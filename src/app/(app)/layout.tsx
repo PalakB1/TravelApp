@@ -81,7 +81,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <SaveToast />
       <TableLabels />
       <QuickEntryLauncher />
-      <Sidebar name={ctx.session.name} isPlatformAdmin={ctx.isPlatformAdmin} actingOrgId={ctx.actingOrgId} customTrips={org?.customTripsEnabled ?? false} />
+      <Sidebar name={ctx.session.name} orgName={org?.name ?? null} isPlatformAdmin={ctx.isPlatformAdmin} actingOrgId={ctx.actingOrgId} customTrips={org?.customTripsEnabled ?? false} />
       <div className="theme-fab no-print"><ThemeToggle compact /></div>
       <main className="main">
         {daysLeft != null && (
