@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
-import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookingTotal, bookingPaid, bookingBalance, bookingInclTaxCharge, bookingInclNonTaxCharge, bookingInclusionCost } from "@/lib/calc";
+import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookingTotal, bookingPaid, bookingBalance, bookingInclTaxCharge, bookingInclNonTaxCharge } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, generateInvoice, renameBooking, updateBookingVisa, addScheduleItem, deleteScheduleItem, updateBookingPolicy, applyPlanToBooking, tidyOverdueDates, updateBookingStay } from "../../data-actions";
 import { scheduleStatus, scheduleTotal } from "@/lib/schedule";
@@ -13,6 +13,7 @@ import ShareInvoice from "@/components/ShareInvoice";
 import InlineTitle from "@/components/InlineTitle";
 import AutoFill from "@/components/AutoFill";
 import CopyLink from "@/components/CopyLink";
+import InlineStay from "@/components/InlineStay";
 import SubmitButton from "@/components/SubmitButton";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,17 @@ function fmtDate(d: Date) {
   return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 const PACKAGE: Record<string, string> = { land: "Land only", lva: "Land + visa (LVA)", full: "Full package" };
+
+// A label/value row on the invoice breakdown. Declared at module scope so it
+// isn't rebuilt on every render.
+function Line({ label, value, strong, muted }: { label: string; value: string; strong?: boolean; muted?: boolean }) {
+  return (
+    <div className="between" style={{ padding: "7px 0", borderBottom: "1px solid var(--border)" }}>
+      <span className={muted ? "muted" : ""} style={{ fontSize: 14, fontWeight: strong ? 500 : 400 }}>{label}</span>
+      <span style={{ fontSize: 14, fontWeight: strong ? 500 : 400, fontVariantNumeric: "tabular-nums" }}>{value}</span>
+    </div>
+  );
+}
 
 export default async function BookingDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -80,19 +92,14 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
   // How many itinerary nights this party actually sleeps, given their stay window.
   const nightsHere = b.trip.itinerary.filter((n) => !n.extra && bookingCoversNight(b, n.date)).length;
   const coreNights = b.trip.itinerary.filter((n) => !n.extra).length;
-  const stayNote = nightsHere === coreNights
-    ? `Full trip — ${coreNights} night${coreNights === 1 ? "" : "s"}`
-    : `${nightsHere} of ${coreNights} nights — not counted on the rest`;
+  const shortDate = (d: Date | null | undefined) => (d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—");
+  const stayFrom = b.stayStart ?? b.trip.departureDate;
+  const stayTo = b.stayEnd ?? b.trip.endDate;
+  const stayLabel = `${shortDate(stayFrom)} – ${shortDate(stayTo)}${nightsHere !== coreNights ? ` · ${nightsHere}/${coreNights} nights` : ""}`;
   const policyValue = b.refundPolicy ?? org?.defaultRefundPolicy ?? STANDARD_REFUND_POLICY;
   const usesCustomPolicy = !!b.refundPolicy && b.refundPolicy !== (org?.defaultRefundPolicy ?? STANDARD_REFUND_POLICY);
   const toInput = (d: Date | null | undefined) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 
-  const Line = ({ label, value, strong, muted }: { label: string; value: string; strong?: boolean; muted?: boolean }) => (
-    <div className="between" style={{ padding: "7px 0", borderBottom: "1px solid var(--border)" }}>
-      <span className={muted ? "muted" : ""} style={{ fontSize: 14, fontWeight: strong ? 500 : 400 }}>{label}</span>
-      <span style={{ fontSize: 14, fontWeight: strong ? 500 : 400, fontVariantNumeric: "tabular-nums" }}>{value}</span>
-    </div>
-  );
 
   return (
     <>
@@ -102,7 +109,16 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           <h1 style={{ marginTop: 6 }}><InlineTitle action={renameBooking} id={b.id} value={b.customerName} /></h1>
           <p className="sub">
             <span className="badge accent" style={{ marginRight: 8 }}>{PACKAGE[b.packageType] || b.packageType}</span>
-            {b.pax} pax{b.customerPhone ? ` · ${b.customerPhone}` : ""}
+            {b.pax} pax · <InlineStay
+              action={updateBookingStay}
+              id={b.id}
+              stayStart={toInput(b.stayStart)}
+              stayEnd={toInput(b.stayEnd)}
+              tripStart={toInput(b.trip.departureDate)}
+              tripEnd={toInput(b.trip.endDate)}
+              label={stayLabel}
+              short={nightsHere !== coreNights}
+            />{b.customerPhone ? ` · ${b.customerPhone}` : ""}
             {b.customerId ? <> · <Link href={`/customers/${b.customerId}`} style={{ color: "var(--accent)" }}>View customer</Link></> : null}
           </p>
         </div>
@@ -120,8 +136,28 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
 
       <div className="metrics">
         <div className="metric c-violet"><div className="label">Invoice total</div><div className="value">{formatINR(total)}</div><div className="foot">incl. GST + TCS</div></div>
-        <div className="metric c-emerald"><div className="label">Paid</div><div className="value">{formatINR(paid)}</div></div>
-        <div className={`metric ${balance > 0 ? "c-rose" : "c-emerald"}`}><div className="label">Balance</div><div className="value">{formatINR(balance)}</div></div>
+        {/* Paid and Balance are one number read two ways — one tile, not two. */}
+        <div className={`metric ${balance > 0 ? "c-rose" : "c-emerald"}`}>
+          <div className="label">{balance > 0 ? "Balance left" : "Fully paid"}</div>
+          <div className="value">{formatINR(balance > 0 ? balance : total)}</div>
+          <div className="foot">{formatINR(paid)} paid of {formatINR(total)}</div>
+        </div>
+        {/* GST used to be a full-width banner for a single figure. */}
+        {bookingTax(b) > 0 && (
+          <div className={`metric ${b.taxRemitted ? "c-emerald" : "c-amber"}`}>
+            <div className="label">GST + TCS</div>
+            <div className="value">{formatINR(bookingTax(b))}</div>
+            <div className="foot" style={{ marginTop: 7 }}>
+              <form action={setTaxRemitted}>
+                <input type="hidden" name="id" value={b.id} />
+                <input type="hidden" name="remit" value={b.taxRemitted ? "0" : "1"} />
+                <button className="sm" type="submit" title={b.taxRemitted && b.taxRemittedOn ? `Paid on ${fmtDate(b.taxRemittedOn)}${b.taxRemittedNote ? ` · ${b.taxRemittedNote}` : ""}` : "Mark this as remitted to the government"}>
+                  {b.taxRemitted ? "✓ Paid to govt" : "Mark paid to govt"}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
         <div className="metric"><div className="label">Status</div><div style={{ marginTop: 6 }}>
           <form action={setBookingStatus} className="inline-form">
             <input type="hidden" name="id" value={b.id} />
@@ -133,37 +169,6 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           </form>
         </div></div>
       </div>
-
-      {/* STAY DATES — visible, not buried in the invoice editor: these decide how
-          many rooms each night needs, so they're operational, not pricing. */}
-      <div className="card">
-        <form action={updateBookingStay}>
-          <input type="hidden" name="id" value={b.id} />
-          <div className="row-3" style={{ alignItems: "end" }}>
-            <label className="field"><span className="lbl">Arrives <span className="small muted">blank = trip start</span></span><input name="stayStart" type="date" defaultValue={toInput(b.stayStart)} /></label>
-            <label className="field"><span className="lbl">Checks out <span className="small muted">blank = trip end</span></span><input name="stayEnd" type="date" defaultValue={toInput(b.stayEnd)} /></label>
-            <div className="flex" style={{ gap: 10, alignItems: "center", justifyContent: "flex-end" }}>
-              <span className="small" style={{ color: nightsHere === coreNights ? "var(--text-2)" : "var(--warning)", fontWeight: nightsHere === coreNights ? 400 : 600 }}>{stayNote}</span>
-              <SubmitButton className="primary sm" pendingLabel="Saving…">Save stay</SubmitButton>
-            </div>
-          </div>
-        </form>
-      </div>
-
-      {bookingTax(b) > 0 && (
-        <div className="card between" style={{ background: b.taxRemitted ? "var(--success-bg)" : "var(--warning-bg)", borderColor: "transparent", flexWrap: "wrap", gap: 10 }}>
-          <span className="small" style={{ color: b.taxRemitted ? "var(--success)" : "var(--warning)" }}>
-            <b>GST + TCS: {formatINR(bookingTax(b))}</b> — {b.taxRemitted
-              ? <>paid to govt{b.taxRemittedOn ? ` on ${b.taxRemittedOn.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}` : ""}{b.taxRemittedNote ? ` · ${b.taxRemittedNote}` : ""} ✓</>
-              : "still to remit to the government"}
-          </span>
-          <form action={setTaxRemitted}>
-            <input type="hidden" name="id" value={b.id} />
-            <input type="hidden" name="remit" value={b.taxRemitted ? "0" : "1"} />
-            <button className="sm" type="submit">{b.taxRemitted ? "Mark unpaid" : "Mark GST paid to govt"}</button>
-          </form>
-        </div>
-      )}
 
       {b.notes ? (
         <div className="card" style={{ background: "var(--warning-bg)", borderColor: "var(--warning-bg)" }}>
