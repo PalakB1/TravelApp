@@ -643,3 +643,28 @@ details.section[open] > .sec-body, details.add[open] .form-box { animation: fade
   }
   :root:not([data-theme="light"]) details.add > summary:hover { background: var(--accent-bg); }
 }
+
+/* Rooms-per-night rows are a rigid 7-column grid (~582px) — far wider than a
+   phone, which forced the whole trip page to scroll sideways. On small screens
+   the row wraps onto three lines and the numbers carry their own labels, since
+   the header row is hidden. */
+@media (max-width: 760px) {
+  .rpn-head { display: none; }
+  details.rpn-day > summary {
+    grid-template-columns: 16px auto 1fr;
+    gap: 3px 8px;
+    padding: 12px 16px;
+  }
+  details.rpn-day > summary > :nth-child(4) { grid-column: 1 / -1; }
+  details.rpn-day > summary > :nth-child(n+5) {
+    text-align: left;
+    font-size: 12.5px;
+    color: var(--text-2);
+    white-space: nowrap;
+  }
+  details.rpn-day > summary > :nth-child(5)::before { content: "Req "; color: var(--text-3); }
+  details.rpn-day > summary > :nth-child(6)::before { content: "Booked "; color: var(--text-3); }
+  details.rpn-day > summary > :nth-child(7)::before { content: "To book "; color: var(--text-3); }
+  .rpn-detail { padding: 6px 16px 14px; }
+}
+
