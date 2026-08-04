@@ -7,11 +7,15 @@ import { captureLead } from "./lead-actions";
 import Logo from "@/components/Logo";
 
 const FEATURES = [
-  { icon: "◈", title: "Payments that chase themselves", body: "Set your terms once — 25% on booking, balance 21 days before travel — and every new booking gets them automatically. One tap opens WhatsApp with the amount due, the due date and a link for the customer to confirm payment. Sort by who owes most and work down the list.", wide: true },
-  { icon: "🧾", title: "Invoices your accountant won't argue with", body: "Sequential, gap-free invoice numbers per financial year. Tax calculated across land, visa and flight components separately, so the totals reconcile. Your cancellation terms print on every invoice — download the PDF or send it on WhatsApp." },
-  { icon: "🛏", title: "Rooms costed night by night", body: "Someone joining late or leaving a day early stops counting on the nights they aren't there, so you book the rooms you actually need. Hotel holds about to expire get flagged before you lose them." },
-  { icon: "▚", title: "Profit that counts what you haven't booked yet", body: "Costing only what you've already paid flatters the margin. TripZei prices the rooms still to source into the total, so the profit on screen is the profit you'll bank." },
-  { icon: "💸", title: "Every rupee out, tracked", body: "Supplier bills, fuel, permits, salaries — tagged to a trip or kept as overhead. When staff pay from their own pocket, mark it personal and settle several at once with the bank reference recorded." },
+  { icon: "⚡", title: "Quick entry — the whole business, one button", body: "A payment, an expense, a booking, a hotel, a customer, a whole new trip — logged from wherever you're standing, in seconds. Or just type it the way you'd say it: “Riya paid 40k upi”. Nothing is saved for later, so there is no month-end catch-up. The dashboard is simply always right.", wide: true },
+  { icon: "◈", title: "Reminders that write themselves", body: "Set your terms once — 25% on booking, balance 21 days out — and every booking inherits them. One tap opens WhatsApp with the amount, the due date and a link for the customer to confirm. Work down the list, biggest debtor first." },
+  { icon: "🧾", title: "Receipts and invoices they keep", body: "The moment money lands, send a branded receipt on WhatsApp. When the trip ends, generate a sequential, gap-free tax invoice as a PDF — with your terms printed on it." },
+  { icon: "🗺", title: "Run last season's route again", body: "Copy a whole itinerary onto new dates: every night, every hotel plan and your pricing come across, with all the dates shifted. A proven trip becomes next season's departure in one click." },
+  { icon: "🛏", title: "Rooms costed night by night", body: "Someone joining late or leaving early stops counting on the nights they aren't there — so you book the rooms you need, not the rooms you guessed. Holds about to expire get flagged before you lose them." },
+  { icon: "▚", title: "Profit that counts what you haven't booked", body: "Costing only what you've already paid flatters the margin. TripZei prices the rooms still to source into the total, so the number on screen is the number you'll bank." },
+  { icon: "🎁", title: "Inclusions, priced once", body: "Define what's in the package — breakfast, permits, a guide, airport transfers — and attach it to a trip. Every booking picks it up and prices it per person, on your cost and your sell." },
+  { icon: "💸", title: "Every payment out, accounted for", body: "Supplier bills, fuel, permits, salaries — tagged to a trip or kept as overhead, with the invoice attached. When staff pay from their own pocket, mark it personal and settle several at once with the transfer reference recorded." },
+  { icon: "⌖", title: "Visa desk", body: "Send travellers one link; get back a tailored cover letter and a document checklist. Each booking carries its own visa status so you can see who still needs chasing." },
   { icon: "🔒", title: "Your client list stays yours", body: "Customers, pricing and margins are sealed to your agency — never visible to any other operator on the platform. Your team sees everything; nobody outside sees anything.", wide: true },
 ];
 const LEGS = [
@@ -89,6 +93,7 @@ export default function LandingClient() {
             <Link href="#features" className={`${s.navLink} ${s.hideSm}`}>Features</Link>
             <Link href="#how" className={`${s.navLink} ${s.hideSm}`}>How it works</Link>
             <Link href="#pricing" className={`${s.navLink} ${s.hideSm}`}>Pricing</Link>
+            <Link href="/guides" className={`${s.navLink} ${s.hideSm}`}>Guides</Link>
             <button type="button" className={s.toggle} onClick={toggle} aria-label={dark ? "Switch to light theme" : "Switch to dark theme"} title={dark ? "Light mode" : "Dark mode"}>
               {dark ? "☀" : "☾"}
             </button>
@@ -102,7 +107,7 @@ export default function LandingClient() {
         <div className={s.hero}>
           <div className={`${s.eyebrow} ${s.up}`}><span className={s.pin} /> For tour operators &amp; travel agencies</div>
           <h1 className={`${s.h1} ${s.up}`} style={{ animationDelay: "0.05s" }}>
-            Know your real margin <span className={`${s.accent} ${s.serif}`}>before the trip departs.</span>
+            Run the trip. <span className={`${s.accent} ${s.serif}`}>Keep the margin.</span>
           </h1>
           <p className={`${s.sub} ${s.up}`} style={{ animationDelay: "0.12s" }}>
             TripZei runs the money side of a travel business — invoicing, payment plans that chase themselves on WhatsApp, room-by-room costing and live profit per trip. Stop finding out what a trip made after everyone has flown home.
@@ -172,8 +177,8 @@ export default function LandingClient() {
       <section className={s.section} id="features">
         <div className={s.shell}>
           <div className={s.kicker}>Built around the money</div>
-          <h2 className={s.h2}>The six things that actually <em>cost you</em></h2>
-          <p className={s.lead}>Payments you forget to chase. Rooms booked for people who left early. Tax worked out by hand. Profit you can only calculate once the trip is over. TripZei closes each of those.</p>
+          <h2 className={s.h2}>Built for the way you <em>actually work</em></h2>
+          <p className={s.lead}>Not a filing cabinet you have to feed. Log things as they happen — in seconds, from anywhere — and the money side keeps itself straight: who owes you, what a trip really costs, and what you actually made.</p>
           <div className={s.bento}>
             {FEATURES.map((f) => (
               <div key={f.title} className={`${s.card} ${f.wide ? s.wide : ""}`}>

@@ -691,3 +691,7 @@ details.section[open] > .sec-body, details.add[open] .form-box { animation: fade
    centred rather than hugging the left edge. The sidebar and document headers
    keep their left alignment. */
 .card > .brand:first-child { justify-content: center; padding-left: 0; padding-right: 0; }
+
+/* Sidebar logo sits centred with a little more room to breathe. The mobile top
+   bar keeps its left alignment, where it reads as a home link. */
+.sidebar > .brand { justify-content: center; padding: 8px 4px 20px; }

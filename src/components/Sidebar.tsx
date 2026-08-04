@@ -53,7 +53,7 @@ export default function Sidebar({ name, orgName, isPlatformAdmin = false, acting
     <>
       <aside className="sidebar">
         <div className="brand">
-          <Logo />
+          <Logo height={38} />
         </div>
         {actingOrgId && (
           <form action={exitOrgAction} style={{ margin: "0 0 10px" }}>
