@@ -42,15 +42,22 @@ function contour(y: number) {
 export default function LandingClient() {
   const [dark, setDark] = useState(false);
 
+  // Share the app's theme rather than keeping a separate landing-only one: a
+  // visitor who picks dark here stays in dark after signing in, and vice versa.
+  // Falls back to the device setting when nothing has been chosen.
   useEffect(() => {
-    const saved = localStorage.getItem("tripdesk-landing-theme");
-    if (saved === "dark") setDark(true);
+    const saved = localStorage.getItem("theme");
+    if (saved === "dark" || saved === "light") setDark(saved === "dark");
+    else setDark(window.matchMedia("(prefers-color-scheme: dark)").matches);
   }, []);
 
   function toggle() {
     setDark((d) => {
       const next = !d;
-      try { localStorage.setItem("tripdesk-landing-theme", next ? "dark" : "light"); } catch {}
+      try {
+        localStorage.setItem("theme", next ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", next ? "dark" : "light");
+      } catch {}
       return next;
     });
   }
