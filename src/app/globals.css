@@ -674,3 +674,14 @@ details.section[open] > .sec-body, details.add[open] .form-box { animation: fade
   .rpn-detail { padding: 6px 16px 14px; }
 }
 
+
+/* Logo colourway swap. Both images are in the DOM and CSS hides one, so the
+   change is instant on theme toggle — no flash, no JavaScript. */
+.logo-swap .logo-dark { display: none; }
+.logo-swap .logo-light { display: block; }
+:root[data-theme="dark"] .logo-swap .logo-light { display: none; }
+:root[data-theme="dark"] .logo-swap .logo-dark { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .logo-swap .logo-light { display: none; }
+  :root:not([data-theme="light"]) .logo-swap .logo-dark { display: block; }
+}

@@ -15,7 +15,7 @@ export default function AdminLoginPage() {
           Platform admin
         </div>
         <p style={{ margin: "8px 0 20px", fontSize: 13, color: "#9aa0c0" }}>
-          Restricted area — for the Tripzei platform owner.
+          Restricted area — for the TripZei platform owner.
         </p>
         <form action={formAction}>
           <label style={{ display: "block", marginBottom: 12 }}>

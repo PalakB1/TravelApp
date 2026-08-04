@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import VisaForm from "./VisaForm";
+import Logo from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export default async function VisaFormPage({ params, searchParams }: { params: P
   return (
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "start center", padding: "24px 16px" }}>
       <div className="card" style={{ width: 640, maxWidth: "100%" }}>
-        <div className="brand" style={{ paddingLeft: 0, marginBottom: 4 }}><span className="dot">✦</span> Tripzei</div>
+        <div className="brand" style={{ paddingLeft: 0, marginBottom: 4 }}><Logo /></div>
         <h1 style={{ fontSize: 20, marginTop: 6 }}>{label} visa details</h1>
         <p className="muted small" style={{ marginTop: 4 }}>
           For <b>{trip.name}</b>{trip.destination ? ` · ${trip.destination}` : ""}{dates ? ` · ${dates}` : ""}. Fill this once and we’ll generate your cover letter + document checklist. Please match your passport exactly.

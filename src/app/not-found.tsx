@@ -1,11 +1,12 @@
 import Link from "next/link";
+import Logo from "@/components/Logo";
 
 export default function NotFound() {
   return (
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20 }}>
       <div className="card" style={{ maxWidth: 420, textAlign: "center" }}>
         <div className="brand" style={{ justifyContent: "center", paddingBottom: 10 }}>
-          <span className="dot">✦</span> Tripzei
+          <Logo />
         </div>
         <h2 style={{ fontSize: 18, marginBottom: 8 }}>This page moved or no longer exists</h2>
         <p className="muted small" style={{ marginBottom: 18 }}>

@@ -2,7 +2,7 @@
 //
 // Configure with two environment variables:
 //   RESEND_API_KEY  — from resend.com
-//   MAIL_FROM       — e.g. "Tripzei <no-reply@mail.tripzei.com>" (the domain
+//   MAIL_FROM       — e.g. "TripZei <no-reply@mail.tripzei.com>" (the domain
 //                     must be verified in Resend, or delivery will be rejected)
 //
 // If RESEND_API_KEY isn't set, nothing is sent: the message is logged to the
@@ -15,7 +15,7 @@ export type SendResult = { delivered: boolean; reason?: string };
 export async function sendMail(opts: { to: string; subject: string; html: string; text: string }): Promise<SendResult> {
   const key = process.env.RESEND_API_KEY;
   // Falls back to the product domain; override per-deployment with MAIL_FROM.
-  const from = process.env.MAIL_FROM || "Tripzei <no-reply@mail.tripzei.com>";
+  const from = process.env.MAIL_FROM || "TripZei <no-reply@mail.tripzei.com>";
 
   if (!key) {
     console.warn(
@@ -46,16 +46,16 @@ export async function sendMail(opts: { to: string; subject: string; html: string
 // The password-reset email. Plain and unbranded on purpose — it must be legible
 // in every client, and it never contains the password itself.
 export function resetEmail(name: string, link: string) {
-  const subject = "Reset your Tripzei password";
+  const subject = "Reset your TripZei password";
   const text =
     `Hi ${name},\n\n` +
-    `Someone asked to reset the password for your Tripzei account.\n\n` +
+    `Someone asked to reset the password for your TripZei account.\n\n` +
     `Open this link to choose a new one (it expires in 1 hour and works once):\n${link}\n\n` +
     `If this wasn't you, ignore this email — your password stays as it is.`;
   const html =
     `<div style="font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:15px;color:#1b1c2b;line-height:1.6">
       <p>Hi ${escapeHtml(name)},</p>
-      <p>Someone asked to reset the password for your Tripzei account.</p>
+      <p>Someone asked to reset the password for your TripZei account.</p>
       <p><a href="${escapeHtml(link)}" style="display:inline-block;background:#5b50e6;color:#fff;padding:11px 20px;border-radius:9px;text-decoration:none;font-weight:600">Choose a new password</a></p>
       <p style="color:#5a5d74;font-size:13px">This link expires in 1 hour and can only be used once.<br>
       If the button doesn't work, paste this into your browser:<br>

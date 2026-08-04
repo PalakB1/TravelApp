@@ -4,6 +4,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { useActionState } from "react";
 import { signup } from "./actions";
+import Logo from "@/components/Logo";
 
 // Public Cloudflare Turnstile site key (safe to ship to the browser).
 const TURNSTILE_SITE_KEY = "0x4AAAAAADvpHod-6yzR28OY";
@@ -16,7 +17,7 @@ export default function SignupForm({ defaultEmail = "" }: { defaultEmail?: strin
       <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
       <div className="card" style={{ width: 400, maxWidth: "100%" }}>
         <div className="brand" style={{ paddingLeft: 0 }}>
-          <span className="dot">✦</span> Tripzei
+          <Logo />
         </div>
         <p className="muted small" style={{ marginTop: -8, marginBottom: 18 }}>
           Create your travel company&apos;s workspace. We&apos;ll review it and switch it on shortly.

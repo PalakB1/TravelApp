@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { visaChecklist, visaLabel } from "@/lib/visa";
 import PrintButton from "@/components/PrintButton";
+import Logo from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export default async function VisaChecklistPage({ params }: { params: Promise<{ 
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "start center", padding: "24px 16px" }}>
       <div style={{ width: 640, maxWidth: "100%" }}>
         <div className="between no-print" style={{ marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
-          <div className="brand" style={{ paddingLeft: 0 }}><span className="dot">✦</span> Tripzei</div>
+          <div className="brand" style={{ paddingLeft: 0 }}><Logo /></div>
           <PrintButton />
         </div>
 

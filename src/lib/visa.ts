@@ -1,5 +1,5 @@
 // Generates a visa cover letter + document checklist by merging what the applicant
-// filled with the trip data already in Tripzei. Supports Schengen (accurate, from
+// filled with the trip data already in TripZei. Supports Schengen (accurate, from
 // the official Embassy of Iceland / VFS checklist) and a GENERIC visitor-visa
 // template for any other country (New Zealand, UK, USA, …). The visa type is chosen
 // when the operator shares the link and is stored on the applicant.

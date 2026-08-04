@@ -5,6 +5,7 @@ import Link from "next/link";
 import { logout, exitOrgAction } from "@/app/(app)/actions";
 import QuickAddButton from "./QuickAddButton";
 import ThemeToggle from "./ThemeToggle";
+import Logo from "@/components/Logo";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: "grid" },
@@ -52,7 +53,7 @@ export default function Sidebar({ name, orgName, isPlatformAdmin = false, acting
     <>
       <aside className="sidebar">
         <div className="brand">
-          <span className="dot">✦</span> Tripzei
+          <Logo />
         </div>
         {actingOrgId && (
           <form action={exitOrgAction} style={{ margin: "0 0 10px" }}>
@@ -105,7 +106,7 @@ export default function Sidebar({ name, orgName, isPlatformAdmin = false, acting
 
       {/* Mobile top bar — slim; navigation lives in the bottom tab bar */}
       <header className="mobile-topbar">
-        <Link href="/dashboard" className="brand" style={{ padding: 0, fontSize: 16 }}><span className="dot">✦</span> Tripzei</Link>
+        <Link href="/dashboard" className="brand" style={{ padding: 0, fontSize: 16 }}><Logo /></Link>
         <div className="flex" style={{ gap: 8, alignItems: "center" }}>
           {actingOrgId && (
             <form action={exitOrgAction}>

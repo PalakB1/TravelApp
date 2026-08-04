@@ -4,6 +4,7 @@ import Link from "next/link";
 import { use } from "react";
 import { useActionState } from "react";
 import { resetPassword } from "@/app/forgot/actions";
+import Logo from "@/components/Logo";
 
 export default function ResetPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
@@ -15,7 +16,7 @@ export default function ResetPage({ params }: { params: Promise<{ token: string 
     <div className="doc-light" style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20 }}>
       <div className="card" style={{ width: 380, maxWidth: "100%" }}>
         <div className="brand" style={{ paddingLeft: 0 }}>
-          <span className="dot">✦</span> Tripzei
+          <Logo />
         </div>
 
         {done ? (

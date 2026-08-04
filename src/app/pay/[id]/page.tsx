@@ -4,6 +4,7 @@ import { bookingTotal, bookingPaid, bookingBalance } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import PayForm from "./PayForm";
 import { STANDARD_REFUND_POLICY } from "@/lib/policy";
+import Logo from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ export default async function PublicPayPage({ params }: { params: Promise<{ id: 
     <div className="doc-light" style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20 }}>
       <div className="card" style={{ width: 460, maxWidth: "100%" }}>
         <div className="brand" style={{ paddingLeft: 0, marginBottom: 4 }}>
-          <span className="dot">✦</span> Tripzei
+          <Logo plain />
         </div>
         <h1 style={{ fontSize: 20, marginTop: 6 }}>Confirm your payment</h1>
         <p className="muted small" style={{ marginTop: 4 }}>Hi {b.customerName} — for <b>{b.trip.name}</b>{b.trip.destination ? ` (${b.trip.destination})` : ""}.</p>

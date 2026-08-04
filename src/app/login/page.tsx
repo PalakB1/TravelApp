@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { login } from "./actions";
+import Logo from "@/components/Logo";
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(login, undefined);
@@ -11,7 +12,7 @@ export default function LoginPage() {
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20 }}>
       <div className="card" style={{ width: 360, maxWidth: "100%" }}>
         <div className="brand" style={{ paddingLeft: 0 }}>
-          <span className="dot">✦</span> Tripzei
+          <Logo />
         </div>
         <p className="muted small" style={{ marginTop: -8, marginBottom: 18 }}>
           Sign in to manage your trips and bookings.
