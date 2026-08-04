@@ -17,7 +17,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   });
   if (!b) notFound();
   const org = b.trip.org;
-  const agency = org?.legalName || org?.name || "Trip Desk";
+  const agency = org?.legalName || org?.name || "Tripzei";
 
   if (!b.invoiceNo) {
     return (

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Trip Desk — travel dashboard",
+  title: "Tripzei — travel dashboard",
   description: "Manage trips, bookings, payments and profit by chatting.",
 };
 

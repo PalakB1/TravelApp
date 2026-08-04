@@ -52,7 +52,7 @@ export default function Sidebar({ name, orgName, isPlatformAdmin = false, acting
     <>
       <aside className="sidebar">
         <div className="brand">
-          <span className="dot">✦</span> Trip Desk
+          <span className="dot">✦</span> Tripzei
         </div>
         {actingOrgId && (
           <form action={exitOrgAction} style={{ margin: "0 0 10px" }}>
@@ -105,7 +105,7 @@ export default function Sidebar({ name, orgName, isPlatformAdmin = false, acting
 
       {/* Mobile top bar — slim; navigation lives in the bottom tab bar */}
       <header className="mobile-topbar">
-        <Link href="/dashboard" className="brand" style={{ padding: 0, fontSize: 16 }}><span className="dot">✦</span> Trip Desk</Link>
+        <Link href="/dashboard" className="brand" style={{ padding: 0, fontSize: 16 }}><span className="dot">✦</span> Tripzei</Link>
         <div className="flex" style={{ gap: 8, alignItems: "center" }}>
           {actingOrgId && (
             <form action={exitOrgAction}>

@@ -25,7 +25,7 @@ export default async function PublicPayPage({ params }: { params: Promise<{ id: 
     <div className="doc-light" style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20 }}>
       <div className="card" style={{ width: 460, maxWidth: "100%" }}>
         <div className="brand" style={{ paddingLeft: 0, marginBottom: 4 }}>
-          <span className="dot">✦</span> Trip Desk
+          <span className="dot">✦</span> Tripzei
         </div>
         <h1 style={{ fontSize: 20, marginTop: 6 }}>Confirm your payment</h1>
         <p className="muted small" style={{ marginTop: 4 }}>Hi {b.customerName} — for <b>{b.trip.name}</b>{b.trip.destination ? ` (${b.trip.destination})` : ""}.</p>

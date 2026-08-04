@@ -1,4 +1,4 @@
-# Trip Desk — travel company dashboard
+# Tripzei — travel company dashboard
 
 A private dashboard to manage trips, prices, inclusions (and your own costs),
 bookings, discounts, payments, and supplier bookings (hotels, cars) — with a
@@ -86,4 +86,4 @@ the trip from its page, or re-seed with `npm run db:seed`.
 This runs on your computer today. To put it online so both of you can log in
 from anywhere, two things change: move `AUTH_SECRET` in `.env` to a long random
 value, and switch the database from SQLite to a hosted one (e.g. Postgres).
-Ask Claude to "deploy Trip Desk" when you're ready and it'll walk through it.
+Ask Claude to "deploy Tripzei" when you're ready and it'll walk through it.

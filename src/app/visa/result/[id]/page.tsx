@@ -23,7 +23,7 @@ export default async function VisaResultPage({ params }: { params: Promise<{ id:
       <div style={{ width: 780, maxWidth: "100%" }}>
         <div className="between no-print" style={{ marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
           <div>
-            <div className="brand" style={{ paddingLeft: 0 }}><span className="dot">✦</span> Trip Desk</div>
+            <div className="brand" style={{ paddingLeft: 0 }}><span className="dot">✦</span> Tripzei</div>
             <p className="small muted" style={{ margin: "4px 0 0" }}>Cover letter & checklist for <b>{a.fullName}</b>. Review, then print or save as PDF.</p>
           </div>
           <PrintButton />

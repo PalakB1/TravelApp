@@ -71,7 +71,7 @@ export default function LandingClient() {
 
       <nav className={s.nav}>
         <div className={s.navIn}>
-          <div className={s.brand}><span className={s.mark}>✦</span> Trip Desk</div>
+          <div className={s.brand}><span className={s.mark}>✦</span> Tripzei</div>
           <div className={s.navLinks}>
             <Link href="#features" className={`${s.navLink} ${s.hideSm}`}>Features</Link>
             <Link href="/pricing" className={`${s.navLink} ${s.hideSm}`}>Pricing</Link>
@@ -159,7 +159,7 @@ export default function LandingClient() {
         <div className={s.shell}>
           <div className={s.kicker}>Everything, in one place</div>
           <h2 className={s.h2}>The back office your tour business <em>deserves</em></h2>
-          <p className={s.lead}>No more spreadsheets, WhatsApp threads and guesswork. Trip Desk holds the whole operation — and does the maths for you.</p>
+          <p className={s.lead}>No more spreadsheets, WhatsApp threads and guesswork. Tripzei holds the whole operation — and does the maths for you.</p>
           <div className={s.bento}>
             {FEATURES.map((f) => (
               <div key={f.title} className={`${s.card} ${f.wide ? s.wide : ""}`}>
@@ -202,8 +202,8 @@ export default function LandingClient() {
 
       <footer className={s.footer}>
         <div className={s.footIn}>
-          <div className={s.brand} style={{ fontSize: 15 }}><span className={s.mark}>✦</span> Trip Desk</div>
-          <div className={s.footMut}>© 2026 Trip Desk · Built for tour operators</div>
+          <div className={s.brand} style={{ fontSize: 15 }}><span className={s.mark}>✦</span> Tripzei</div>
+          <div className={s.footMut}>© 2026 Tripzei · Built for tour operators</div>
           <Link href="/admin/login" className={s.adminLink}>◆ Platform admin</Link>
         </div>
       </footer>

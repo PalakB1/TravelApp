@@ -16,7 +16,7 @@ export default function SignupForm({ defaultEmail = "" }: { defaultEmail?: strin
       <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
       <div className="card" style={{ width: 400, maxWidth: "100%" }}>
         <div className="brand" style={{ paddingLeft: 0 }}>
-          <span className="dot">✦</span> Trip Desk
+          <span className="dot">✦</span> Tripzei
         </div>
         <p className="muted small" style={{ marginTop: -8, marginBottom: 18 }}>
           Create your travel company&apos;s workspace. We&apos;ll review it and switch it on shortly.

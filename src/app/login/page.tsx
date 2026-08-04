@@ -11,7 +11,7 @@ export default function LoginPage() {
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20 }}>
       <div className="card" style={{ width: 360, maxWidth: "100%" }}>
         <div className="brand" style={{ paddingLeft: 0 }}>
-          <span className="dot">✦</span> Trip Desk
+          <span className="dot">✦</span> Tripzei
         </div>
         <p className="muted small" style={{ marginTop: -8, marginBottom: 18 }}>
           Sign in to manage your trips and bookings.

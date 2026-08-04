@@ -21,7 +21,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
 
   const b = p.booking;
   const org = b.trip.org;
-  const agency = org?.legalName || org?.name || "Trip Desk";
+  const agency = org?.legalName || org?.name || "Tripzei";
   const total = bookingTotal(b);
   // As of THIS receipt's date — so an older receipt isn't polluted by later payments.
   const asOf = new Date(p.date).getTime();

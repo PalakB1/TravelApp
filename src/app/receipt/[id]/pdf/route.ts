@@ -28,7 +28,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const ascii = (s?: string | null) => (s || "").replace(/[—–]/g, "-").replace(/·/g, "-").replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/…/g, "...").replace(/[^\x00-\xff]/g, "");
 
   const element = React.createElement(ReceiptDoc, {
-      agency: ascii(org?.legalName || org?.name || "Trip Desk"),
+      agency: ascii(org?.legalName || org?.name || "Tripzei"),
       gstAddress: ascii(org?.gstAddress),
       gstin: org?.gstin ?? null,
       receiptNo,

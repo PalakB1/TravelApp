@@ -2,14 +2,14 @@ import Link from "next/link";
 import { PLANS } from "@/lib/billing";
 import { formatINR } from "@/lib/money";
 
-export const metadata = { title: "Pricing — Trip Desk" };
+export const metadata = { title: "Pricing — Tripzei" };
 
 export default function PricingPage() {
   return (
     <div style={{ minHeight: "100vh", padding: "48px 20px 80px" }}>
       <div style={{ maxWidth: 860, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 8 }}>
-          <Link href="/" className="brand" style={{ justifyContent: "center", fontSize: 18 }}><span className="dot">✦</span> Trip Desk</Link>
+          <Link href="/" className="brand" style={{ justifyContent: "center", fontSize: 18 }}><span className="dot">✦</span> Tripzei</Link>
         </div>
         <h1 style={{ textAlign: "center", fontSize: 34, letterSpacing: "-0.02em" }}>Simple pricing</h1>
         <p className="muted" style={{ textAlign: "center", maxWidth: 520, margin: "10px auto 0" }}>

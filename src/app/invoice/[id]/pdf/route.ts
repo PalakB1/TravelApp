@@ -29,7 +29,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const rate = b.gstRate ?? 5;
 
   const element = React.createElement(InvoiceDoc, {
-    agency: ascii(org?.legalName || org?.name || "Trip Desk"),
+    agency: ascii(org?.legalName || org?.name || "Tripzei"),
     gstAddress: ascii(org?.gstAddress),
     gstin: org?.gstin ?? null,
     gstState: ascii(org?.gstState),
