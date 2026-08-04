@@ -2,7 +2,7 @@
 //
 // Configure with two environment variables:
 //   RESEND_API_KEY  — from resend.com
-//   MAIL_FROM       — e.g. "Trip Desk <no-reply@yourdomain.com>" (the domain
+//   MAIL_FROM       — e.g. "Trip Desk <no-reply@mail.tripzei.com>" (the domain
 //                     must be verified in Resend, or delivery will be rejected)
 //
 // If RESEND_API_KEY isn't set, nothing is sent: the message is logged to the
@@ -14,7 +14,8 @@ export type SendResult = { delivered: boolean; reason?: string };
 
 export async function sendMail(opts: { to: string; subject: string; html: string; text: string }): Promise<SendResult> {
   const key = process.env.RESEND_API_KEY;
-  const from = process.env.MAIL_FROM || "Trip Desk <onboarding@resend.dev>";
+  // Falls back to the product domain; override per-deployment with MAIL_FROM.
+  const from = process.env.MAIL_FROM || "Trip Desk <no-reply@mail.tripzei.com>";
 
   if (!key) {
     console.warn(
