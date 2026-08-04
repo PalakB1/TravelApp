@@ -29,6 +29,9 @@ export default async function PublicPayPage({ params }: { params: Promise<{ id: 
         </div>
         <h1 style={{ fontSize: 20, marginTop: 6 }}>Confirm your payment</h1>
         <p className="muted small" style={{ marginTop: 4 }}>Hi {b.customerName} — for <b>{b.trip.name}</b>{b.trip.destination ? ` (${b.trip.destination})` : ""}.</p>
+        <p className="small" style={{ marginTop: 6, background: "var(--accent-bg)", color: "var(--accent)", padding: "8px 11px", borderRadius: 9 }}>
+          This page doesn&apos;t take payment. Once you&apos;ve paid us, tell us the details below and we&apos;ll match it to your booking.
+        </p>
 
         <div className="metrics" style={{ gridTemplateColumns: "1fr 1fr 1fr", marginTop: 16, marginBottom: 18 }}>
           <div className="metric c-violet"><div className="label">Invoice</div><div className="value" style={{ fontSize: 17 }}>{formatINR(total)}</div></div>

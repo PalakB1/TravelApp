@@ -34,12 +34,16 @@ export default function RemindPayment({
   function send() {
     const url = `${window.location.origin}${payPath}`;
     const many = count > 1 ? ` (${count} installments)` : "";
+    // The link does NOT take payment — it's where the customer confirms a payment
+    // they've already made and uploads the proof. Say so, or they'll open it
+    // expecting a checkout.
+    const confirmLine = `Once you've made the payment, please confirm it here (you can upload the receipt): ${url}`;
     const msg = !dueLabel
       // No scheduled date — just an outstanding balance.
-      ? `Hi ${customerName}, a gentle reminder — there's a balance of ${amount} on your ${tripName} trip. You can pay securely here: ${url}`
+      ? `Hi ${customerName}, a gentle reminder — there's a balance of ${amount} on your ${tripName} trip. ${confirmLine}`
       : overdue
-        ? `Hi ${customerName}, a gentle reminder — a total of ${amount}${many} for your ${tripName} trip is now due (from ${dueLabel}). You can pay securely here: ${url}`
-        : `Hi ${customerName}, a friendly reminder — ${amount} for your ${tripName} trip is due on ${dueLabel}. You can pay securely here: ${url}`;
+        ? `Hi ${customerName}, a gentle reminder — a total of ${amount}${many} for your ${tripName} trip is now due (from ${dueLabel}). ${confirmLine}`
+        : `Hi ${customerName}, a friendly reminder — ${amount} for your ${tripName} trip is due on ${dueLabel}. ${confirmLine}`;
     const wa = waNumber();
     const link = wa
       ? `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`
