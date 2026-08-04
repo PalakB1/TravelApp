@@ -1,30 +1,30 @@
 /* ---- TripZei landing — "expedition" identity, themeable (light default / dark) ---- */
 .wrap {
   /* LIGHT (default) */
-  --bg: #eef3f0;
+  --bg: #eef2f6;
   --surface: #ffffff;
-  --surface2: #f6f9f7;
-  --line: rgba(16, 60, 48, 0.12);
-  --text: #0d1a16;
-  --text2: #33463f;
-  --muted: #5f726c;
-  --muted2: #8b9a95;
-  --accent: #0e9f74;
-  --accent2: #0b8c67;
-  --ice: #1191c9;
-  --magma: #ef6a3d;
-  --grad: linear-gradient(115deg, #0eae7e 0%, #12a79a 45%, #1191c9 100%);
+  --surface2: #f7f9fb;
+  --line: rgba(8, 32, 48, 0.12);
+  --text: #082030;
+  --text2: #2c4356;
+  --muted: #5b7284;
+  --muted2: #8fa3b1;
+  --accent: #c7401f;
+  --accent2: #e8492b;
+  --ice: #14506e;
+  --magma: #f86048;
+  --grad: linear-gradient(115deg, #f86048 0%, #e8492b 45%, #0f3a55 100%);
   --primaryText: #ffffff;
-  --shadow: 0 1px 2px rgba(16,60,48,.06), 0 18px 40px rgba(16,60,48,.10);
-  --shadowHover: 0 1px 2px rgba(16,60,48,.06), 0 24px 50px rgba(16,60,48,.16);
-  --consoleShadow: 0 40px 90px rgba(16,60,48,.16);
-  --barGrad: linear-gradient(180deg, #12b487, #a7ecd2);
-  --contour: rgba(16,110,84,.45);
-  --icoBg: rgba(14,159,116,.10);
-  --navBg: rgba(238,243,240,.72);
-  --markBg: var(--grad); --markColor: #fff; --markShadow: 0 6px 16px rgba(14,159,116,.35);
+  --shadow: 0 1px 2px rgba(8,32,48,.06), 0 18px 40px rgba(8,32,48,.10);
+  --shadowHover: 0 1px 2px rgba(8,32,48,.06), 0 24px 50px rgba(8,32,48,.16);
+  --consoleShadow: 0 40px 90px rgba(8,32,48,.18);
+  --barGrad: linear-gradient(180deg, #f86048, #ffc9bd);
+  --contour: rgba(15,58,85,.40);
+  --icoBg: rgba(248,96,72,.10);
+  --navBg: rgba(238,242,246,.78);
+  --markBg: var(--grad); --markColor: #fff; --markShadow: 0 6px 16px rgba(248,96,72,.30);
   --auroraBlend: multiply; --auroraOpacity: .55;
-  --a1: #a7ecd2; --a2: #bfe6fb; --a3: #d9d2ff;
+  --a1: #ffd0c4; --a2: #cfe0ec; --a3: #ffe1d6;
 
   position: relative;
   min-height: 100vh;
@@ -36,28 +36,28 @@
   transition: background .3s ease, color .3s ease;
 }
 .wrap.dark {
-  --bg: #070c0e;
-  --surface: #10191c;
+  --bg: #04101a;
+  --surface: #0f1e29;
   --surface2: rgba(255,255,255,0.02);
-  --line: rgba(122,214,184,0.14);
-  --text: #ecf5f2;
-  --text2: #b7c7c2;
-  --muted: #8ba39f;
-  --muted2: #647a76;
-  --accent: #46e6a8;
-  --accent2: #35d29b;
-  --ice: #7cd6ff;
-  --magma: #ff7a4d;
-  --grad: linear-gradient(115deg, #57f0b0 0%, #46e6a8 42%, #7cd6ff 100%);
-  --primaryText: #04120c;
+  --line: rgba(148,190,214,0.14);
+  --text: #eaf2f8;
+  --text2: #b3c6d3;
+  --muted: #8ba3b4;
+  --muted2: #62798a;
+  --accent: #fb8768;
+  --accent2: #ff9878;
+  --ice: #8fc4e4;
+  --magma: #ff8a63;
+  --grad: linear-gradient(115deg, #ff9878 0%, #fb8768 42%, #8fc4e4 100%);
+  --primaryText: #2b0c04;
   --shadow: 0 1px 2px rgba(0,0,0,.3), 0 18px 40px rgba(0,0,0,.5);
   --shadowHover: 0 1px 2px rgba(0,0,0,.3), 0 24px 50px rgba(0,0,0,.55);
   --consoleShadow: 0 44px 120px rgba(0,0,0,.66);
-  --barGrad: linear-gradient(180deg, #46e6a8, rgba(70,230,168,.25));
-  --contour: rgba(70,230,168,.5);
-  --icoBg: rgba(70,230,168,.08);
-  --navBg: rgba(7,12,14,.62);
-  --markBg: #10191c; --markColor: var(--accent); --markShadow: inset 0 0 14px rgba(70,230,168,.25);
+  --barGrad: linear-gradient(180deg, #fb8768, rgba(251,135,104,.25));
+  --contour: rgba(143,196,228,.45);
+  --icoBg: rgba(251,135,104,.10);
+  --navBg: rgba(4,16,26,.68);
+  --markBg: #0f1e29; --markColor: var(--accent); --markShadow: inset 0 0 14px rgba(251,135,104,.25);
   --auroraBlend: screen; --auroraOpacity: .5;
   --a1: #2fe0a4; --a2: #58b6ff; --a3: #7a5cff;
 }

@@ -4,16 +4,17 @@
   --bg: #f3f4fb;
   --surface: #ffffff;
   --surface-2: #f6f7fc;
-  --border: #e6e7f1;
-  --border-strong: #d2d4e6;
-  --text: #1b1c2b;
-  --text-2: #5a5d74;
-  --text-3: #9094ac;
+  --border: #e3e8ed;
+  --border-strong: #cbd5dd;
+  --text: #0a2233;
+  --text-2: #4c6070;
+  --text-3: #8496a3;
 
-  --accent: #5b50e6;
-  --accent-2: #7b6ff2;
-  --accent-bg: #eceaff;
-  --accent-grad: linear-gradient(135deg, #7b6ff2 0%, #5b50e6 100%);
+  --accent: #c7401f;
+  --accent-2: #e8492b;
+  --accent-bg: #fdece7;
+  --accent-grad: linear-gradient(135deg, #e8492b 0%, #c7401f 100%);
+  --navy: #082030;
 
   --success: #0f9d6b;
   --success-bg: #e3f7ef;
@@ -42,7 +43,7 @@
 
 html, body {
   padding: 0; margin: 0;
-  background: linear-gradient(160deg, #eef0fe 0%, #f3f1fb 38%, #eaf3fc 100%);
+  background: linear-gradient(160deg, #eef2f6 0%, #f4f6f8 38%, #edf1f5 100%);
   background-attachment: fixed;
   color: var(--text);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
@@ -55,7 +56,7 @@ h1, h2, h3 { font-weight: 600; margin: 0; letter-spacing: -0.01em; }
 /* Layout */
 .app { display: flex; min-height: 100vh; }
 .sidebar {
-  width: 232px; flex-shrink: 0; background: linear-gradient(180deg, #ffffff 0%, #faf9ff 100%); border-right: 1px solid var(--border);
+  width: 232px; flex-shrink: 0; background: linear-gradient(180deg, #ffffff 0%, #f7f9fb 100%); border-right: 1px solid var(--border);
   padding: 20px 14px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
   /* Column layout so the account row can sit at the bottom (margin-top:auto)
      rather than trailing the nav and pushing the menu into a scroll. */
@@ -558,19 +559,19 @@ details.section[open] > .sec-body, details.add[open] .form-box { animation: fade
    share one declaration block across a selector and an @media rule.
    ============================================================ */
 :root[data-theme="dark"] {
-  --bg: #0e0f16;
-  --surface: #181a24;
-  --surface-2: #20222e;
+  --bg: #061119;
+  --surface: #0f1e29;
+  --surface-2: #162a37;
   --border: #2a2d3b;
   --border-strong: #3a3e50;
   --text: #e8eaf3;
   --text-2: #a4a7bb;
   --text-3: #71748a;
 
-  --accent: #8f84ff;
-  --accent-2: #a99dff;
-  --accent-bg: #262248;
-  --accent-grad: linear-gradient(135deg, #8f84ff 0%, #6d5ef0 100%);
+  --accent: #fb8768;
+  --accent-2: #ff9878;
+  --accent-bg: #3a1f18;
+  --accent-grad: linear-gradient(135deg, #fb8768 0%, #f05a3c 100%);
 
   --success: #34d399; --success-bg: #0f2a20;
   --warning: #eab24a; --warning-bg: #2c2410;
@@ -591,19 +592,19 @@ details.section[open] > .sec-body, details.add[open] .form-box { animation: fade
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0e0f16;
-    --surface: #181a24;
-    --surface-2: #20222e;
+    --bg: #061119;
+    --surface: #0f1e29;
+    --surface-2: #162a37;
     --border: #2a2d3b;
     --border-strong: #3a3e50;
     --text: #e8eaf3;
     --text-2: #a4a7bb;
     --text-3: #71748a;
 
-    --accent: #8f84ff;
-    --accent-2: #a99dff;
-    --accent-bg: #262248;
-    --accent-grad: linear-gradient(135deg, #8f84ff 0%, #6d5ef0 100%);
+    --accent: #fb8768;
+    --accent-2: #ff9878;
+    --accent-bg: #3a1f18;
+    --accent-grad: linear-gradient(135deg, #fb8768 0%, #f05a3c 100%);
 
     --success: #34d399; --success-bg: #0f2a20;
     --warning: #eab24a; --warning-bg: #2c2410;
@@ -627,19 +628,19 @@ details.section[open] > .sec-body, details.add[open] .form-box { animation: fade
 /* Surfaces that use hardcoded light gradients need explicit dark overrides. */
 :root[data-theme="dark"] body,
 :root[data-theme="dark"] html {
-  background: linear-gradient(160deg, #0d0e15 0%, #101019 40%, #0c1119 100%);
+  background: linear-gradient(160deg, #05101a 0%, #071620 40%, #061119 100%);
 }
 :root[data-theme="dark"] .sidebar {
-  background: linear-gradient(180deg, #181a24 0%, #14151d 100%);
+  background: linear-gradient(180deg, #0f1e29 0%, #0b1822 100%);
 }
 :root[data-theme="dark"] details.add > summary:hover { background: var(--accent-bg); }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) body,
   :root:not([data-theme="light"]) html {
-    background: linear-gradient(160deg, #0d0e15 0%, #101019 40%, #0c1119 100%);
+    background: linear-gradient(160deg, #05101a 0%, #071620 40%, #061119 100%);
   }
   :root:not([data-theme="light"]) .sidebar {
-    background: linear-gradient(180deg, #181a24 0%, #14151d 100%);
+    background: linear-gradient(180deg, #0f1e29 0%, #0b1822 100%);
   }
   :root:not([data-theme="light"]) details.add > summary:hover { background: var(--accent-bg); }
 }
