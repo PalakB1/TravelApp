@@ -4,6 +4,7 @@ import { bookingTotal } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import { amountInWords } from "@/lib/invoice";
 import PrintButton from "@/components/PrintButton";
+import PoweredBy from "@/components/PoweredBy";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
             Thank you for your payment. This is a computer-generated receipt and does not require a signature.
           </p>
         </div>
+        <PoweredBy hide={org?.hideBranding} />
       </div>
     </div>
   );

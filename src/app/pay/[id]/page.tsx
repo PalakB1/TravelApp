@@ -4,6 +4,7 @@ import { bookingTotal, bookingPaid, bookingBalance } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import PayForm from "./PayForm";
 import { STANDARD_REFUND_POLICY } from "@/lib/policy";
+import PoweredBy from "@/components/PoweredBy";
 import Logo from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +13,7 @@ export default async function PublicPayPage({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const b = await prisma.booking.findUnique({
     where: { id },
-    include: { trip: { select: { name: true, destination: true, org: { select: { defaultRefundPolicy: true } } } }, payments: true },
+    include: { trip: { select: { name: true, destination: true, org: { select: { defaultRefundPolicy: true, hideBranding: true } } } }, payments: true },
   });
   if (!b) notFound();
 
@@ -49,6 +50,7 @@ export default async function PublicPayPage({ params }: { params: Promise<{ id: 
             <div className="small muted" style={{ whiteSpace: "pre-wrap", lineHeight: 1.6, marginTop: 10 }}>{policy}</div>
           </details>
         )}
+        <PoweredBy hide={b.trip.org?.hideBranding} />
       </div>
     </div>
   );

@@ -44,6 +44,10 @@ model Organization {
   // Default cancellation / refund terms — auto-fills on new bookings, editable per booking.
   defaultRefundPolicy String?
   paymentPlanTemplates PaymentPlanTemplate[]
+  // Customer-facing documents carry a small "Powered by TripZei" line — free,
+  // targeted distribution to travellers and the agencies they work with.
+  // Turning it off is a paid-tier lever.
+  hideBranding        Boolean @default(false)
 }
 
 

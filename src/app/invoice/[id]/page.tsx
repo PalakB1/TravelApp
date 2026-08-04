@@ -5,6 +5,7 @@ import { formatINR } from "@/lib/money";
 import { amountInWords } from "@/lib/invoice";
 import { STANDARD_REFUND_POLICY } from "@/lib/policy";
 import PrintButton from "@/components/PrintButton";
+import PoweredBy from "@/components/PoweredBy";
 
 export const dynamic = "force-dynamic";
 const fmt = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
@@ -125,6 +126,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
 
           <p className="small muted" style={{ marginTop: 10, textAlign: "right" }}>For {agency}</p>
         </div>
+        <PoweredBy hide={org?.hideBranding} />
       </div>
     </div>
   );
