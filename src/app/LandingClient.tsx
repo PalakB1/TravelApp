@@ -7,23 +7,23 @@ import { captureLead } from "./lead-actions";
 import Logo from "@/components/Logo";
 
 const FEATURES = [
-  { icon: "🗺", title: "Trips & itineraries", body: "Build night-by-night group routes — or fully bespoke, per-client trips. Flag hotel gaps, track holds before they expire, and manage your car fleet with per-driver costs.", wide: true },
-  { icon: "🧾", title: "Bookings as invoices", body: "Land / visa / flight line items with automatic GST + TCS, discounts and per-traveller extras — the maths matches your accountant’s sheet." },
-  { icon: "◈", title: "Payments & collections", body: "Log installments, see who owes what, and let customers self-report payments via a shareable link you approve." },
-  { icon: "⌖", title: "Visa desk", body: "Send travellers one form; get back a tailored cover letter and document checklist — Schengen or any country — with appointment tracking." },
-  { icon: "▚", title: "Live profit analytics", body: "Revenue, cost, profit, margin and outstanding — recomputed instantly across every trip, with charts that actually mean something." },
-  { icon: "🔒", title: "Your clients stay your clients", body: "Your customer list, pricing and margins are sealed to your agency — never visible to any other agency on the platform. Your team sees everything; outsiders, nothing.", wide: true },
+  { icon: "◈", title: "Payments that chase themselves", body: "Set your terms once — 25% on booking, balance 21 days before travel — and every new booking gets them automatically. One tap opens WhatsApp with the amount due, the due date and a link for the customer to confirm payment. Sort by who owes most and work down the list.", wide: true },
+  { icon: "🧾", title: "GST invoices your CA won't argue with", body: "Gapless invoice numbers per financial year. CGST, SGST and TCS calculated across land, visa and flight components separately. Your cancellation terms print on every invoice — download the PDF or send it on WhatsApp." },
+  { icon: "🛏", title: "Rooms costed night by night", body: "Someone joining late or leaving a day early stops counting on the nights they aren't there, so you book the rooms you actually need. Hotel holds about to expire get flagged before you lose them." },
+  { icon: "▚", title: "Profit that counts what you haven't booked yet", body: "Costing only what you've already paid flatters the margin. TripZei prices the rooms still to source into the total, so the profit on screen is the profit you'll bank." },
+  { icon: "💸", title: "Every rupee out, tracked", body: "Supplier bills, fuel, permits, salaries — tagged to a trip or kept as overhead. When staff pay from their own pocket, mark it personal and settle several at once with the bank reference recorded." },
+  { icon: "🔒", title: "Your client list stays yours", body: "Customers, pricing and margins are sealed to your agency — never visible to any other operator on the platform. Your team sees everything; nobody outside sees anything.", wide: true },
 ];
 const LEGS = [
-  { n: "01", title: "Chart your workspace", body: "Sign up with your agency name. We review it and switch it on — usually within hours." },
-  { n: "02", title: "Load trips & bookings", body: "Import an itinerary from Excel or type bookings in plain English. Customers, payments and taxes file themselves." },
-  { n: "03", title: "Run the whole route", body: "Track profit, chase balances, book hotels before holds lapse, and process visas — all from one desk." },
+  { n: "01", title: "Tell us about your agency", body: "Sign up with your company name. We review it and switch your workspace on — usually within hours." },
+  { n: "02", title: "Set your terms once", body: "Your payment plan, cancellation policy, GST details and logo. Every booking you make from then on inherits them." },
+  { n: "03", title: "Run every trip from one desk", body: "Bookings, rooms, payments, supplier costs, invoices and visas — with profit updating as you go." },
 ];
 const KPIS = [
-  { l: "Revenue booked", v: "₹66.3L", f: "+ GST/TCS billed ₹71L", c: "var(--accent)" },
-  { l: "Your cost", v: "₹47.3L", f: "hotels · cars · drivers", c: "var(--ice)" },
-  { l: "Profit", v: "₹18.9L", f: "29% margin", c: "#6d5cf0" },
-  { l: "Outstanding", v: "₹63.4L", f: "due from customers", c: "var(--magma)" },
+  { l: "Revenue booked", v: "₹90.8L", f: "+ GST/TCS ₹6.1L", c: "var(--accent)" },
+  { l: "Your cost", v: "₹62.0L", f: "incl. rooms still to book", c: "var(--ice)" },
+  { l: "Profit", v: "₹28.8L", f: "32% margin", c: "var(--magma)" },
+  { l: "Overdue", v: "₹30.3L", f: "24 customers to chase", c: "var(--accent2)" },
 ];
 const BARS = [58, 84, 44, 72, 96, 60, 80];
 const STOPS = [
@@ -48,8 +48,13 @@ export default function LandingClient() {
   // Falls back to the device setting when nothing has been chosen.
   useEffect(() => {
     const saved = localStorage.getItem("theme");
-    if (saved === "dark" || saved === "light") setDark(saved === "dark");
-    else setDark(window.matchMedia("(prefers-color-scheme: dark)").matches);
+    const isDark = saved === "dark" || saved === "light"
+      ? saved === "dark"
+      : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    // localStorage and matchMedia don't exist during server rendering, so the
+    // stored choice can only be read once mounted — hence setting state here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDark(isDark);
   }, []);
 
   function toggle() {
@@ -82,7 +87,8 @@ export default function LandingClient() {
           <div className={s.brand}><Logo height={30} /></div>
           <div className={s.navLinks}>
             <Link href="#features" className={`${s.navLink} ${s.hideSm}`}>Features</Link>
-            <Link href="/pricing" className={`${s.navLink} ${s.hideSm}`}>Pricing</Link>
+            <Link href="#how" className={`${s.navLink} ${s.hideSm}`}>How it works</Link>
+            <Link href="#pricing" className={`${s.navLink} ${s.hideSm}`}>Pricing</Link>
             <button type="button" className={s.toggle} onClick={toggle} aria-label={dark ? "Switch to light theme" : "Switch to dark theme"} title={dark ? "Light mode" : "Dark mode"}>
               {dark ? "☀" : "☾"}
             </button>
@@ -94,12 +100,12 @@ export default function LandingClient() {
 
       <header className={s.shell}>
         <div className={s.hero}>
-          <div className={`${s.eyebrow} ${s.up}`}><span className={s.pin} /> Built for self-drive tour operators · now multi-tenant</div>
+          <div className={`${s.eyebrow} ${s.up}`}><span className={s.pin} /> For Indian tour operators &amp; travel agencies</div>
           <h1 className={`${s.h1} ${s.up}`} style={{ animationDelay: "0.05s" }}>
-            Every mile of your trip business, <span className={`${s.accent} ${s.serif}`}>on one desk.</span>
+            Know your real margin <span className={`${s.accent} ${s.serif}`}>before the trip departs.</span>
           </h1>
           <p className={`${s.sub} ${s.up}`} style={{ animationDelay: "0.12s" }}>
-            Trips, itineraries, bookings, GST/TCS invoicing, payments, visas and profit — the whole route of a group-tour business, mapped in one beautifully fast dashboard.
+            TripZei runs the money side of a travel business — GST invoicing, payment plans that chase themselves on WhatsApp, room-by-room costing and live profit per trip. Stop finding out what a trip made after everyone has flown home.
           </p>
           <form action={captureLead} className={`${s.emailForm} ${s.up}`} style={{ animationDelay: "0.18s" }}>
             <div className={s.emailWrap}>
@@ -109,7 +115,7 @@ export default function LandingClient() {
             <Link href="/login" className={`${s.btn} ${s.ghost} ${s.big}`}>Sign in</Link>
           </form>
           <div className={`${s.trust} ${s.up}`} style={{ animationDelay: "0.24s" }}>
-            <span><b>Free</b> to start</span><span><b>Approved</b> in hours</span><span>Your data stays <b>yours</b></span>
+            <span><b>Free</b> to start</span><span>Live in <b>hours</b></span><span>Your client list stays <b>yours</b></span>
           </div>
         </div>
 
@@ -165,9 +171,9 @@ export default function LandingClient() {
 
       <section className={s.section} id="features">
         <div className={s.shell}>
-          <div className={s.kicker}>Everything, in one place</div>
-          <h2 className={s.h2}>The back office your tour business <em>deserves</em></h2>
-          <p className={s.lead}>No more spreadsheets, WhatsApp threads and guesswork. TripZei holds the whole operation — and does the maths for you.</p>
+          <div className={s.kicker}>Built around the money</div>
+          <h2 className={s.h2}>The six things that actually <em>cost you</em></h2>
+          <p className={s.lead}>Payments you forget to chase. Rooms booked for people who left early. GST worked out by hand. Profit you can only calculate once the trip is over. TripZei closes each of those.</p>
           <div className={s.bento}>
             {FEATURES.map((f) => (
               <div key={f.title} className={`${s.card} ${f.wide ? s.wide : ""}`}>
@@ -180,10 +186,10 @@ export default function LandingClient() {
         </div>
       </section>
 
-      <section className={s.section}>
+      <section className={s.section} id="how">
         <div className={s.shell}>
-          <div className={s.kicker}>The itinerary</div>
-          <h2 className={s.h2}>Live in <em>three stops</em></h2>
+          <div className={s.kicker}>Getting started</div>
+          <h2 className={s.h2}>Running in <em>three steps</em></h2>
           <div className={s.legs}>
             <div className={s.legLine} aria-hidden />
             <div className={s.legRow}>
@@ -199,9 +205,30 @@ export default function LandingClient() {
         </div>
       </section>
 
+      <section className={s.section} id="pricing">
+        <div className={s.shell}>
+          <div className={s.kicker}>Pricing</div>
+          <h2 className={s.h2}>Priced around <em>your operation</em></h2>
+          <p className={s.lead}>
+            A two-person agency running four group departures a year shouldn&apos;t pay what a company
+            running forty does. Tell us roughly how many trips and people you handle and we&apos;ll come
+            back with a straight answer — no call required unless you want one.
+          </p>
+          <form action={captureLead} className={s.emailForm} style={{ marginTop: 22 }}>
+            <div className={s.emailWrap}>
+              <input className={s.emailInput} name="email" type="email" required placeholder="you@youragency.com" aria-label="Your work email" />
+              <button type="submit" className={`${s.btn} ${s.primary}`}>Get a quote →</button>
+            </div>
+          </form>
+          <p className={s.lead} style={{ marginTop: 14, fontSize: 14 }}>
+            You can also start free and talk to us later — nothing is charged while you try it.
+          </p>
+        </div>
+      </section>
+
       <section className={s.band}>
-        <h2>Give your operation a <span className={`${s.accent} ${s.serif}`}>home base.</span></h2>
-        <p>Set up your company workspace in minutes. We’ll switch it on and you’ll never chase a spreadsheet again.</p>
+        <h2>Stop guessing what a trip <span className={`${s.accent} ${s.serif}`}>actually made.</span></h2>
+        <p>Set up your workspace in minutes. Load one live trip and you&apos;ll see its true margin, who still owes you, and every room left to book — on day one.</p>
         <div className={s.ctaRow} style={{ marginTop: 28 }}>
           <Link href="/signup" className={`${s.btn} ${s.primary} ${s.big}`}>Start free →</Link>
           <Link href="/login" className={`${s.btn} ${s.ghost} ${s.big}`}>Sign in</Link>
@@ -211,7 +238,7 @@ export default function LandingClient() {
       <footer className={s.footer}>
         <div className={s.footIn}>
           <div className={s.brand} style={{ fontSize: 15 }}><Logo height={24} /></div>
-          <div className={s.footMut}>© 2026 TripZei · Built for tour operators</div>
+          <div className={s.footMut}>© 2026 TripZei · Built for tour operators &amp; travel agencies</div>
           <Link href="/admin/login" className={s.adminLink}>◆ Platform admin</Link>
         </div>
       </footer>
