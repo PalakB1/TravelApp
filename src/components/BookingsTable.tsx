@@ -44,10 +44,11 @@ const VISA_ORDER = ["rejected", "required", "initiated", "submitted", "approved"
 const CAP_MOBILE = 5; // rows shown before "Show all" — phone
 const CAP_DESKTOP = 10; // ...and laptop
 
-export default function BookingsTable({ rows, showTrip = false }: { rows: BookingRow[]; showTrip?: boolean }) {
+export default function BookingsTable({ rows, showTrip = false, initialVisa = "" }: { rows: BookingRow[]; showTrip?: boolean; initialVisa?: string }) {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
-  const [visa, setVisa] = useState("");
+  // Pre-set when arriving from the dashboard's "visas need action" tile.
+  const [visa, setVisa] = useState(initialVisa);
   const [sort, setSort] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [expanded, setExpanded] = useState(false);

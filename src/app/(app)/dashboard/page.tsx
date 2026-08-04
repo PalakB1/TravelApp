@@ -185,7 +185,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const actionTiles: ActionTile[] = [];
   if (overdueAmt > 0) actionTiles.push({ emoji: "💸", n: formatINRShort(overdueAmt), label: `overdue · ${overdueCustomers} to chase`, href: "/payments?due=amount", tone: "c-rose" });
   if (departingSoon > 0) actionTiles.push({ emoji: "✈️", n: String(departingSoon), label: departingSoon === 1 ? "trip departs ≤7 days" : "trips depart ≤7 days", href: "/trips", tone: "c-sky" });
-  if (visasStuck > 0) actionTiles.push({ emoji: "🛂", n: String(visasStuck), label: "visas need action", href: "/visas", tone: "c-amber" });
+  // Links to the bookings themselves — /visas only lists people who filled the
+  // public visa form, so it looked empty when a booking's visa was mid-flight.
+  if (visasStuck > 0) actionTiles.push({ emoji: "🛂", n: String(visasStuck), label: visasStuck === 1 ? "visa in progress" : "visas in progress", href: "/bookings?visa=initiated", tone: "c-amber" });
   if (invoicesReady > 0) actionTiles.push({ emoji: "🧾", n: String(invoicesReady), label: invoicesReady === 1 ? "invoice ready" : "invoices ready", href: "/bookings", tone: "c-violet" });
   if (pendingApprovals > 0) actionTiles.push({ emoji: "✅", n: String(pendingApprovals), label: "to approve", href: "/payments", tone: "c-emerald" });
 

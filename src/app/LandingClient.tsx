@@ -8,7 +8,7 @@ import Logo from "@/components/Logo";
 
 const FEATURES = [
   { icon: "◈", title: "Payments that chase themselves", body: "Set your terms once — 25% on booking, balance 21 days before travel — and every new booking gets them automatically. One tap opens WhatsApp with the amount due, the due date and a link for the customer to confirm payment. Sort by who owes most and work down the list.", wide: true },
-  { icon: "🧾", title: "GST invoices your CA won't argue with", body: "Gapless invoice numbers per financial year. CGST, SGST and TCS calculated across land, visa and flight components separately. Your cancellation terms print on every invoice — download the PDF or send it on WhatsApp." },
+  { icon: "🧾", title: "Invoices your accountant won't argue with", body: "Sequential, gap-free invoice numbers per financial year. Tax calculated across land, visa and flight components separately, so the totals reconcile. Your cancellation terms print on every invoice — download the PDF or send it on WhatsApp." },
   { icon: "🛏", title: "Rooms costed night by night", body: "Someone joining late or leaving a day early stops counting on the nights they aren't there, so you book the rooms you actually need. Hotel holds about to expire get flagged before you lose them." },
   { icon: "▚", title: "Profit that counts what you haven't booked yet", body: "Costing only what you've already paid flatters the margin. TripZei prices the rooms still to source into the total, so the profit on screen is the profit you'll bank." },
   { icon: "💸", title: "Every rupee out, tracked", body: "Supplier bills, fuel, permits, salaries — tagged to a trip or kept as overhead. When staff pay from their own pocket, mark it personal and settle several at once with the bank reference recorded." },
@@ -16,14 +16,14 @@ const FEATURES = [
 ];
 const LEGS = [
   { n: "01", title: "Tell us about your agency", body: "Sign up with your company name. We review it and switch your workspace on — usually within hours." },
-  { n: "02", title: "Set your terms once", body: "Your payment plan, cancellation policy, GST details and logo. Every booking you make from then on inherits them." },
+  { n: "02", title: "Set your terms once", body: "Your payment plan, cancellation policy, tax details and logo. Every booking you make from then on inherits them." },
   { n: "03", title: "Run every trip from one desk", body: "Bookings, rooms, payments, supplier costs, invoices and visas — with profit updating as you go." },
 ];
 const KPIS = [
-  { l: "Revenue booked", v: "₹90.8L", f: "+ GST/TCS ₹6.1L", c: "var(--accent)" },
-  { l: "Your cost", v: "₹62.0L", f: "incl. rooms still to book", c: "var(--ice)" },
-  { l: "Profit", v: "₹28.8L", f: "32% margin", c: "var(--magma)" },
-  { l: "Overdue", v: "₹30.3L", f: "24 customers to chase", c: "var(--accent2)" },
+  { l: "Revenue booked", v: "1.24M", f: "+ tax 84K billed", c: "var(--accent)" },
+  { l: "Your cost", v: "848K", f: "incl. rooms still to book", c: "var(--ice)" },
+  { l: "Profit", v: "392K", f: "32% margin", c: "var(--magma)" },
+  { l: "Overdue", v: "302K", f: "24 customers to chase", c: "var(--accent2)" },
 ];
 const BARS = [58, 84, 44, 72, 96, 60, 80];
 const STOPS = [
@@ -100,12 +100,12 @@ export default function LandingClient() {
 
       <header className={s.shell}>
         <div className={s.hero}>
-          <div className={`${s.eyebrow} ${s.up}`}><span className={s.pin} /> For Indian tour operators &amp; travel agencies</div>
+          <div className={`${s.eyebrow} ${s.up}`}><span className={s.pin} /> For tour operators &amp; travel agencies</div>
           <h1 className={`${s.h1} ${s.up}`} style={{ animationDelay: "0.05s" }}>
             Know your real margin <span className={`${s.accent} ${s.serif}`}>before the trip departs.</span>
           </h1>
           <p className={`${s.sub} ${s.up}`} style={{ animationDelay: "0.12s" }}>
-            TripZei runs the money side of a travel business — GST invoicing, payment plans that chase themselves on WhatsApp, room-by-room costing and live profit per trip. Stop finding out what a trip made after everyone has flown home.
+            TripZei runs the money side of a travel business — invoicing, payment plans that chase themselves on WhatsApp, room-by-room costing and live profit per trip. Stop finding out what a trip made after everyone has flown home.
           </p>
           <form action={captureLead} className={`${s.emailForm} ${s.up}`} style={{ animationDelay: "0.18s" }}>
             <div className={s.emailWrap}>
@@ -173,7 +173,7 @@ export default function LandingClient() {
         <div className={s.shell}>
           <div className={s.kicker}>Built around the money</div>
           <h2 className={s.h2}>The six things that actually <em>cost you</em></h2>
-          <p className={s.lead}>Payments you forget to chase. Rooms booked for people who left early. GST worked out by hand. Profit you can only calculate once the trip is over. TripZei closes each of those.</p>
+          <p className={s.lead}>Payments you forget to chase. Rooms booked for people who left early. Tax worked out by hand. Profit you can only calculate once the trip is over. TripZei closes each of those.</p>
           <div className={s.bento}>
             {FEATURES.map((f) => (
               <div key={f.title} className={`${s.card} ${f.wide ? s.wide : ""}`}>

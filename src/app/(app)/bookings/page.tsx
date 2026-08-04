@@ -8,7 +8,8 @@ import BookingsTable from "@/components/BookingsTable";
 
 export const dynamic = "force-dynamic";
 
-export default async function BookingsPage() {
+export default async function BookingsPage({ searchParams }: { searchParams: Promise<{ visa?: string }> }) {
+  const initialVisa = (await searchParams).visa ?? "";
   const scope = await requireScope();
   const bookings = await prisma.booking.findMany({
     where: scope.viaTrip,
@@ -49,7 +50,7 @@ export default async function BookingsPage() {
         </div>
       ) : (
         <div className="card" style={{ padding: "18px 20px" }}>
-          <BookingsTable rows={rows} showTrip />
+          <BookingsTable rows={rows} showTrip initialVisa={initialVisa} />
         </div>
       )}
 
