@@ -685,3 +685,8 @@ details.section[open] > .sec-body, details.add[open] .form-box { animation: fade
   :root:not([data-theme="light"]) .logo-swap .logo-light { display: none; }
   :root:not([data-theme="light"]) .logo-swap .logo-dark { display: block; }
 }
+
+/* On the sign-in / reset / pay cards the logo heads the card, so it should be
+   centred rather than hugging the left edge. The sidebar and document headers
+   keep their left alignment. */
+.card > .brand:first-child { justify-content: center; padding-left: 0; padding-right: 0; }

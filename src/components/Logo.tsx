@@ -5,7 +5,7 @@ import Image from "next/image";
 //
 // `plain` renders the navy version only — for the invoice/receipt/pay documents,
 // which are pinned to a light "paper" look regardless of the viewer's theme.
-export default function Logo({ height = 26, plain = false }: { height?: number; plain?: boolean }) {
+export default function Logo({ height = 30, plain = false }: { height?: number; plain?: boolean }) {
   // Wordmark aspect ratio (640×205) — width follows height so it never distorts.
   const width = Math.round((height * 640) / 205);
 

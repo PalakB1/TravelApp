@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import s from "./landing.module.css";
 import { captureLead } from "./lead-actions";
+import Logo from "@/components/Logo";
 
 const FEATURES = [
   { icon: "🗺", title: "Trips & itineraries", body: "Build night-by-night group routes — or fully bespoke, per-client trips. Flag hotel gaps, track holds before they expire, and manage your car fleet with per-driver costs.", wide: true },
@@ -78,7 +79,7 @@ export default function LandingClient() {
 
       <nav className={s.nav}>
         <div className={s.navIn}>
-          <div className={s.brand}><span className={s.mark}>✦</span> TripZei</div>
+          <div className={s.brand}><Logo height={30} /></div>
           <div className={s.navLinks}>
             <Link href="#features" className={`${s.navLink} ${s.hideSm}`}>Features</Link>
             <Link href="/pricing" className={`${s.navLink} ${s.hideSm}`}>Pricing</Link>
@@ -209,7 +210,7 @@ export default function LandingClient() {
 
       <footer className={s.footer}>
         <div className={s.footIn}>
-          <div className={s.brand} style={{ fontSize: 15 }}><span className={s.mark}>✦</span> TripZei</div>
+          <div className={s.brand} style={{ fontSize: 15 }}><Logo height={24} /></div>
           <div className={s.footMut}>© 2026 TripZei · Built for tour operators</div>
           <Link href="/admin/login" className={s.adminLink}>◆ Platform admin</Link>
         </div>
