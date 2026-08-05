@@ -6,6 +6,8 @@ import { amountInWords } from "@/lib/invoice";
 import { STANDARD_REFUND_POLICY } from "@/lib/policy";
 import PrintButton from "@/components/PrintButton";
 import PoweredBy from "@/components/PoweredBy";
+import Link from "next/link";
+import Logo from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 const fmt = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
@@ -56,13 +58,9 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
     <div className="doc-light" style={{ minHeight: "100vh", display: "grid", placeItems: "start center", padding: "24px 16px" }}>
       <div style={{ width: 620, maxWidth: "100%" }}>
         <div className="between no-print" style={{ marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
-          <div className="brand" style={{ paddingLeft: 0, gap: 10 }}>
-            {org?.logo ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={org.logo} alt="" style={{ height: 26, maxWidth: 110, objectFit: "contain" }} />
-            ) : null}
-            {agency}
-          </div>
+          <Link href="https://tripzei.com" target="_blank" rel="noopener" style={{ display: "inline-flex" }} aria-label="TripZei">
+            <Logo plain height={26} />
+          </Link>
           <div className="flex" style={{ gap: 8 }}>
             <a className="btn primary sm" href={`/invoice/${b.id}/pdf`} download>⬇ Download PDF</a>
             <PrintButton />
