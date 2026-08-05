@@ -15,6 +15,7 @@ import AutoFill from "@/components/AutoFill";
 import CopyLink from "@/components/CopyLink";
 import InlineStay from "@/components/InlineStay";
 import SubmitButton from "@/components/SubmitButton";
+import DeleteBooking from "@/components/DeleteBooking";
 
 export const dynamic = "force-dynamic";
 
@@ -127,10 +128,14 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           {b.invoiceNo
             ? <><Link className="btn sm" href={`/invoice/${b.id}`} target="_blank">🧾 Invoice {b.invoiceNo}</Link><ShareInvoice bookingId={b.id} customerName={b.customerName} invoiceNo={b.invoiceNo} phone={b.customerPhone} /></>
             : <form action={generateInvoice}><input type="hidden" name="id" value={b.id} /><button className="btn sm" type="submit">🧾 Generate GST invoice</button></form>}
-          <form action={deleteBooking}>
-            <input type="hidden" name="id" value={b.id} />
-            <button className="danger sm" type="submit">Delete booking</button>
-          </form>
+          <DeleteBooking
+            action={deleteBooking}
+            id={b.id}
+            customerName={b.customerName}
+            paymentCount={b.payments.length}
+            paidLabel={formatINR(paid)}
+            balanceLabel={formatINR(balance)}
+          />
         </div>
       </div>
 
