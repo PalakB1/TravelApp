@@ -35,6 +35,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     gstState: ascii(org?.gstState),
     gstStateCode: org?.gstStateCode ?? null,
     logo: org?.logo ?? null,
+    poweredBy: !org?.hideBranding,
     sacCode: org?.sacCode || "998555",
     note: ascii(org?.invoiceNote),
     invoiceNo: b.invoiceNo,

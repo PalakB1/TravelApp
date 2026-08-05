@@ -29,6 +29,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const element = React.createElement(ReceiptDoc, {
       agency: ascii(org?.legalName || org?.name || "TripZei"),
+      logo: org?.logo ?? null,
+      poweredBy: !org?.hideBranding,
       gstAddress: ascii(org?.gstAddress),
       gstin: org?.gstin ?? null,
       receiptNo,

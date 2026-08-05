@@ -11,7 +11,7 @@ export default function PoweredBy({ hide = false }: { hide?: boolean }) {
   if (hide) return null;
   return (
     <p
-      className="small no-print"
+      className="small"
       style={{ textAlign: "center", marginTop: 18, color: "var(--text-3)", fontSize: 12 }}
     >
       Powered by{" "}

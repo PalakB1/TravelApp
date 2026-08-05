@@ -11,6 +11,15 @@ export const dynamic = "force-dynamic";
 const fmt = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
 export const receiptNo = (id: string) => `RCPT-${id.slice(-6).toUpperCase()}`;
 
+// One label/value line on the receipt. Module scope, same reason as above.
+function Row({ l, v, strong }: { l: string; v: string; strong?: boolean }) {
+  return (
+    <div className="between" style={{ padding: "7px 0", borderBottom: "1px solid var(--border)", fontWeight: strong ? 600 : 400 }}>
+      <span className="muted small">{l}</span><span style={{ fontSize: 14 }}>{v}</span>
+    </div>
+  );
+}
+
 // PUBLIC — a shareable payment receipt for one recorded payment.
 export default async function ReceiptPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -29,11 +38,6 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
   const receivedToDate = b.payments.filter((x) => new Date(x.date).getTime() <= asOf).reduce((s, x) => s + x.amount, 0);
   const balance = total - receivedToDate;
 
-  const Row = ({ l, v, strong }: { l: string; v: string; strong?: boolean }) => (
-    <div className="between" style={{ padding: "7px 0", borderBottom: "1px solid var(--border)", fontWeight: strong ? 600 : 400 }}>
-      <span className="muted small">{l}</span><span style={{ fontSize: 14 }}>{v}</span>
-    </div>
-  );
 
   return (
     <div className="doc-light" style={{ minHeight: "100vh", display: "grid", placeItems: "start center", padding: "24px 16px" }}>
@@ -85,8 +89,8 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
           <p className="small muted" style={{ marginTop: 16, textAlign: "center" }}>
             Thank you for your payment. This is a computer-generated receipt and does not require a signature.
           </p>
+          <PoweredBy hide={org?.hideBranding} />
         </div>
-        <PoweredBy hide={org?.hideBranding} />
       </div>
     </div>
   );

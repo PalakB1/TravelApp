@@ -10,6 +10,13 @@ import PoweredBy from "@/components/PoweredBy";
 export const dynamic = "force-dynamic";
 const fmt = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
 
+// One invoice table cell. Module scope so it isn't recreated on every render.
+function Cell({ children, num, head, bold }: { children: React.ReactNode; num?: boolean; head?: boolean; bold?: boolean }) {
+  return (
+    <td style={{ padding: "7px 10px", borderBottom: "1px solid var(--border)", textAlign: num ? "right" : "left", fontWeight: head || bold ? 600 : 400, fontSize: head ? 11 : 13, color: head ? "var(--text-2)" : "var(--text)", textTransform: head ? "uppercase" : "none" }}>{children}</td>
+  );
+}
+
 export default async function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const b = await prisma.booking.findUnique({
@@ -44,9 +51,6 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   // This booking's own wording wins; else the org default; else the standard terms.
   const policy = b.refundPolicy ?? org?.defaultRefundPolicy ?? STANDARD_REFUND_POLICY;
 
-  const Cell = ({ children, num, head, bold }: { children: React.ReactNode; num?: boolean; head?: boolean; bold?: boolean }) => (
-    <td style={{ padding: "7px 10px", borderBottom: "1px solid var(--border)", textAlign: num ? "right" : "left", fontWeight: head || bold ? 600 : 400, fontSize: head ? 11 : 13, color: head ? "var(--text-2)" : "var(--text)", textTransform: head ? "uppercase" : "none" }}>{children}</td>
-  );
 
   return (
     <div className="doc-light" style={{ minHeight: "100vh", display: "grid", placeItems: "start center", padding: "24px 16px" }}>
@@ -131,8 +135,8 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           )}
 
           <p className="small muted" style={{ marginTop: 10, textAlign: "right" }}>For {agency}</p>
+          <PoweredBy hide={org?.hideBranding} />
         </div>
-        <PoweredBy hide={org?.hideBranding} />
       </div>
     </div>
   );

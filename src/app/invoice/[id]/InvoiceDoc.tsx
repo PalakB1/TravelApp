@@ -10,6 +10,7 @@ export type InvoiceProps = {
   gstHalfRate: number; tcsRate: number; nonTaxNum: number;
   amountWords: string;
   policy?: string | null;
+  poweredBy?: boolean;
 };
 
 const s = StyleSheet.create({
@@ -26,6 +27,7 @@ const s = StyleSheet.create({
   totRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
   totBox: { width: 240, marginLeft: "auto", marginTop: 12 },
   words: { marginTop: 12, fontFamily: "Helvetica-Oblique" },
+  poweredBy: { marginTop: 14, textAlign: "center", color: "#9094ac", fontSize: 8 },
 });
 
 const Tot = ({ l, v, bold }: { l: string; v: string; bold?: boolean }) => (
@@ -85,6 +87,7 @@ export default function InvoiceDoc(p: InvoiceProps) {
           </View>
         ) : null}
         <Text style={[s.muted, { marginTop: 18, textAlign: "right" }]}>For {p.agency}</Text>
+        {p.poweredBy ? <Text style={s.poweredBy}>Powered by TripZei - tripzei.com</Text> : null}
       </Page>
     </Document>
   );

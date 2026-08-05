@@ -1,8 +1,10 @@
 import React from "react";
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, Text, View, Image, StyleSheet } from "@react-pdf/renderer";
 
 export type ReceiptProps = {
   agency: string;
+  logo?: string | null;
+  poweredBy?: boolean;
   gstAddress?: string | null;
   gstin?: string | null;
   receiptNo: string;
@@ -22,6 +24,8 @@ export type ReceiptProps = {
 const s = StyleSheet.create({
   page: { padding: 42, fontSize: 10, fontFamily: "Helvetica", color: "#1b1c2b" },
   agency: { fontSize: 15, fontFamily: "Helvetica-Bold", textAlign: "center" },
+  logo: { height: 42, maxWidth: 150, objectFit: "contain", marginBottom: 8, alignSelf: "center" },
+  poweredBy: { marginTop: 16, textAlign: "center", color: "#9094ac", fontSize: 8 },
   sub: { textAlign: "center", color: "#5a5d74", fontSize: 9, marginTop: 2 },
   title: { marginTop: 12, fontSize: 11, fontFamily: "Helvetica-Bold", letterSpacing: 2, textAlign: "center" },
   rule: { borderBottomWidth: 2, borderBottomColor: "#d2d4e6", marginTop: 12, marginBottom: 16 },
@@ -45,6 +49,7 @@ export default function ReceiptDoc(p: ReceiptProps) {
   return (
     <Document title={`Receipt ${p.receiptNo}`} author={p.agency}>
       <Page size="A4" style={s.page}>
+        {p.logo ? <Image src={p.logo} style={s.logo} /> : null}
         <Text style={s.agency}>{p.agency}</Text>
         {p.gstAddress ? <Text style={s.sub}>{p.gstAddress}</Text> : null}
         {p.gstin ? <Text style={s.sub}>GSTIN: {p.gstin}</Text> : null}
@@ -68,6 +73,7 @@ export default function ReceiptDoc(p: ReceiptProps) {
         </View>
 
         <Text style={s.footer}>Thank you for your payment. This is a computer-generated receipt and does not require a signature.</Text>
+        {p.poweredBy ? <Text style={s.poweredBy}>Powered by TripZei - tripzei.com</Text> : null}
       </Page>
     </Document>
   );
