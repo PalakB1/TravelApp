@@ -695,3 +695,18 @@ details.section[open] > .sec-body, details.add[open] .form-box { animation: fade
 /* Sidebar logo sits centred with a little more room to breathe. The mobile top
    bar keeps its left alignment, where it reads as a home link. */
 .sidebar > .brand { justify-content: center; padding: 8px 4px 20px; }
+
+/* Trip-access chooser. Floats over the row on desktop; on phones the table has
+   already stacked into cards, where an absolutely-positioned panel escaped its
+   card and overlapped the rows below — so there it just sits inline. */
+.menu-pop-panel {
+  position: absolute; left: 0; top: calc(100% + 6px); width: 300px; max-width: 80vw; z-index: 30;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(27,28,43,0.16); padding: 14px; text-align: left;
+}
+@media (max-width: 760px) {
+  .menu-pop-panel {
+    position: static; width: 100%; max-width: 100%; margin-top: 8px;
+    box-shadow: none; background: var(--surface-2);
+  }
+}

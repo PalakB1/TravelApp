@@ -16,7 +16,7 @@ export default function ResetPage({ params }: { params: Promise<{ token: string 
     <div className="doc-light" style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20 }}>
       <div className="card" style={{ width: 380, maxWidth: "100%" }}>
         <div className="brand" style={{ paddingLeft: 0 }}>
-          <Logo />
+          <Logo plain />
         </div>
 
         {done ? (

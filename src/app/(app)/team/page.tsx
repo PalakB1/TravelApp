@@ -16,9 +16,11 @@ export default async function TeamPage() {
   const orgId = ctx?.orgId ?? null;
   const meId = ctx?.session.userId;
 
+  const viewerIsPlatformAdmin = !!ctx?.isPlatformAdmin;
   const members = orgId
     ? await prisma.user.findMany({
-        where: { orgId },
+        // Hide the platform-admin account from the agency's own view.
+        where: { orgId, ...(viewerIsPlatformAdmin ? {} : { isPlatformAdmin: false }) },
         orderBy: { createdAt: "asc" },
         select: { id: true, name: true, email: true, isPlatformAdmin: true, isOrgAdmin: true, createdAt: true, tripScoped: true, tripAccess: { select: { tripId: true } } },
       })
@@ -26,7 +28,10 @@ export default async function TeamPage() {
   const org = orgId ? await prisma.organization.findUnique({ where: { id: orgId }, select: { name: true } }) : null;
   // Only admins can invite, remove, change access or promote.
   const canManage = !!ctx?.isPlatformAdmin || members.some((m) => m.id === meId && m.isOrgAdmin);
-  const adminCount = members.filter((m) => m.isOrgAdmin).length;
+  // Platform admins don't count as the company's admin — every workspace must
+  // keep at least one of its OWN admins.
+  const orgAdmins = members.filter((m) => m.isOrgAdmin && !m.isPlatformAdmin);
+  const adminCount = orgAdmins.length;
   const trips = orgId
     ? await prisma.trip.findMany({ where: { orgId }, orderBy: [{ departureDate: "desc" }], select: { id: true, name: true } })
     : [];
@@ -80,7 +85,7 @@ export default async function TeamPage() {
                       <summary className="btn sm" style={{ listStyle: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }} title="Change what this member can see">
                         {m.tripScoped ? `${m.tripAccess.length} of ${trips.length} trips` : "All trips"} <span aria-hidden style={{ fontSize: 10, opacity: 0.7 }}>▾ edit</span>
                       </summary>
-                      <div style={{ position: "absolute", left: 0, top: "calc(100% + 6px)", width: 300, maxWidth: "80vw", zIndex: 30, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, boxShadow: "0 12px 32px rgba(27,28,43,0.16)", padding: 14, textAlign: "left" }}>
+                      <div className="menu-pop-panel">
                         <div style={{ fontWeight: 500, marginBottom: 8 }}>What can {m.name.split(" ")[0]} see?</div>
                         <form action={setTripAccess}>
                           <input type="hidden" name="userId" value={m.id} />

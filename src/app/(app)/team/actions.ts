@@ -34,7 +34,9 @@ export async function setOrgAdmin(formData: FormData) {
 
   // Never leave a workspace with no one who can manage it.
   if (!makeAdmin) {
-    const admins = await prisma.user.count({ where: { orgId, isOrgAdmin: true } });
+    // Platform admins don't count — a workspace must keep one of its OWN admins,
+    // otherwise the agency would depend on us to manage their team.
+    const admins = await prisma.user.count({ where: { orgId, isOrgAdmin: true, isPlatformAdmin: false } });
     if (admins <= 1 && target.isOrgAdmin) { revalidatePath("/team"); return; }
   }
 
