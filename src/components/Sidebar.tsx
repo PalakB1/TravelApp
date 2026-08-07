@@ -52,9 +52,9 @@ export default function Sidebar({ name, orgName, isPlatformAdmin = false, acting
   return (
     <>
       <aside className="sidebar">
-        <div className="brand">
+        <Link href="/dashboard" className="brand" aria-label="Go to dashboard">
           <Logo height={38} />
-        </div>
+        </Link>
         {actingOrgId && (
           <form action={exitOrgAction} style={{ margin: "0 0 10px" }}>
             <button className="sm" style={{ width: "100%", justifyContent: "center", background: "var(--accent-bg)", borderColor: "transparent" }} type="submit" title="Return to the platform admin console">

@@ -11,9 +11,9 @@ export default function LoginPage() {
   return (
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20 }}>
       <div className="card" style={{ width: 360, maxWidth: "100%" }}>
-        <div className="brand" style={{ paddingLeft: 0 }}>
+        <Link href="/" className="brand" style={{ paddingLeft: 0 }} aria-label="TripZei home">
           <Logo />
-        </div>
+        </Link>
         <p className="muted small" style={{ marginTop: -8, marginBottom: 18 }}>
           Sign in to manage your trips and bookings.
         </p>

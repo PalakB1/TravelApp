@@ -89,7 +89,7 @@ export default function LandingClient() {
 
       <nav className={s.nav}>
         <div className={s.navIn}>
-          <div className={s.brand}><Logo height={30} /></div>
+          <Link href="/" className={s.brand} aria-label="TripZei home"><Logo height={30} /></Link>
           <div className={s.navLinks}>
             <Link href="#features" className={`${s.navLink} ${s.hideSm}`}>Features</Link>
             <Link href="#how" className={`${s.navLink} ${s.hideSm}`}>How it works</Link>
@@ -266,7 +266,7 @@ export default function LandingClient() {
 
       <footer className={s.footer}>
         <div className={s.footIn}>
-          <div className={s.brand} style={{ fontSize: 15 }}><Logo height={24} /></div>
+          <Link href="/" className={s.brand} style={{ fontSize: 15 }} aria-label="TripZei home"><Logo height={24} /></Link>
           <div className={s.footMut}>© 2026 TripZei · Built for tour operators &amp; travel agencies</div>
           <Link href="/admin/login" className={s.adminLink}>◆ Platform admin</Link>
         </div>

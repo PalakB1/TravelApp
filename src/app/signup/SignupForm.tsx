@@ -16,9 +16,9 @@ export default function SignupForm({ defaultEmail = "" }: { defaultEmail?: strin
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20 }}>
       <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
       <div className="card" style={{ width: 400, maxWidth: "100%" }}>
-        <div className="brand" style={{ paddingLeft: 0 }}>
+        <Link href="/" className="brand" style={{ paddingLeft: 0 }} aria-label="TripZei home">
           <Logo />
-        </div>
+        </Link>
         <p className="muted small" style={{ marginTop: -8, marginBottom: 18 }}>
           Create your travel company&apos;s workspace. We&apos;ll review it and switch it on shortly.
         </p>

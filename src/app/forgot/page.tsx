@@ -11,9 +11,9 @@ export default function ForgotPage() {
   return (
     <div className="doc-light" style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 20 }}>
       <div className="card" style={{ width: 380, maxWidth: "100%" }}>
-        <div className="brand" style={{ paddingLeft: 0 }}>
+        <Link href="/" className="brand" style={{ paddingLeft: 0 }} aria-label="TripZei home">
           <Logo plain />
-        </div>
+        </Link>
 
         {state?.ok ? (
           <>
