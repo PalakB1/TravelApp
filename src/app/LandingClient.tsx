@@ -46,6 +46,7 @@ function contour(y: number) {
 
 export default function LandingClient() {
   const [dark, setDark] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Share the app's theme rather than keeping a separate landing-only one: a
   // visitor who picks dark here stays in dark after signing in, and vice versa.
@@ -94,22 +95,36 @@ export default function LandingClient() {
             <Link href="#how" className={`${s.navLink} ${s.hideSm}`}>How it works</Link>
             <Link href="#pricing" className={`${s.navLink} ${s.hideSm}`}>Pricing</Link>
             <Link href="/guides" className={`${s.navLink} ${s.hideSm}`}>Guides</Link>
-            <Link href="/signup" className={`${s.btn} ${s.primary} ${s.showSm}`}>Start free</Link>
             <button type="button" className={s.toggle} onClick={toggle} aria-label={dark ? "Switch to light theme" : "Switch to dark theme"} title={dark ? "Light mode" : "Dark mode"}>
               {dark ? "☀" : "☾"}
             </button>
-            <Link href="/login" className={`${s.btn} ${s.ghost}`}>Sign in</Link>
-            <Link href="/signup" className={`${s.btn} ${s.primary}`}>Start free</Link>
+            <Link href="/login" className={`${s.btn} ${s.ghost} ${s.hideSm}`}>Sign in</Link>
+            <Link href="/signup" className={`${s.btn} ${s.primary} ${s.hideSm}`}>Start free</Link>
+            {/* Phone: one burger instead of six cramped controls. */}
+            <button
+              type="button"
+              className={s.burger}
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={menuOpen}
+            >
+              {menuOpen ? "✕" : "☰"}
+            </button>
           </div>
         </div>
-        {/* Phone-only: the section links live here rather than being hidden. */}
-        <div className={s.navScroll}>
-          <Link href="#features" className={s.navLink}>Features</Link>
-          <Link href="#how" className={s.navLink}>How it works</Link>
-          <Link href="#pricing" className={s.navLink}>Pricing</Link>
-          <Link href="/guides" className={s.navLink}>Guides</Link>
-          <Link href="/login" className={s.navLink}>Sign in</Link>
-        </div>
+
+        {menuOpen && (
+          <div className={s.mobileMenu}>
+            <Link href="#features" className={s.mobileLink} onClick={() => setMenuOpen(false)}>Features</Link>
+            <Link href="#how" className={s.mobileLink} onClick={() => setMenuOpen(false)}>How it works</Link>
+            <Link href="#pricing" className={s.mobileLink} onClick={() => setMenuOpen(false)}>Pricing</Link>
+            <Link href="/guides" className={s.mobileLink} onClick={() => setMenuOpen(false)}>Guides</Link>
+            <div className={s.mobileActions}>
+              <Link href="/login" className={`${s.btn} ${s.ghost}`} onClick={() => setMenuOpen(false)}>Sign in</Link>
+              <Link href="/signup" className={`${s.btn} ${s.primary}`} onClick={() => setMenuOpen(false)}>Start free</Link>
+            </div>
+          </div>
+        )}
       </nav>
 
       <header className={s.shell}>
