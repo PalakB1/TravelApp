@@ -7,16 +7,16 @@ import { captureLead } from "./lead-actions";
 import Logo from "@/components/Logo";
 
 const FEATURES = [
-  { icon: "⚡", title: "Quick entry — the whole business, one button", body: "A payment, an expense, a booking, a hotel, a customer, a whole new trip — logged from wherever you're standing, in seconds. Or just type it the way you'd say it: “Riya paid 40k upi”. Nothing is saved for later, so there is no month-end catch-up. The dashboard is simply always right.", wide: true },
-  { icon: "◈", title: "Reminders that write themselves", body: "Set your terms once — 25% on booking, balance 21 days out — and every booking inherits them. One tap opens WhatsApp with the amount, the due date and a link for the customer to confirm. Work down the list, biggest debtor first." },
-  { icon: "🧾", title: "Receipts and invoices they keep", body: "The moment money lands, send a branded receipt on WhatsApp. When the trip ends, generate a sequential, gap-free tax invoice as a PDF — with your terms printed on it." },
-  { icon: "🗺", title: "Run last season's route again", body: "Copy a whole itinerary onto new dates: every night, every hotel plan and your pricing come across, with all the dates shifted. A proven trip becomes next season's departure in one click." },
-  { icon: "🛏", title: "Rooms costed night by night", body: "Someone joining late or leaving early stops counting on the nights they aren't there — so you book the rooms you need, not the rooms you guessed. Holds about to expire get flagged before you lose them." },
-  { icon: "▚", title: "Profit that counts what you haven't booked", body: "Costing only what you've already paid flatters the margin. TripZei prices the rooms still to source into the total, so the number on screen is the number you'll bank." },
-  { icon: "🎁", title: "Inclusions, priced once", body: "Define what's in the package — breakfast, permits, a guide, airport transfers — and attach it to a trip. Every booking picks it up and prices it per person, on your cost and your sell." },
-  { icon: "💸", title: "Every payment out, accounted for", body: "Supplier bills, fuel, permits, salaries — tagged to a trip or kept as overhead, with the invoice attached. When staff pay from their own pocket, mark it personal and settle several at once with the transfer reference recorded." },
-  { icon: "⌖", title: "Visa desk", body: "Send travellers one link; get back a tailored cover letter and a document checklist. Each booking carries its own visa status so you can see who still needs chasing." },
-  { icon: "🔒", title: "Your client list stays yours", body: "Customers, pricing and margins are sealed to your agency — never visible to any other operator on the platform. Your team sees everything; nobody outside sees anything.", wide: true },
+  { icon: "⚡", title: "Quick entry", body: "Log a payment, expense, booking, hotel or whole trip from any screen in seconds — or just type “Riya paid 40k upi”. Nothing waits for later, so there's no month-end catch-up.", wide: true },
+  { icon: "◈", title: "Reminders that write themselves", body: "Set your terms once. One tap opens WhatsApp with the amount, the due date and a link to confirm." },
+  { icon: "🧾", title: "Invoices & receipts", body: "Sequential, gap-free tax invoices as PDFs. Branded receipts sent the moment money lands." },
+  { icon: "🗺", title: "Reuse a whole itinerary", body: "Copy last season's route onto new dates — nights, hotels and pricing come across, dates shifted." },
+  { icon: "🛏", title: "Rooms costed per night", body: "Late joiners and early leavers drop off the nights they aren't there, so you book what you need." },
+  { icon: "▚", title: "Honest profit", body: "Rooms you haven't sourced yet are priced in, so the margin on screen is the one you'll bank." },
+  { icon: "🎁", title: "Inclusions", body: "Define the package once — breakfast, permits, transfers — and every booking prices it per person." },
+  { icon: "💸", title: "Costs & reimbursements", body: "Supplier bills tagged to a trip, invoice attached. Staff spends settled together with the reference." },
+  { icon: "⌖", title: "Visa desk", body: "One link to travellers; a cover letter and checklist back, with status tracked per booking." },
+  { icon: "🔒", title: "Your client list stays yours", body: "Customers, pricing and margins are sealed to your agency. Your team sees everything; nobody outside sees anything.", wide: true },
 ];
 const LEGS = [
   { n: "01", title: "Tell us about your agency", body: "Sign up with your company name. We review it and switch your workspace on — usually within hours." },
@@ -94,12 +94,21 @@ export default function LandingClient() {
             <Link href="#how" className={`${s.navLink} ${s.hideSm}`}>How it works</Link>
             <Link href="#pricing" className={`${s.navLink} ${s.hideSm}`}>Pricing</Link>
             <Link href="/guides" className={`${s.navLink} ${s.hideSm}`}>Guides</Link>
+            <Link href="/signup" className={`${s.btn} ${s.primary} ${s.showSm}`}>Start free</Link>
             <button type="button" className={s.toggle} onClick={toggle} aria-label={dark ? "Switch to light theme" : "Switch to dark theme"} title={dark ? "Light mode" : "Dark mode"}>
               {dark ? "☀" : "☾"}
             </button>
             <Link href="/login" className={`${s.btn} ${s.ghost}`}>Sign in</Link>
             <Link href="/signup" className={`${s.btn} ${s.primary}`}>Start free</Link>
           </div>
+        </div>
+        {/* Phone-only: the section links live here rather than being hidden. */}
+        <div className={s.navScroll}>
+          <Link href="#features" className={s.navLink}>Features</Link>
+          <Link href="#how" className={s.navLink}>How it works</Link>
+          <Link href="#pricing" className={s.navLink}>Pricing</Link>
+          <Link href="/guides" className={s.navLink}>Guides</Link>
+          <Link href="/login" className={s.navLink}>Sign in</Link>
         </div>
       </nav>
 

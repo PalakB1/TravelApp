@@ -86,6 +86,9 @@
 .brand { display: flex; align-items: center; gap: 11px; font-weight: 700; font-size: 17px; letter-spacing: -0.01em; }
 .mark { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: var(--markBg); color: var(--markColor); font-size: 15px; box-shadow: var(--markShadow); border: 1px solid var(--line); }
 .navLinks { display: flex; align-items: center; gap: 6px; }
+/* Phone-only pieces — hidden on desktop, switched on in the media query below. */
+.navScroll { display: none; }
+.showSm { display: none; }
 .navLink { color: var(--muted); font-size: 14px; padding: 8px 12px; border-radius: 9px; transition: color .15s, background .15s; }
 .navLink:hover { color: var(--text); background: rgba(128,128,128,0.08); }
 .toggle { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface2); color: var(--muted); cursor: pointer; transition: color .15s, border-color .15s, transform .15s; }
@@ -200,7 +203,27 @@
   .legRow { grid-template-columns: 1fr; gap: 34px; }
   .legLine { display: none; }
   .console { transform: none; }
+  /* Section links move to their own strip below the bar, so the bar itself
+     keeps just the logo, theme toggle and the one action that matters. */
   .hideSm { display: none; }
+  .showSm { display: inline-flex; }
+  .navScroll {
+    display: flex; gap: 4px; align-items: center;
+    padding: 0 14px 9px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .navScroll::-webkit-scrollbar { display: none; }
+  .navScroll a { flex-shrink: 0; font-size: 13.5px; padding: 6px 10px; }
+}
+
+/* One column on a phone — two columns at 375px made every card a tall sliver. */
+@media (max-width: 560px) {
+  .bento { grid-template-columns: 1fr; gap: 12px; margin-top: 28px; }
+  .card { padding: 18px; border-radius: 15px; }
+  .card h3 { font-size: 16.5px; margin-top: 10px; }
+  .card p { font-size: 13.5px; margin-top: 6px; }
+  .card::after { display: none; }
+  .kpis { grid-template-columns: 1fr 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
   .aur, .primary, .accent, .bar, .up, .pin, .dash, .trace { animation: none !important; }
