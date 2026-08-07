@@ -710,3 +710,19 @@ details.section[open] > .sec-body, details.add[open] .form-box { animation: fade
     box-shadow: none; background: var(--surface-2);
   }
 }
+
+/* One-time "add to home screen" nudge. Sits above the mobile tab bar so it
+   never covers navigation, and tucks into a corner on a laptop. */
+.install-app {
+  position: fixed; z-index: 95;
+  right: 18px; bottom: 18px; width: 340px; max-width: calc(100vw - 36px);
+  padding: 14px; box-shadow: 0 12px 34px rgba(8, 32, 48, 0.18);
+  animation: fadeIn .25s var(--ease) both;
+}
+@media (max-width: 760px) {
+  .install-app {
+    left: 12px; right: 12px; width: auto;
+    /* clears the 5-icon tab bar plus the iPhone home indicator */
+    bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+  }
+}

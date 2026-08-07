@@ -9,6 +9,7 @@ import CollapseOnSave from "@/components/CollapseOnSave";
 import SaveToast from "@/components/SaveToast";
 import TableLabels from "@/components/TableLabels";
 import BottomNav from "@/components/BottomNav";
+import InstallApp from "@/components/InstallApp";
 import QuickEntryLauncher from "@/components/QuickEntryLauncher";
 import ThemeToggle from "@/components/ThemeToggle";
 import { logout } from "./actions";
@@ -77,6 +78,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="app">
       <EscToClose />
+      <InstallApp />
       <CollapseOnSave />
       <SaveToast />
       <TableLabels />
