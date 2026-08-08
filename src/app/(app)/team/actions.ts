@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { getOrgContext } from "@/lib/org";
 import { logActivity } from "../data-actions";
+import { isDemoUser } from "@/lib/demo";
 
 export type MemberResult = { ok?: boolean; error?: string; message?: string };
 
@@ -109,6 +110,8 @@ export async function resetMemberPassword(_prev: MemberResult | undefined, formD
 
   const member = await prisma.user.findFirst({ where: { id, orgId, isPlatformAdmin: false }, select: { id: true, name: true, email: true } });
   if (!member) return { error: "That member isn’t in this workspace." };
+  // Same reason as Settings: the demo's logins are public and must keep working.
+  if (isDemoUser(member.email)) return { error: "This is the shared demo workspace, so its passwords are locked. Start a free trial to get an account of your own." };
 
   await prisma.user.update({ where: { id: member.id }, data: { passwordHash: await bcrypt.hash(password, 10) } });
   await logActivity(orgId, "team", "updated", `Reset password for ${member.name} (${member.email})`);
@@ -126,6 +129,7 @@ export async function removeMember(formData: FormData) {
 
   const member = await prisma.user.findFirst({ where: { id, orgId, isPlatformAdmin: false }, select: { id: true, name: true, email: true } });
   if (!member) return;
+  if (isDemoUser(member.email)) return; // deleting a demo login would end the demo
   await prisma.user.delete({ where: { id: member.id } });
   await logActivity(orgId, "team", "deleted", `Removed team member ${member.name} (${member.email})`);
   revalidatePath("/team");

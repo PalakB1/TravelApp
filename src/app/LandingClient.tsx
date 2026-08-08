@@ -143,6 +143,9 @@ export default function LandingClient() {
             </div>
             <Link href="/login" className={`${s.btn} ${s.ghost} ${s.big}`}>Sign in</Link>
           </form>
+          <p className={`${s.sub} ${s.up}`} style={{ animationDelay: "0.21s", fontSize: 14.5, marginTop: 14 }}>
+            Not ready to sign up? <Link href="/demo" className={s.link}>Open the live demo</Link> — a real workspace with three trips already in it.
+          </p>
           <div className={`${s.trust} ${s.up}`} style={{ animationDelay: "0.24s" }}>
             <span><b>Free</b> to start</span><span>Live in <b>hours</b></span><span>Your client list stays <b>yours</b></span>
           </div>
@@ -260,7 +263,7 @@ export default function LandingClient() {
         <p>Set up your workspace in minutes. Load one live trip and you&apos;ll see its true margin, who still owes you, and every room left to book — on day one.</p>
         <div className={s.ctaRow} style={{ marginTop: 28 }}>
           <Link href="/signup" className={`${s.btn} ${s.primary} ${s.big}`}>Start free →</Link>
-          <Link href="/login" className={`${s.btn} ${s.ghost} ${s.big}`}>Sign in</Link>
+          <Link href="/demo" className={`${s.btn} ${s.ghost} ${s.big}`}>See the live demo</Link>
         </div>
       </section>
 

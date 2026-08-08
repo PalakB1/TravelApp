@@ -5,7 +5,7 @@ import { verifyToken } from "@/lib/auth";
 // "/" is the public marketing landing. /admin/login is the separate admin door.
 // "/forgot" and "/reset" must be public — someone who's locked out can't sign in
 // to reach them.
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/pricing", "/admin/login", "/pay", "/join", "/visa", "/receipt", "/invoice", "/forgot", "/reset", "/guides"];
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/pricing", "/admin/login", "/pay", "/join", "/visa", "/receipt", "/invoice", "/forgot", "/reset", "/guides", "/demo"];
 
 // Vercel always exposes a *.vercel.app URL for a project and it can't be removed
 // in the dashboard, so the app itself sends those visitors to the real domain.

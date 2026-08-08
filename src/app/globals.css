@@ -726,3 +726,22 @@ details.section[open] > .sec-body, details.add[open] .form-box { animation: fade
     bottom: calc(74px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* Demo workspace bar. Sits above everything so a visitor is never confused
+   about whose data they're looking at. */
+.demo-banner {
+  display: flex; align-items: center; gap: 10px;
+  /* Matches the trial strip directly below it rather than inventing a look. */
+  padding: 9px 14px; margin-bottom: 14px; border-radius: 10px;
+  font-size: 13.5px; line-height: 1.4;
+  background: var(--accent-bg); color: var(--accent-fg);
+}
+.demo-banner .btn { margin-left: auto; flex-shrink: 0; }
+.demo-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+@media (max-width: 700px) {
+  .demo-banner { padding: 8px 12px; font-size: 12.5px; }
+  .demo-hide-sm { display: none; }
+}

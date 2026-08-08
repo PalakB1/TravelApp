@@ -5,6 +5,7 @@ import Script from "next/script";
 import { useActionState } from "react";
 import { signup } from "./actions";
 import Logo from "@/components/Logo";
+import DemoCard from "@/components/DemoCard";
 
 // Public Cloudflare Turnstile site key (safe to ship to the browser).
 const TURNSTILE_SITE_KEY = "0x4AAAAAADvpHod-6yzR28OY";
@@ -65,6 +66,7 @@ export default function SignupForm({ defaultEmail = "" }: { defaultEmail?: strin
         <p className="muted small" style={{ marginTop: 16, textAlign: "center" }}>
           Already have an account? <Link href="/login">Sign in</Link>
         </p>
+        <DemoCard compact />
       </div>
     </div>
   );

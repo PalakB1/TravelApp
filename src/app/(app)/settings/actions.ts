@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { getOrgContext } from "@/lib/org";
+import { isDemoUser } from "@/lib/demo";
 
 export type PwResult = { ok?: boolean; error?: string; message?: string };
 
@@ -51,6 +52,12 @@ export async function updateOrgProfile(formData: FormData) {
 export async function changePassword(_prev: PwResult | undefined, formData: FormData): Promise<PwResult> {
   const session = await getSession();
   if (!session) redirect("/login");
+
+  // The demo login is printed on the sign-in page — if a visitor changed it,
+  // the next visitor would be locked out and the demo would be dead.
+  if (isDemoUser(session.email)) {
+    return { error: "This is the shared demo workspace, so its passwords are locked. Start a free trial to get an account of your own." };
+  }
 
   const current = String(formData.get("current") || "");
   const next = String(formData.get("next") || "");

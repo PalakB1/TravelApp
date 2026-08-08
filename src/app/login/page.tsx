@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { login } from "./actions";
 import Logo from "@/components/Logo";
+import DemoCard from "@/components/DemoCard";
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(login, undefined);
@@ -36,6 +37,7 @@ export default function LoginPage() {
         <Link className="small muted" href="/forgot" style={{ display: "block", textAlign: "center", marginTop: 14 }}>
           Forgot your password?
         </Link>
+        <DemoCard />
       </div>
     </div>
   );

@@ -10,9 +10,11 @@ import SaveToast from "@/components/SaveToast";
 import TableLabels from "@/components/TableLabels";
 import BottomNav from "@/components/BottomNav";
 import InstallApp from "@/components/InstallApp";
+import DemoBanner from "@/components/DemoBanner";
 import QuickEntryLauncher from "@/components/QuickEntryLauncher";
 import ThemeToggle from "@/components/ThemeToggle";
 import { logout, reapplyAction } from "./actions";
+import { isDemoUser } from "@/lib/demo";
 
 function TrialEndedScreen({ name, orgName }: { name: string; orgName?: string }) {
   return (
@@ -95,6 +97,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Sidebar name={ctx.session.name} orgName={org?.name ?? null} isPlatformAdmin={ctx.isPlatformAdmin} actingOrgId={ctx.actingOrgId} customTrips={org?.customTripsEnabled ?? false} />
       <div className="theme-fab no-print"><ThemeToggle compact /></div>
       <main className="main">
+        {isDemoUser(ctx.session.email) && <DemoBanner />}
         {daysLeft != null && (
           <Link href="/pricing" className="between" style={{ display: "flex", background: daysLeft <= 5 ? "var(--warning-bg)" : "var(--accent-bg)", borderRadius: 10, padding: "9px 14px", marginBottom: 14, fontSize: 13.5 }}>
             <span>✨ <b>{daysLeft} day{daysLeft === 1 ? "" : "s"}</b> left in your free trial{daysLeft <= 5 ? " — don’t lose access to your data" : ""}.</span>

@@ -241,3 +241,14 @@
   .up { opacity: 1; transform: none; }
   .trace { stroke-dashoffset: 0; }
 }
+
+/* Inline text link inside body copy — underlined so it reads as a link even
+   against the muted paragraph colour it sits in. */
+.link {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
+}
+.link:hover { text-decoration-thickness: 2px; }
