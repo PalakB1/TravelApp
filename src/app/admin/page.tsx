@@ -34,7 +34,25 @@ export default async function AdminPage() {
 
   const pending = orgs.filter((o) => o.status === "pending");
   const others = orgs.filter((o) => o.status !== "pending");
-  const leads = await prisma.lead.findMany({ orderBy: { createdAt: "desc" }, take: 100 });
+  // Every submission is kept in the Lead table as a raw log, but this list is a
+  // to-do: people who showed interest and haven't signed up. So collapse repeats
+  // (the same person hitting the form twice isn't two leads) and drop anyone who
+  // already has an account — there's nothing left to chase them about.
+  const rawLeads = await prisma.lead.findMany({ orderBy: { createdAt: "desc" }, take: 500 });
+  const accountEmails = new Set(
+    (await prisma.user.findMany({ select: { email: true } })).map((u) => u.email.toLowerCase()),
+  );
+
+  const byEmail = new Map<string, { email: string; source: string | null; createdAt: Date; times: number }>();
+  for (const l of rawLeads) {
+    const key = l.email.toLowerCase();
+    const seen = byEmail.get(key);
+    // rawLeads is newest-first, so the first sighting is the one worth showing.
+    if (seen) seen.times += 1;
+    else byEmail.set(key, { email: l.email, source: l.source, createdAt: l.createdAt, times: 1 });
+  }
+  const leads = [...byEmail.values()].filter((l) => !accountEmails.has(l.email.toLowerCase()));
+  const convertedCount = byEmail.size - leads.length;
 
   return (
     <div className="stack-tables" style={{ maxWidth: 960, margin: "0 auto", padding: "28px 20px 60px" }}>
@@ -123,17 +141,23 @@ export default async function AdminPage() {
         </table>
       </div>
 
-      <h2 style={{ fontSize: 15, margin: "24px 0 10px", color: "var(--text-2)" }}>Signup interest <span className="small muted">emails captured on the landing page</span></h2>
+      <h2 style={{ fontSize: 15, margin: "24px 0 10px", color: "var(--text-2)" }}>Signup interest <span className="small muted">left an email but haven&apos;t signed up</span></h2>
       <div className="card" style={{ padding: 0 }}>
         {leads.length === 0 ? (
-          <div className="empty">No leads yet.</div>
+          <div className="empty">
+            {convertedCount > 0 ? "Everyone who left their email has signed up." : "No leads yet."}
+          </div>
         ) : (
           <table className="t">
-            <thead><tr><th style={{ paddingLeft: 20 }}>Email</th><th>Source</th><th>When</th></tr></thead>
+            <thead><tr><th style={{ paddingLeft: 20 }}>Email</th><th>Source</th><th>Last seen</th></tr></thead>
             <tbody>
               {leads.map((l) => (
-                <tr key={l.id}>
-                  <td style={{ paddingLeft: 20 }}>{l.email}</td>
+                <tr key={l.email}>
+                  <td style={{ paddingLeft: 20 }}>
+                    {l.email}
+                    {/* Repeat visits are a buying signal, so surface the count. */}
+                    {l.times > 1 && <span className="badge gray" style={{ marginLeft: 8 }}>×{l.times}</span>}
+                  </td>
                   <td className="muted small">{l.source || "—"}</td>
                   <td className="muted small">{l.createdAt.toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true })}</td>
                 </tr>
@@ -142,6 +166,11 @@ export default async function AdminPage() {
           </table>
         )}
       </div>
+      {convertedCount > 0 && (
+        <p className="small muted" style={{ marginTop: 8 }}>
+          {convertedCount} more {convertedCount === 1 ? "email is" : "emails are"} hidden — they already have an account.
+        </p>
+      )}
     </div>
   );
 }

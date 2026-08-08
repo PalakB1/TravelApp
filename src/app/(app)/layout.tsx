@@ -12,7 +12,7 @@ import BottomNav from "@/components/BottomNav";
 import InstallApp from "@/components/InstallApp";
 import QuickEntryLauncher from "@/components/QuickEntryLauncher";
 import ThemeToggle from "@/components/ThemeToggle";
-import { logout } from "./actions";
+import { logout, reapplyAction } from "./actions";
 
 function TrialEndedScreen({ name, orgName }: { name: string; orgName?: string }) {
   return (
@@ -43,12 +43,21 @@ function WaitingScreen({ status, name, orgName }: { status: string; name: string
         <p className="muted" style={{ marginBottom: 4 }}>Hi {name},</p>
         <p className="muted small">
           {rejected
-            ? `We couldn't approve ${orgName || "your workspace"} at this time. Please get in touch if you think this is a mistake.`
+            ? `We couldn't approve ${orgName || "your workspace"} at this time. You're welcome to apply again — check that your company name and details are right, and resubmit.`
             : suspended
               ? `${orgName || "Your workspace"} is currently paused. Please contact us to reactivate it.`
               : `${orgName || "Your workspace"} has been created and is waiting for approval. You'll be able to sign in as soon as we switch it on.`}
         </p>
-        <form action={logout} style={{ marginTop: 18 }}>
+        {/* Rejection isn't a dead end — without this they'd be stuck looking at
+            this screen forever, since a signed-in visitor can't reach /signup. */}
+        {rejected && (
+          <form action={reapplyAction} style={{ marginTop: 18 }}>
+            <button className="primary" style={{ width: "100%", justifyContent: "center" }} type="submit">
+              Apply again
+            </button>
+          </form>
+        )}
+        <form action={logout} style={{ marginTop: rejected ? 8 : 18 }}>
           <button className="sm" style={{ width: "100%", justifyContent: "center" }} type="submit">Sign out</button>
         </form>
       </div>
