@@ -13,10 +13,14 @@ export type ScheduleItemLite = {
 
 export type ScheduleLineStatus = {
   item: ScheduleItemLite;
+  /** What this line can actually ask for, once the invoice total is applied. */
+  effectiveAmount: number;
   paidHere: number; // how much of this line the received money covers
   remaining: number; // still owed on this line
-  covered: boolean; // fully paid
+  covered: boolean; // fully paid (or nothing left to ask for)
   overdue: boolean; // not fully paid and the due date has passed
+  /** The invoice was already fully accounted for before this line — it asks for nothing. */
+  beyondInvoice: boolean;
 };
 
 // Sort by the plan's own step sequence (advance first, then 2nd, 3rd…). We fill
@@ -33,17 +37,40 @@ export function sortSchedule<T extends { dueDate: Date | null; order: number }>(
   });
 }
 
-export function scheduleStatus(items: ScheduleItemLite[], totalPaid: number, now: Date = new Date()): ScheduleLineStatus[] {
+// A plan can fall out of step with the invoice — the price is edited after the
+// plan was applied, or a plan built for a different total gets assigned. When
+// that happens the invoice wins: it is what the customer actually agreed to pay,
+// and the plan is only a schedule for collecting it.
+//
+// So each line is capped at whatever is left of the invoice once the lines
+// before it are accounted for. A customer who has paid their invoice in full is
+// never shown as behind, however stale the plan is. Without this, a plan built
+// for 2,08,950 against a 99,000 invoice reported 1,09,950 overdue from someone
+// who had paid every rupee they owed.
+export function scheduleStatus(
+  items: ScheduleItemLite[],
+  totalPaid: number,
+  opts: { invoiceTotal?: number | null; now?: Date } = {},
+): ScheduleLineStatus[] {
   const sorted = sortSchedule(items);
-  const today = now.getTime();
+  const today = (opts.now ?? new Date()).getTime();
+  const cap = opts.invoiceTotal != null && opts.invoiceTotal >= 0 ? opts.invoiceTotal : null;
+
   let pool = Math.max(0, totalPaid);
+  let claimed = 0; // how much of the invoice the earlier lines already ask for
+
   return sorted.map((item) => {
-    const paidHere = Math.max(0, Math.min(item.amount, pool));
+    const headroom = cap == null ? item.amount : Math.max(0, cap - claimed);
+    const effectiveAmount = Math.min(item.amount, headroom);
+    claimed += effectiveAmount;
+
+    const paidHere = Math.max(0, Math.min(effectiveAmount, pool));
     pool -= paidHere;
-    const remaining = item.amount - paidHere;
+    const remaining = effectiveAmount - paidHere;
     const covered = remaining <= 0;
     const overdue = !covered && item.dueDate != null && new Date(item.dueDate).getTime() < today;
-    return { item, paidHere, remaining, covered, overdue };
+    const beyondInvoice = cap != null && effectiveAmount === 0 && item.amount > 0;
+    return { item, effectiveAmount, paidHere, remaining, covered, overdue, beyondInvoice };
   });
 }
 

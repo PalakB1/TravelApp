@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
-import { bookingPaid, bookingBalance, isActive } from "@/lib/calc";
+import { bookingPaid, bookingBalance, bookingTotal, isActive } from "@/lib/calc";
 import { formatINR, formatINRShort } from "@/lib/money";
 import TableSearch from "@/components/TableSearch";
 import Combobox from "@/components/Combobox";
@@ -62,7 +62,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
   const dueRows = bookings
     .filter((b) => isActive(b.status) && !b.deletedAt && b.schedule.length > 0)
     .map((b) => {
-      const lines = scheduleStatus(b.schedule.map((s) => ({ id: s.id, label: s.label, amount: s.amount, dueDate: s.dueDate, order: s.order })), bookingPaid(b), now);
+      const lines = scheduleStatus(b.schedule.map((s) => ({ id: s.id, label: s.label, amount: s.amount, dueDate: s.dueDate, order: s.order })), bookingPaid(b), { invoiceTotal: bookingTotal(b), now });
       const uncovered = lines.filter((l) => !l.covered);
       const dueNow = uncovered.filter((l) => l.item.dueDate && dayStart(new Date(l.item.dueDate)) <= today0);
       if (dueNow.length > 0) {

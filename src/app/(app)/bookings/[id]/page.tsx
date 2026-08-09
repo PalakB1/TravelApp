@@ -80,7 +80,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
   const pct = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
 
   // Payment plan status: fill the installments from money received, in date order.
-  const planLines = scheduleStatus(b.schedule.map((s) => ({ id: s.id, label: s.label, amount: s.amount, dueDate: s.dueDate, order: s.order })), paid);
+  const planLines = scheduleStatus(b.schedule.map((s) => ({ id: s.id, label: s.label, amount: s.amount, dueDate: s.dueDate, order: s.order })), paid, { invoiceTotal: total });
   const planTotal = scheduleTotal(b.schedule);
   const planMismatch = b.schedule.length > 0 ? planTotal - total : 0; // ≠0 means the plan doesn't add up to the invoice
   const nextDue = planLines.find((l) => !l.covered); // the next unpaid line
@@ -425,15 +425,27 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                     <tr key={l.item.id}>
                       <td>{l.item.label}</td>
                       <td className="muted small">{l.item.dueDate ? fmtDate(new Date(l.item.dueDate)) : "—"}</td>
-                      <td className="num" style={{ fontWeight: 500 }}>{formatINR(l.item.amount)}</td>
+                      <td className="num" style={{ fontWeight: 500 }}>
+                        {/* Show what this step can actually collect. When the plan
+                            overshoots the invoice, the written amount is struck
+                            through so the trimming is visible, not silent. */}
+                        {l.effectiveAmount !== l.item.amount ? (
+                          <>
+                            <span className="muted" style={{ textDecoration: "line-through", fontWeight: 400 }}>{formatINR(l.item.amount)}</span>{" "}
+                            {formatINR(l.effectiveAmount)}
+                          </>
+                        ) : formatINR(l.item.amount)}
+                      </td>
                       <td>
-                        {l.covered
-                          ? <span className="badge emerald">paid</span>
-                          : l.overdue
-                            ? <span className="badge rose">overdue · {formatINR(l.remaining)} left</span>
-                            : l.paidHere > 0
-                              ? <span className="badge amber">part-paid · {formatINR(l.remaining)} left</span>
-                              : <span className="badge gray">due</span>}
+                        {l.beyondInvoice
+                          ? <span className="badge gray" title="The invoice is already covered by the earlier steps">not needed</span>
+                          : l.covered
+                            ? <span className="badge emerald">paid</span>
+                            : l.overdue
+                              ? <span className="badge rose">overdue · {formatINR(l.remaining)} left</span>
+                              : l.paidHere > 0
+                                ? <span className="badge amber">part-paid · {formatINR(l.remaining)} left</span>
+                                : <span className="badge gray">due</span>}
                       </td>
                       <td className="num"><form action={deleteScheduleItem}><input type="hidden" name="id" value={l.item.id} /><button className="sm" type="submit" aria-label="Delete">✕</button></form></td>
                     </tr>
@@ -442,7 +454,14 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
               </table>
               <div className="small muted" style={{ marginTop: 8 }}>
                 Plan totals {formatINR(planTotal)} · invoice {formatINR(total)}
-                {planMismatch !== 0 && <span style={{ color: "var(--warning)" }}> · ⚠ off by {formatINR(Math.abs(planMismatch))}</span>}
+                {planMismatch > 0 && (
+                  <span style={{ color: "var(--warning)" }}>
+                    {" "}· ⚠ this plan was built for {formatINR(planTotal)}. Only {formatINR(total)} is collectable — re-apply a plan to tidy the steps.
+                  </span>
+                )}
+                {planMismatch < 0 && (
+                  <span style={{ color: "var(--warning)" }}> · ⚠ the steps are {formatINR(-planMismatch)} short of the invoice</span>
+                )}
                 {nextDue && <> · next: <b>{formatINR(nextDue.remaining)}</b> {nextDue.item.dueDate ? `by ${fmtDate(new Date(nextDue.item.dueDate))}` : ""}</>}
               </div>
             </>

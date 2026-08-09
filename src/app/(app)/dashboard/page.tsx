@@ -171,7 +171,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   let overdueAmt = 0, overdueCustomers = 0, invoicesReady = 0, visasStuck = 0;
   for (const b of actionBookings) {
     if (b.schedule.length) {
-      const lines = scheduleStatus(b.schedule.map((s) => ({ id: s.id, label: s.label, amount: s.amount, dueDate: s.dueDate, order: s.order })), bookingPaid(b), nowA);
+      const lines = scheduleStatus(b.schedule.map((s) => ({ id: s.id, label: s.label, amount: s.amount, dueDate: s.dueDate, order: s.order })), bookingPaid(b), { invoiceTotal: bookingTotal(b), now: nowA });
       const dueNow = lines.filter((l) => !l.covered && l.item.dueDate && dayStartA(new Date(l.item.dueDate)) <= startTodayA.getTime());
       if (dueNow.length) { overdueCustomers++; overdueAmt += dueNow.reduce((s, l) => s + l.remaining, 0); }
     }
