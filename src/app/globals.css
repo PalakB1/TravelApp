@@ -783,16 +783,9 @@ details.section[open] > .sec-body, details.add[open] .form-box { animation: fade
 .pick-row { display: flex; gap: 8px; align-items: flex-start; padding: 3px 0; font-size: 13px; cursor: pointer; line-height: 1.35; }
 .pick-row input { width: auto; margin-top: 2px; flex-shrink: 0; }
 
-/* Visa state as a dot rather than a badge — used where a full label would cost
-   a column. The title attribute carries the wording. */
-.visa-dot {
-  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
-  margin-left: 7px; vertical-align: middle; flex-shrink: 0;
-  outline: 2px solid color-mix(in srgb, currentColor 12%, transparent);
-}
-.visa-dot.dot-amber  { background: var(--amber); }
-.visa-dot.dot-sky    { background: var(--sky); }
-.visa-dot.dot-violet { background: var(--violet); }
-.visa-dot.dot-green  { background: var(--success); }
-.visa-dot.dot-red    { background: var(--danger); }
-.visa-dot.dot-gray   { background: var(--text-3); }
+/* A badge shrunk to ride beside a name without stealing column width. */
+.badge.xs { font-size: 10.5px; padding: 1px 6px; letter-spacing: 0; vertical-align: middle; }
+
+/* A column inside .grid-2 that stacks its cards with no regard for the other
+   column's height. Use when the two sides differ a lot in length. */
+.stack-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }

@@ -185,16 +185,18 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                   </td>
                   <td>
                     <Link className="row-link" href={`/bookings/${r.b.id}`}>{r.b.customerName}</Link>
-                    {/* Visa state as a single dot: chasing money and chasing
-                        documents happen in the same phone call, but a full badge
-                        here would push the money columns off a laptop screen.
-                        Hidden entirely when no visa is needed. */}
+                    {/* Visa state alongside the name: chasing money and chasing
+                        documents happen in the same phone call. A short tag, not
+                        the full label, so the money columns keep their width —
+                        and nothing at all when no visa is needed. */}
                     {r.b.visaStatus && r.b.visaStatus !== "not_required" && (
                       <span
-                        className={`visa-dot dot-${visaMeta(r.b.visaStatus).badge}`}
+                        className={`badge xs ${visaMeta(r.b.visaStatus).badge}`}
+                        style={{ marginLeft: 7 }}
                         title={visaMeta(r.b.visaStatus).label}
-                        aria-label={visaMeta(r.b.visaStatus).short}
-                      />
+                      >
+                        {visaMeta(r.b.visaStatus).tiny}
+                      </span>
                     )}
                   </td>
                   <td className="muted small">{r.b.trip.name}</td>

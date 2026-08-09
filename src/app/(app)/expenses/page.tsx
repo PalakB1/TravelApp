@@ -9,6 +9,7 @@ import SettlePersonal, { type PersonalRow } from "@/components/SettlePersonal";
 import { addExpense, deleteExpense, undoSettlement } from "./actions";
 import ExpenseTargets from "@/components/ExpenseTargets";
 import SubmitButton from "@/components/SubmitButton";
+import DeleteExpense from "@/components/DeleteExpense";
 
 export const dynamic = "force-dynamic";
 
@@ -289,7 +290,17 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                     <td className="muted small">{e.notes || ""}</td>
                     <td className="num" style={{ fontWeight: 500 }}>{formatINR(e.amount)}</td>
                     <td className="num">{e.fileData ? <a className="btn sm" href={`/expenses/file/${e.id}`} target="_blank" rel="noopener" title={e.fileName || "invoice"}>📎 View</a> : null}</td>
-                    <td className="num"><form action={deleteExpense}><input type="hidden" name="id" value={e.id} /><button className="sm" type="submit" aria-label="Delete">✕</button></form></td>
+                    <td className="num">
+                      <DeleteExpense
+                        action={deleteExpense}
+                        id={e.id}
+                        payee={e.payee || "this supplier"}
+                        amountLabel={formatINR(e.amount)}
+                        tripName={e.trip?.name}
+                        personalFor={e.paidPersonally ? e.paidBy : null}
+                        settled={!!e.settlementId}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -3,8 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import QuickEntry from "./QuickEntry";
 import type { ComboOption } from "./Combobox";
+import type { TargetTrip } from "./ExpenseTargets";
 
-type Data = { payable: ComboOption[]; trips: { id: string; name: string }[]; customerNames: string[]; sources: string[] };
+type Data = {
+  payable: ComboOption[];
+  trips: { id: string; name: string }[];
+  customerNames: string[];
+  sources: string[];
+  targetTrips: TargetTrip[];
+  banks: string[];
+  myName: string;
+};
 
 // Global overlay that hosts Quick entry. Opened from anywhere via the
 // "open-quick-entry" window event (see QuickAddButton / BottomNav). Data is
@@ -45,7 +54,7 @@ export default function QuickEntryLauncher() {
         </div>
         <div className="qe-body">
           {data
-            ? <QuickEntry payable={data.payable} trips={data.trips} customerNames={data.customerNames} sources={data.sources} />
+            ? <QuickEntry payable={data.payable} trips={data.trips} customerNames={data.customerNames} sources={data.sources} targetTrips={data.targetTrips} banks={data.banks} myName={data.myName} />
             : <div className="empty">Loading…</div>}
         </div>
       </div>

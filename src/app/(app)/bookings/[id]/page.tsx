@@ -324,248 +324,248 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
       )}
 
       <div className="grid-2">
-        {/* INVOICE */}
-        <div className="card">
-          <div className="card-title">Invoice</div>
-          {b.landAmount > 0 && <Line label="Land package" value={formatINR(b.landAmount)} />}
-          {b.visaAmount > 0 && <Line label="Visa assistance" value={formatINR(b.visaAmount)} />}
-          {b.flightAmount > 0 && <Line label="Flights" value={formatINR(b.flightAmount)} />}
-          {base === 0 && <div className="empty small">No package amount set yet. Edit the invoice below.</div>}
-          {b.discount > 0 && <Line label={`Discount${b.discountReason ? " · " + b.discountReason : ""}`} value={`− ${formatINR(b.discount)}`} muted />}
-          {bookingInclTaxCharge(b) > 0 && <Line label="Inclusions (taxable)" value={formatINR(bookingInclTaxCharge(b))} muted />}
-          {b.travellerExtra > 0 && <Line label="Per-person extras" value={formatINR(b.travellerExtra)} muted />}
-          <Line label="Taxable value" value={formatINR(taxable)} strong />
-          <Line label={`GST @ ${b.gstRate}%`} value={formatINR(gst)} muted />
-          <Line label={`TCS @ ${b.tcsRate}%`} value={formatINR(tcs)} muted />
-          {b.nonTaxable > 0 && <Line label="Non-taxable (no GST/TCS)" value={formatINR(b.nonTaxable)} muted />}
-          {bookingInclNonTaxCharge(b) > 0 && <Line label="Inclusions (no tax)" value={formatINR(bookingInclNonTaxCharge(b))} muted />}
-          <div className="between" style={{ paddingTop: 10 }}>
-            <span style={{ fontSize: 15, fontWeight: 500 }}>Invoice total</span>
-            <span style={{ fontSize: 16, fontWeight: 500 }}>{formatINR(total)}</span>
-          </div>
-
-          <details className="add">
-            <summary>✏️ Edit party name, phone &amp; invoice amounts</summary>
-            <div className="form-box">
-              <form action={updateBookingInvoice}>
-                <input type="hidden" name="id" value={b.id} />
-                <div className="row-3">
-                  <label className="field"><span className="lbl">Party name</span><input name="customerName" defaultValue={b.customerName} /></label>
-                  <label className="field"><span className="lbl">Phone</span><input name="customerPhone" defaultValue={b.customerPhone || ""} /></label>
-                  <label className="field"><span className="lbl">Package</span>
-                    <select name="packageType" defaultValue={b.packageType}><option value="land">Land only</option><option value="lva">Land + visa (LVA)</option><option value="full">Full (incl. flights)</option></select>
-                  </label>
-                </div>
-                <div className="row-3">
-                  <label className="field"><span className="lbl">Land cost</span><input name="landAmount" defaultValue={b.landAmount || ""} /></label>
-                  <label className="field"><span className="lbl">Visa assistance</span><input name="visaAmount" defaultValue={b.visaAmount || ""} /></label>
-                  <label className="field"><span className="lbl">Flights</span><input name="flightAmount" defaultValue={b.flightAmount || ""} /></label>
-                </div>
-                <div className="row-3">
-                  <label className="field"><span className="lbl">Travellers (pax)</span><input name="pax" type="number" min="1" defaultValue={b.pax} /></label>
-                  <label className="field"><span className="lbl">Discount</span><input name="discount" defaultValue={b.discount || ""} /></label>
-                  <label className="field"><span className="lbl">Discount reason</span><input name="discountReason" defaultValue={b.discountReason || ""} /></label>
-                </div>
-                <div className="row-3">
-                  <label className="field"><span className="lbl">Non-taxable amount</span><input name="nonTaxable" defaultValue={b.nonTaxable || ""} placeholder="embassy fee, etc." /></label>
-                  <label className="field"><span className="lbl">GST %</span><input name="gstRate" type="number" min="0" step="0.01" defaultValue={b.gstRate} /></label>
-                  <label className="field"><span className="lbl">TCS %</span><input name="tcsRate" type="number" min="0" step="0.01" defaultValue={b.tcsRate} /></label>
-                </div>
-                <label className="field"><span className="lbl">Remarks</span><input name="notes" defaultValue={b.notes || ""} placeholder="e.g. 1 night less, Perlan paid extra" /></label>
-                <button className="primary sm" type="submit">Save invoice</button>
-              </form>
+        {/* Two independent columns rather than a 2-up grid: the payment plan
+            is much taller than the invoice, and in a grid the next row has to
+            wait for it — which left a screen's worth of white space under the
+            invoice. Each column now packs its own cards tightly. */}
+        <div className="stack-col">
+          <div className="card">
+            <div className="card-title">Invoice</div>
+            {b.landAmount > 0 && <Line label="Land package" value={formatINR(b.landAmount)} />}
+            {b.visaAmount > 0 && <Line label="Visa assistance" value={formatINR(b.visaAmount)} />}
+            {b.flightAmount > 0 && <Line label="Flights" value={formatINR(b.flightAmount)} />}
+            {base === 0 && <div className="empty small">No package amount set yet. Edit the invoice below.</div>}
+            {b.discount > 0 && <Line label={`Discount${b.discountReason ? " · " + b.discountReason : ""}`} value={`− ${formatINR(b.discount)}`} muted />}
+            {bookingInclTaxCharge(b) > 0 && <Line label="Inclusions (taxable)" value={formatINR(bookingInclTaxCharge(b))} muted />}
+            {b.travellerExtra > 0 && <Line label="Per-person extras" value={formatINR(b.travellerExtra)} muted />}
+            <Line label="Taxable value" value={formatINR(taxable)} strong />
+            <Line label={`GST @ ${b.gstRate}%`} value={formatINR(gst)} muted />
+            <Line label={`TCS @ ${b.tcsRate}%`} value={formatINR(tcs)} muted />
+            {b.nonTaxable > 0 && <Line label="Non-taxable (no GST/TCS)" value={formatINR(b.nonTaxable)} muted />}
+            {bookingInclNonTaxCharge(b) > 0 && <Line label="Inclusions (no tax)" value={formatINR(bookingInclNonTaxCharge(b))} muted />}
+            <div className="between" style={{ paddingTop: 10 }}>
+              <span style={{ fontSize: 15, fontWeight: 500 }}>Invoice total</span>
+              <span style={{ fontSize: 16, fontWeight: 500 }}>{formatINR(total)}</span>
             </div>
-          </details>
-        </div>
 
-        {/* PAYMENTS */}
-        {/* PAYMENT PLAN — planned installments with due dates (drives reminders). */}
-        <div className="card">
-          <div className="card-title">Payment plan <span className="small muted">what&apos;s due and by when · money received fills the plan in date order</span></div>
-
-          {/* One-tap: assign a reusable plan (set them up in Settings → Payment plans). */}
-          {planTemplates.length > 0 ? (
-            <form action={applyPlanToBooking} className="form-box flex" style={{ gap: 8, alignItems: "end", marginBottom: 12, flexWrap: "wrap" }}>
-              <input type="hidden" name="bookingId" value={b.id} />
-              <label className="field" style={{ flex: 1, minWidth: 180 }}><span className="lbl">Apply a plan {b.schedule.length > 0 && <span className="small muted">— replaces the current one</span>}</span>
-                <select name="templateId" defaultValue={defaultPlanId}>
-                  {planTemplates.map((t) => <option key={t.id} value={t.id}>{t.name}{t.isDefault ? " (default)" : ""}</option>)}
-                </select>
-              </label>
-              <SubmitButton className="primary sm" pendingLabel="Applying…">Apply</SubmitButton>
-            </form>
-          ) : (
-            <p className="small muted" style={{ marginBottom: 12 }}>Tip: create reusable plans in <Link href="/settings" style={{ color: "var(--accent)" }}>Settings → Payment plans</Link>, then assign them here in one tap.</p>
-          )}
-
-          {/* Payment health verdict — one honest line instead of a wall of red. */}
-          {b.schedule.length > 0 && (
-            <div className="between" style={{ padding: "10px 12px", borderRadius: 10, marginBottom: 12, flexWrap: "wrap", gap: 8,
-              background: planAllPaid ? "var(--success-bg)" : behindByNow > 0 ? "var(--warning-bg)" : "var(--success-bg)" }}>
-              <span style={{ fontWeight: 600, color: planAllPaid ? "var(--success)" : behindByNow > 0 ? "var(--warning)" : "var(--success)" }}>
-                {planAllPaid ? "✅ Fully paid" : behindByNow > 0 ? `🔴 Behind by ${formatINR(behindByNow)}` : "✅ On track — nothing due yet"}
-              </span>
-              {hasPastDates && !planAllPaid && (
-                <form action={tidyOverdueDates}>
-                  <input type="hidden" name="bookingId" value={b.id} />
-                  <button className="sm" type="submit" title="Move installments dated in the past to today, so on-track customers stop showing as overdue">Tidy past dates → today</button>
+            <details className="add">
+              <summary>✏️ Edit party name, phone &amp; invoice amounts</summary>
+              <div className="form-box">
+                <form action={updateBookingInvoice}>
+                  <input type="hidden" name="id" value={b.id} />
+                  <div className="row-3">
+                    <label className="field"><span className="lbl">Party name</span><input name="customerName" defaultValue={b.customerName} /></label>
+                    <label className="field"><span className="lbl">Phone</span><input name="customerPhone" defaultValue={b.customerPhone || ""} /></label>
+                    <label className="field"><span className="lbl">Package</span>
+                      <select name="packageType" defaultValue={b.packageType}><option value="land">Land only</option><option value="lva">Land + visa (LVA)</option><option value="full">Full (incl. flights)</option></select>
+                    </label>
+                  </div>
+                  <div className="row-3">
+                    <label className="field"><span className="lbl">Land cost</span><input name="landAmount" defaultValue={b.landAmount || ""} /></label>
+                    <label className="field"><span className="lbl">Visa assistance</span><input name="visaAmount" defaultValue={b.visaAmount || ""} /></label>
+                    <label className="field"><span className="lbl">Flights</span><input name="flightAmount" defaultValue={b.flightAmount || ""} /></label>
+                  </div>
+                  <div className="row-3">
+                    <label className="field"><span className="lbl">Travellers (pax)</span><input name="pax" type="number" min="1" defaultValue={b.pax} /></label>
+                    <label className="field"><span className="lbl">Discount</span><input name="discount" defaultValue={b.discount || ""} /></label>
+                    <label className="field"><span className="lbl">Discount reason</span><input name="discountReason" defaultValue={b.discountReason || ""} /></label>
+                  </div>
+                  <div className="row-3">
+                    <label className="field"><span className="lbl">Non-taxable amount</span><input name="nonTaxable" defaultValue={b.nonTaxable || ""} placeholder="embassy fee, etc." /></label>
+                    <label className="field"><span className="lbl">GST %</span><input name="gstRate" type="number" min="0" step="0.01" defaultValue={b.gstRate} /></label>
+                    <label className="field"><span className="lbl">TCS %</span><input name="tcsRate" type="number" min="0" step="0.01" defaultValue={b.tcsRate} /></label>
+                  </div>
+                  <label className="field"><span className="lbl">Remarks</span><input name="notes" defaultValue={b.notes || ""} placeholder="e.g. 1 night less, Perlan paid extra" /></label>
+                  <button className="primary sm" type="submit">Save invoice</button>
                 </form>
-              )}
+              </div>
+            </details>
+          </div>
+          <div className="card" id="payments" style={{ scrollMarginTop: 72 }}>
+            <div className="card-title">Payments</div>
+            <div className="bar" style={{ marginBottom: 6 }}><span className={balance > 0 ? "amber" : ""} style={{ width: `${pct}%` }} /></div>
+            <div className="small muted" style={{ marginBottom: 12 }}>{pct}% collected · {formatINR(balance)} remaining</div>
+            <div className="form-box" style={{ marginBottom: 12 }}>
+              <div className="small" style={{ fontWeight: 600, marginBottom: 6 }}>🔗 Payment link for the customer</div>
+              <CopyLink path={`/pay/${b.id}`} label="Copy link" waPhone={b.customerPhone} waText={`Hi ${b.customerName}, please confirm your payment for ${b.trip.name} here:`} />
+              <p className="small muted" style={{ margin: "8px 0 0" }}>Send this to {b.customerName}. They confirm their payment + upload a screenshot; it appears under “awaiting approval” on the Payments page.</p>
             </div>
-          )}
 
-          {b.schedule.length === 0 ? (
-            <div className="empty" style={{ padding: "16px 8px" }}>No plan yet. Add the advance and balance below so reminders know what&apos;s due.</div>
-          ) : (
-            <>
+            {b.payments.length === 0 ? (
+              <div className="empty">No payments recorded yet.</div>
+            ) : (
               <table className="t">
-                <thead><tr><th>Step</th><th>Due date</th><th className="num">Amount</th><th>Status</th><th></th></tr></thead>
+                <thead><tr><th>Date</th><th>Mode</th><th className="num">Amount</th><th></th></tr></thead>
                 <tbody>
-                  {planLines.map((l) => (
-                    <tr key={l.item.id}>
-                      <td>{l.item.label}</td>
-                      <td className="muted small">{l.item.dueDate ? fmtDate(new Date(l.item.dueDate)) : "—"}</td>
-                      <td className="num" style={{ fontWeight: 500 }}>
-                        {/* Show what this step can actually collect. When the plan
-                            overshoots the invoice, the written amount is struck
-                            through so the trimming is visible, not silent. */}
-                        {l.effectiveAmount !== l.item.amount ? (
-                          <>
-                            <span className="muted" style={{ textDecoration: "line-through", fontWeight: 400 }}>{formatINR(l.item.amount)}</span>{" "}
-                            {formatINR(l.effectiveAmount)}
-                          </>
-                        ) : formatINR(l.item.amount)}
-                      </td>
-                      <td>
-                        {l.beyondInvoice
-                          ? <span className="badge gray" title="The invoice is already covered by the earlier steps">not needed</span>
-                          : l.covered
-                            ? <span className="badge emerald">paid</span>
-                            : l.overdue
-                              ? <span className="badge rose">overdue · {formatINR(l.remaining)} left</span>
-                              : l.paidHere > 0
-                                ? <span className="badge amber">part-paid · {formatINR(l.remaining)} left</span>
-                                : <span className="badge gray">due</span>}
-                      </td>
-                      <td className="num"><form action={deleteScheduleItem}><input type="hidden" name="id" value={l.item.id} /><button className="sm" type="submit" aria-label="Delete">✕</button></form></td>
+                  {b.payments.map((p) => (
+                    <tr key={p.id}>
+                      <td className="muted small">{fmtDate(p.date)}</td>
+                      <td><span className="badge gray">{p.mode}</span>{p.note ? <div className="small muted">{p.note}</div> : null}</td>
+                      <td className="num" style={{ fontWeight: 500 }}>{formatINR(p.amount)}</td>
+                      <td className="num"><form action={deletePayment}><input type="hidden" name="id" value={p.id} /><button className="sm" type="submit" aria-label="Delete">✕</button></form></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <div className="small muted" style={{ marginTop: 8 }}>
-                Plan totals {formatINR(planTotal)} · invoice {formatINR(total)}
-                {planMismatch > 0 && (
-                  <span style={{ color: "var(--warning)" }}>
-                    {" "}· ⚠ this plan was built for {formatINR(planTotal)}. Only {formatINR(total)} is collectable — re-apply a plan to tidy the steps.
-                  </span>
-                )}
-                {planMismatch < 0 && (
-                  <span style={{ color: "var(--warning)" }}> · ⚠ the steps are {formatINR(-planMismatch)} short of the invoice</span>
-                )}
-                {nextDue && <> · next: <b>{formatINR(nextDue.remaining)}</b> {nextDue.item.dueDate ? `by ${fmtDate(new Date(nextDue.item.dueDate))}` : ""}</>}
-              </div>
-            </>
-          )}
-
-          <details className="add" open={b.schedule.length === 0}>
-            <summary>+ Add a step</summary>
-            <div className="form-box">
-              <form action={addScheduleItem}>
-                <input type="hidden" name="bookingId" value={b.id} />
-                <div className="row-3">
-                  <label className="field"><span className="lbl">Name</span><input name="label" placeholder="Advance / Balance / Installment 2" /></label>
-                  <label className="field"><span className="lbl">Amount</span><input name="amount" placeholder="20000 or 20k" required /></label>
-                  <label className="field"><span className="lbl">Due date</span><input name="dueDate" type="date" /></label>
-                </div>
-                <button className="primary sm" type="submit">Add step</button>
-              </form>
-            </div>
-          </details>
-        </div>
-
-        <div className="card" id="payments" style={{ scrollMarginTop: 72 }}>
-          <div className="card-title">Payments</div>
-          <div className="bar" style={{ marginBottom: 6 }}><span className={balance > 0 ? "amber" : ""} style={{ width: `${pct}%` }} /></div>
-          <div className="small muted" style={{ marginBottom: 12 }}>{pct}% collected · {formatINR(balance)} remaining</div>
-          <div className="form-box" style={{ marginBottom: 12 }}>
-            <div className="small" style={{ fontWeight: 600, marginBottom: 6 }}>🔗 Payment link for the customer</div>
-            <CopyLink path={`/pay/${b.id}`} label="Copy link" waPhone={b.customerPhone} waText={`Hi ${b.customerName}, please confirm your payment for ${b.trip.name} here:`} />
-            <p className="small muted" style={{ margin: "8px 0 0" }}>Send this to {b.customerName}. They confirm their payment + upload a screenshot; it appears under “awaiting approval” on the Payments page.</p>
-          </div>
-
-          {b.payments.length === 0 ? (
-            <div className="empty">No payments recorded yet.</div>
-          ) : (
-            <table className="t">
-              <thead><tr><th>Date</th><th>Mode</th><th className="num">Amount</th><th></th></tr></thead>
-              <tbody>
-                {b.payments.map((p) => (
-                  <tr key={p.id}>
-                    <td className="muted small">{fmtDate(p.date)}</td>
-                    <td><span className="badge gray">{p.mode}</span>{p.note ? <div className="small muted">{p.note}</div> : null}</td>
-                    <td className="num" style={{ fontWeight: 500 }}>{formatINR(p.amount)}</td>
-                    <td className="num"><form action={deletePayment}><input type="hidden" name="id" value={p.id} /><button className="sm" type="submit" aria-label="Delete">✕</button></form></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          <details className="add" open={b.payments.length === 0}>
-            <summary>+ Record payment</summary>
-            <div className="form-box">
-              <form action={addPayment}>
-                <input type="hidden" name="bookingId" value={b.id} />
-                <div className="row-3">
-                  <label className="field"><span className="lbl">Amount</span><input name="amount" placeholder="40000 or 40k" required /></label>
-                  <label className="field"><span className="lbl">Mode</span>
-                    <select name="mode" defaultValue="upi"><option value="upi">UPI</option><option value="cash">Cash</option><option value="card">Card</option><option value="bank">Bank transfer</option><option value="other">Other</option></select>
-                  </label>
-                  <label className="field"><span className="lbl">Date</span><input name="date" type="date" /></label>
-                </div>
-                <label className="field"><span className="lbl">Note</span><input name="note" placeholder="Advance / balance / installment 2" /></label>
-                <SubmitButton className="primary sm" pendingLabel="Recording…">Record payment</SubmitButton>
-              </form>
-            </div>
-          </details>
-        </div>
-
-        {/* CANCELLATION & REFUND POLICY — one line by default. It's the same terms
-            for nearly every customer, so the editor stays folded away until wanted. */}
-        <details className="section">
-          <summary>
-            <span className="sec-title">Cancellation policy</span>
-            <span className="sec-hi" style={{ marginLeft: "auto", marginRight: 12 }}>
-              {usesCustomPolicy
-                ? <span className="badge amber">Custom for {b.customerName.split(" ")[0]}</span>
-                : <span className="badge gray">Standard terms</span>}
-              {b.freeCancelUntil && <span style={{ marginLeft: 8 }}>free until {fmtDate(b.freeCancelUntil)}</span>}
-            </span>
-          </summary>
-          <div className="sec-body">
-            {!usesCustomPolicy && (
-              <p className="small muted" style={{ marginTop: 0 }}>
-                Using your standard terms — <Link href="/settings" style={{ color: "var(--accent)" }}>edit them in Settings</Link> to change them everywhere.
-                Edit below to write different terms for {b.customerName} only.
-              </p>
             )}
-            <form action={updateBookingPolicy}>
-              <input type="hidden" name="id" value={b.id} />
-              <label className="field"><span className="lbl">Terms</span>
-                <textarea name="refundPolicy" rows={8} defaultValue={policyValue} style={{ fontFamily: "inherit", lineHeight: 1.55 }} />
-              </label>
-              <div className="row-3" style={{ alignItems: "end" }}>
-                <label className="field"><span className="lbl">Free cancellation until <span className="small muted">drives the reminder</span></span><input name="freeCancelUntil" type="date" defaultValue={toInput(b.freeCancelUntil)} /></label>
-                <label className="field" style={{ justifyContent: "center" }}>
-                  <span className="flex" style={{ gap: 8, alignItems: "center", cursor: "pointer" }}>
-                    <input type="checkbox" name="saveDefault" style={{ width: "auto" }} />
-                    <span className="lbl" style={{ margin: 0 }}>Save as my default <span className="small muted">for future bookings</span></span>
-                  </span>
-                </label>
-                <SubmitButton className="primary sm" pendingLabel="Saving…">Save policy</SubmitButton>
+            <details className="add" open={b.payments.length === 0}>
+              <summary>+ Record payment</summary>
+              <div className="form-box">
+                <form action={addPayment}>
+                  <input type="hidden" name="bookingId" value={b.id} />
+                  <div className="row-3">
+                    <label className="field"><span className="lbl">Amount</span><input name="amount" placeholder="40000 or 40k" required /></label>
+                    <label className="field"><span className="lbl">Mode</span>
+                      <select name="mode" defaultValue="upi"><option value="upi">UPI</option><option value="cash">Cash</option><option value="card">Card</option><option value="bank">Bank transfer</option><option value="other">Other</option></select>
+                    </label>
+                    <label className="field"><span className="lbl">Date</span><input name="date" type="date" /></label>
+                  </div>
+                  <label className="field"><span className="lbl">Note</span><input name="note" placeholder="Advance / balance / installment 2" /></label>
+                  <SubmitButton className="primary sm" pendingLabel="Recording…">Record payment</SubmitButton>
+                </form>
               </div>
-            </form>
+            </details>
           </div>
-        </details>
+        </div>
+        <div className="stack-col">
+          <div className="card">
+            <div className="card-title">Payment plan <span className="small muted">what&apos;s due and by when · money received fills the plan in date order</span></div>
+
+            {/* One-tap: assign a reusable plan (set them up in Settings → Payment plans). */}
+            {planTemplates.length > 0 ? (
+              <form action={applyPlanToBooking} className="form-box flex" style={{ gap: 8, alignItems: "end", marginBottom: 12, flexWrap: "wrap" }}>
+                <input type="hidden" name="bookingId" value={b.id} />
+                <label className="field" style={{ flex: 1, minWidth: 180 }}><span className="lbl">Apply a plan {b.schedule.length > 0 && <span className="small muted">— replaces the current one</span>}</span>
+                  <select name="templateId" defaultValue={defaultPlanId}>
+                    {planTemplates.map((t) => <option key={t.id} value={t.id}>{t.name}{t.isDefault ? " (default)" : ""}</option>)}
+                  </select>
+                </label>
+                <SubmitButton className="primary sm" pendingLabel="Applying…">Apply</SubmitButton>
+              </form>
+            ) : (
+              <p className="small muted" style={{ marginBottom: 12 }}>Tip: create reusable plans in <Link href="/settings" style={{ color: "var(--accent)" }}>Settings → Payment plans</Link>, then assign them here in one tap.</p>
+            )}
+
+            {/* Payment health verdict — one honest line instead of a wall of red. */}
+            {b.schedule.length > 0 && (
+              <div className="between" style={{ padding: "10px 12px", borderRadius: 10, marginBottom: 12, flexWrap: "wrap", gap: 8,
+                background: planAllPaid ? "var(--success-bg)" : behindByNow > 0 ? "var(--warning-bg)" : "var(--success-bg)" }}>
+                <span style={{ fontWeight: 600, color: planAllPaid ? "var(--success)" : behindByNow > 0 ? "var(--warning)" : "var(--success)" }}>
+                  {planAllPaid ? "✅ Fully paid" : behindByNow > 0 ? `🔴 Behind by ${formatINR(behindByNow)}` : "✅ On track — nothing due yet"}
+                </span>
+                {hasPastDates && !planAllPaid && (
+                  <form action={tidyOverdueDates}>
+                    <input type="hidden" name="bookingId" value={b.id} />
+                    <button className="sm" type="submit" title="Move installments dated in the past to today, so on-track customers stop showing as overdue">Tidy past dates → today</button>
+                  </form>
+                )}
+              </div>
+            )}
+
+            {b.schedule.length === 0 ? (
+              <div className="empty" style={{ padding: "16px 8px" }}>No plan yet. Add the advance and balance below so reminders know what&apos;s due.</div>
+            ) : (
+              <>
+                <table className="t">
+                  <thead><tr><th>Step</th><th>Due date</th><th className="num">Amount</th><th>Status</th><th></th></tr></thead>
+                  <tbody>
+                    {planLines.map((l) => (
+                      <tr key={l.item.id}>
+                        <td>{l.item.label}</td>
+                        <td className="muted small">{l.item.dueDate ? fmtDate(new Date(l.item.dueDate)) : "—"}</td>
+                        <td className="num" style={{ fontWeight: 500 }}>
+                          {/* Show what this step can actually collect. When the plan
+                              overshoots the invoice, the written amount is struck
+                              through so the trimming is visible, not silent. */}
+                          {l.effectiveAmount !== l.item.amount ? (
+                            <>
+                              <span className="muted" style={{ textDecoration: "line-through", fontWeight: 400 }}>{formatINR(l.item.amount)}</span>{" "}
+                              {formatINR(l.effectiveAmount)}
+                            </>
+                          ) : formatINR(l.item.amount)}
+                        </td>
+                        <td>
+                          {l.beyondInvoice
+                            ? <span className="badge gray" title="The invoice is already covered by the earlier steps">not needed</span>
+                            : l.covered
+                              ? <span className="badge emerald">paid</span>
+                              : l.overdue
+                                ? <span className="badge rose">overdue · {formatINR(l.remaining)} left</span>
+                                : l.paidHere > 0
+                                  ? <span className="badge amber">part-paid · {formatINR(l.remaining)} left</span>
+                                  : <span className="badge gray">due</span>}
+                        </td>
+                        <td className="num"><form action={deleteScheduleItem}><input type="hidden" name="id" value={l.item.id} /><button className="sm" type="submit" aria-label="Delete">✕</button></form></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="small muted" style={{ marginTop: 8 }}>
+                  Plan totals {formatINR(planTotal)} · invoice {formatINR(total)}
+                  {planMismatch > 0 && (
+                    <span style={{ color: "var(--warning)" }}>
+                      {" "}· ⚠ this plan was built for {formatINR(planTotal)}. Only {formatINR(total)} is collectable — re-apply a plan to tidy the steps.
+                    </span>
+                  )}
+                  {planMismatch < 0 && (
+                    <span style={{ color: "var(--warning)" }}> · ⚠ the steps are {formatINR(-planMismatch)} short of the invoice</span>
+                  )}
+                  {nextDue && <> · next: <b>{formatINR(nextDue.remaining)}</b> {nextDue.item.dueDate ? `by ${fmtDate(new Date(nextDue.item.dueDate))}` : ""}</>}
+                </div>
+              </>
+            )}
+
+            <details className="add" open={b.schedule.length === 0}>
+              <summary>+ Add a step</summary>
+              <div className="form-box">
+                <form action={addScheduleItem}>
+                  <input type="hidden" name="bookingId" value={b.id} />
+                  <div className="row-3">
+                    <label className="field"><span className="lbl">Name</span><input name="label" placeholder="Advance / Balance / Installment 2" /></label>
+                    <label className="field"><span className="lbl">Amount</span><input name="amount" placeholder="20000 or 20k" required /></label>
+                    <label className="field"><span className="lbl">Due date</span><input name="dueDate" type="date" /></label>
+                  </div>
+                  <button className="primary sm" type="submit">Add step</button>
+                </form>
+              </div>
+            </details>
+          </div>
+          <details className="section">
+            <summary>
+              <span className="sec-title">Cancellation policy</span>
+              <span className="sec-hi" style={{ marginLeft: "auto", marginRight: 12 }}>
+                {usesCustomPolicy
+                  ? <span className="badge amber">Custom for {b.customerName.split(" ")[0]}</span>
+                  : <span className="badge gray">Standard terms</span>}
+                {b.freeCancelUntil && <span style={{ marginLeft: 8 }}>free until {fmtDate(b.freeCancelUntil)}</span>}
+              </span>
+            </summary>
+            <div className="sec-body">
+              {!usesCustomPolicy && (
+                <p className="small muted" style={{ marginTop: 0 }}>
+                  Using your standard terms — <Link href="/settings" style={{ color: "var(--accent)" }}>edit them in Settings</Link> to change them everywhere.
+                  Edit below to write different terms for {b.customerName} only.
+                </p>
+              )}
+              <form action={updateBookingPolicy}>
+                <input type="hidden" name="id" value={b.id} />
+                <label className="field"><span className="lbl">Terms</span>
+                  <textarea name="refundPolicy" rows={8} defaultValue={policyValue} style={{ fontFamily: "inherit", lineHeight: 1.55 }} />
+                </label>
+                <div className="row-3" style={{ alignItems: "end" }}>
+                  <label className="field"><span className="lbl">Free cancellation until <span className="small muted">drives the reminder</span></span><input name="freeCancelUntil" type="date" defaultValue={toInput(b.freeCancelUntil)} /></label>
+                  <label className="field" style={{ justifyContent: "center" }}>
+                    <span className="flex" style={{ gap: 8, alignItems: "center", cursor: "pointer" }}>
+                      <input type="checkbox" name="saveDefault" style={{ width: "auto" }} />
+                      <span className="lbl" style={{ margin: 0 }}>Save as my default <span className="small muted">for future bookings</span></span>
+                    </span>
+                  </label>
+                  <SubmitButton className="primary sm" pendingLabel="Saving…">Save policy</SubmitButton>
+                </div>
+              </form>
+            </div>
+          </details>
+        </div>
       </div>
     </>
   );

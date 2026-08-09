@@ -17,8 +17,9 @@ export async function GET() {
     orderBy: [{ departureDate: "desc" }, { createdAt: "desc" }],
     include: {
       bookings: { where: { deletedAt: null }, include: { payments: true, variant: true } },
-      itinerary: { select: { hotels: { select: { source: true } } } },
-      cars: { select: { source: true } },
+      itinerary: { orderBy: { order: "asc" }, select: { date: true, location: true, hotels: { select: { id: true, hotelName: true, source: true } } } },
+      cars: { select: { id: true, label: true, carType: true, source: true } },
+      vendorBookings: { select: { id: true, vendorName: true, detail: true } },
     },
   });
 
@@ -38,10 +39,40 @@ export async function GET() {
     ...t.cars.map((c) => c.source),
   ]).map((s) => (s || "").trim()).filter(Boolean))].sort();
 
+  // Quick add logs a spend with the same fields as the Costing form, so it needs
+  // the same pickers: every taggable item in each trip, and the accounts already
+  // in use.
+  const targetTrips = trips.map((t) => ({
+    id: t.id,
+    name: t.name,
+    items: [
+      ...t.itinerary.flatMap((n) =>
+        n.hotels.map((h) => ({
+          ref: `hotel:${h.id}`,
+          label: `${h.hotelName}${n.location ? ` · ${n.location}` : ""}${n.date ? ` · ${n.date.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : ""}`,
+          group: "Hotels",
+        })),
+      ),
+      ...t.cars.map((c) => ({ ref: `car:${c.id}`, label: `${c.label}${c.carType ? ` · ${c.carType}` : ""}`, group: "Cars" })),
+      ...t.vendorBookings.map((v) => ({ ref: `vendor:${v.id}`, label: `${v.vendorName}${v.detail ? ` · ${v.detail}` : ""}`, group: "Extras & suppliers" })),
+    ],
+  }));
+
+  const bankRows = await prisma.expense.findMany({
+    where: { orgId: scope.orgId, bankName: { not: null }, deletedAt: null },
+    select: { bankName: true }, distinct: ["bankName"], take: 40,
+  });
+  const banks = bankRows.map((b) => b.bankName!).filter(Boolean).sort((a, b) => a.localeCompare(b));
+
+  const me = await prisma.user.findUnique({ where: { id: scope.userId }, select: { name: true } });
+
   return NextResponse.json({
     payable,
     trips: trips.map((t) => ({ id: t.id, name: t.name })),
     customerNames,
     sources,
+    targetTrips,
+    banks,
+    myName: me?.name ?? "",
   });
 }

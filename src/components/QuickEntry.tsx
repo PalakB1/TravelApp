@@ -6,10 +6,14 @@ import {
   addPayment, addBooking, addHotelStay, createCustomer, createTrip,
 } from "@/app/(app)/data-actions";
 import { addExpense } from "@/app/(app)/expenses/actions";
+import ExpenseTargets, { type TargetTrip } from "./ExpenseTargets";
 
 type Props = {
   payable: ComboOption[];
   trips: { id: string; name: string }[];
+  targetTrips: TargetTrip[];
+  banks: string[];
+  myName: string;
   customerNames: string[];
   sources: string[];
 };
@@ -30,7 +34,7 @@ const EXP_CATS: [string, string][] = [
   ["salary", "Salary / payroll"], ["office", "Office / rent"], ["software", "Software / tools"], ["tax", "Tax / govt"], ["misc", "Miscellaneous"],
 ];
 
-export default function QuickEntry({ payable, trips, customerNames, sources }: Props) {
+export default function QuickEntry({ payable, trips, customerNames, sources, targetTrips, banks, myName }: Props) {
   const [action, setAction] = useState<ActionKey>("payment");
   // Client runtime — fine to read the clock here (defaults the date to today).
   const today = new Date().toISOString().slice(0, 10);
@@ -65,16 +69,12 @@ export default function QuickEntry({ payable, trips, customerNames, sources }: P
         </form>
       )}
 
-      {/* EXPENSE — money out; optionally tag it to a trip, attach the invoice */}
+      {/* EXPENSE — the same fields as the Costing form, deliberately. A quick
+          add that drops half the detail just means going back to fix it later. */}
       {action === "expense" && (
         <form action={addExpense} key="expense">
           <div className="row-3">
-            <label className="field"><span className="lbl">Which trip?</span>
-              <select name="target" defaultValue="">
-                <option value="">General / no trip</option>
-                {trips.map((t) => <option key={t.id} value={`trip:${t.id}`}>{t.name}</option>)}
-              </select>
-            </label>
+            <ExpenseTargets trips={targetTrips} />
             <label className="field"><span className="lbl">Expense type</span>
               <select name="category" defaultValue="misc">{EXP_CATS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
             </label>
@@ -85,14 +85,29 @@ export default function QuickEntry({ payable, trips, customerNames, sources }: P
             <label className="field"><span className="lbl">Mode</span>
               <select name="paymentMode" defaultValue="bank"><option value="bank">Bank transfer</option><option value="upi">UPI</option><option value="card">Card</option><option value="cash">Cash</option><option value="other">Other</option></select>
             </label>
-            <label className="field"><span className="lbl">Date</span><input name="date" type="date" defaultValue={today} /></label>
+            <label className="field"><span className="lbl">Bank / account <span className="small muted">optional</span></span>
+              <input name="bankName" list="qe-banks" placeholder="HDFC current / ICICI…" />
+              <datalist id="qe-banks">{banks.map((b) => <option key={b} value={b} />)}</datalist>
+            </label>
           </div>
-          <div className="row">
+          <div className="row-3">
+            <label className="field"><span className="lbl">Date</span><input name="date" type="date" defaultValue={today} /></label>
+            <label className="field"><span className="lbl">Status</span>
+              <select name="status" defaultValue="paid"><option value="paid">Paid</option><option value="pending">Unpaid / due</option></select>
+            </label>
             <label className="field"><span className="lbl">Notes</span><input name="notes" placeholder="3 nights · advance / balance…" /></label>
+          </div>
+          <div className="row-3" style={{ alignItems: "end" }}>
+            <label className="field" style={{ justifyContent: "center" }}>
+              <span className="flex" style={{ gap: 8, alignItems: "center", cursor: "pointer" }}>
+                <input type="checkbox" name="paidPersonally" style={{ width: "auto" }} />
+                <span className="lbl" style={{ margin: 0 }}>Paid from personal money <span className="small muted">— to be reimbursed</span></span>
+              </span>
+            </label>
+            <label className="field"><span className="lbl">Paid by <span className="small muted">if personal</span></span><input name="paidBy" defaultValue={myName} placeholder="Who fronted the money" /></label>
             <label className="field"><span className="lbl">Invoice / receipt <span className="small muted">optional</span></span><input name="file" type="file" accept="image/*,application/pdf" /></label>
           </div>
           <button className="primary" type="submit">Log expense</button>
-          <p className="small muted" style={{ margin: "10px 0 0" }}>To pin it to a specific hotel or car, open <a href="/expenses" style={{ color: "var(--accent)" }}>Costing</a>. General spend (fuel, ads, salaries) stays untagged.</p>
         </form>
       )}
 
