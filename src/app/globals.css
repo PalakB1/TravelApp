@@ -773,3 +773,26 @@ details.section[open] > .sec-body, details.add[open] .form-box { animation: fade
      small screen leaves it in a worse place than a predictable one. */
   .tour-card { top: auto !important; left: 12px !important; right: 12px; bottom: calc(78px + env(safe-area-inset-bottom, 0px)); width: auto; }
 }
+
+/* Tick-list of a trip's hotels, cars and suppliers on the spend form. */
+.pick-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;
+  max-height: 260px; overflow-y: auto;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2);
+}
+.pick-row { display: flex; gap: 8px; align-items: flex-start; padding: 3px 0; font-size: 13px; cursor: pointer; line-height: 1.35; }
+.pick-row input { width: auto; margin-top: 2px; flex-shrink: 0; }
+
+/* Visa state as a dot rather than a badge — used where a full label would cost
+   a column. The title attribute carries the wording. */
+.visa-dot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  margin-left: 7px; vertical-align: middle; flex-shrink: 0;
+  outline: 2px solid color-mix(in srgb, currentColor 12%, transparent);
+}
+.visa-dot.dot-amber  { background: var(--amber); }
+.visa-dot.dot-sky    { background: var(--sky); }
+.visa-dot.dot-violet { background: var(--violet); }
+.visa-dot.dot-green  { background: var(--success); }
+.visa-dot.dot-red    { background: var(--danger); }
+.visa-dot.dot-gray   { background: var(--text-3); }

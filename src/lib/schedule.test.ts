@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scheduleStatus } from "./schedule";
+import { scheduleStatus, apportion } from "./schedule";
 
 // Regression: a plan left over from a bigger price must not invent a debt.
 // Reported from a live booking — invoice 99,000, plan still summing to 208,950,
@@ -40,5 +40,32 @@ describe("plan out of step with the invoice", () => {
   it("leaves the plan alone when no invoice total is given", () => {
     const lines = scheduleStatus(plan, 0, { now });
     expect(lines.reduce((s, l) => s + l.effectiveAmount, 0)).toBe(208950);
+  });
+});
+
+describe("apportion", () => {
+  it("splits in proportion to the estimates", () => {
+    expect(apportion(100000, [50000, 30000, 20000])).toEqual([50000, 30000, 20000]);
+  });
+
+  it("always adds back to the whole, however awkward the split", () => {
+    for (const [amount, weights] of [
+      [100, [1, 1, 1]],
+      [99999, [7, 11, 13]],
+      [1, [1, 1]],
+      [58333, [1, 2, 3, 4, 5]],
+    ] as [number, number[]][]) {
+      const parts = apportion(amount, weights);
+      expect(parts.reduce((s, v) => s + v, 0)).toBe(amount);
+    }
+  });
+
+  it("splits evenly when nothing has an estimate", () => {
+    expect(apportion(90, [0, 0, 0])).toEqual([30, 30, 30]);
+  });
+
+  it("handles a single item and an empty list", () => {
+    expect(apportion(4200, [0])).toEqual([4200]);
+    expect(apportion(500, [])).toEqual([]);
   });
 });

@@ -7,6 +7,7 @@ import TableSearch from "@/components/TableSearch";
 import ActivityLog from "@/components/ActivityLog";
 import SettlePersonal, { type PersonalRow } from "@/components/SettlePersonal";
 import { addExpense, deleteExpense, undoSettlement } from "./actions";
+import ExpenseTargets from "@/components/ExpenseTargets";
 import SubmitButton from "@/components/SubmitButton";
 
 export const dynamic = "force-dynamic";
@@ -43,11 +44,30 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
     select: {
       id: true,
       name: true,
-      itinerary: { orderBy: { order: "asc" }, select: { location: true, hotels: { select: { id: true, hotelName: true } } } },
+      itinerary: { orderBy: { order: "asc" }, select: { date: true, location: true, hotels: { select: { id: true, hotelName: true } } } },
       cars: { select: { id: true, label: true, carType: true } },
+      vendorBookings: { select: { id: true, vendorName: true, detail: true } },
     },
   });
   const tripIdSet = new Set(trips.map((t) => t.id));
+
+  // Flattened for the picker: every taggable thing in a trip, grouped by kind.
+  // Nights carry their date so three stays at the same hotel are distinguishable.
+  const targetTrips = trips.map((t) => ({
+    id: t.id,
+    name: t.name,
+    items: [
+      ...t.itinerary.flatMap((n) =>
+        n.hotels.map((h) => ({
+          ref: `hotel:${h.id}`,
+          label: `${h.hotelName}${n.location ? ` · ${n.location}` : ""}${n.date ? ` · ${n.date.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : ""}`,
+          group: "Hotels",
+        })),
+      ),
+      ...t.cars.map((c) => ({ ref: `car:${c.id}`, label: `${c.label}${c.carType ? ` · ${c.carType}` : ""}`, group: "Cars" })),
+      ...t.vendorBookings.map((v) => ({ ref: `vendor:${v.id}`, label: `${v.vendorName}${v.detail ? ` · ${v.detail}` : ""}`, group: "Extras & suppliers" })),
+    ],
+  }));
 
   // Base scope: org, and — for trip-limited members — only their trips' rows.
   const base: Record<string, unknown> = scope.tripIds
@@ -124,6 +144,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
             {pending.length > 0 ? ` · ${formatINR(pendingTotal)} unpaid` : ""}
           </p>
         </div>
+        <Link className="btn" href="/expenses/log">📋 Expense log</Link>
       </div>
 
       <div className="metrics">
@@ -144,21 +165,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
         <div style={{ marginTop: 14 }}>
         <form action={addExpense}>
           <div className="row-3">
-            <label className="field"><span className="lbl">Which trip?</span>
-              <select name="target" defaultValue={filter && tripIdSet.has(filter) ? `trip:${filter}` : ""}>
-                <option value="">General / no trip</option>
-                {trips.map((t) => {
-                  const hotels = t.itinerary.flatMap((n) => n.hotels.map((h) => ({ ...h, location: n.location })));
-                  return (
-                    <optgroup key={t.id} label={t.name}>
-                      <option value={`trip:${t.id}`}>{t.name} — whole trip</option>
-                      {hotels.map((h) => <option key={h.id} value={`hotel:${h.id}`}>&nbsp;&nbsp;🏨 {h.hotelName}{h.location ? ` · ${h.location}` : ""}</option>)}
-                      {t.cars.map((c) => <option key={c.id} value={`car:${c.id}`}>&nbsp;&nbsp;🚗 {c.label}{c.carType ? ` · ${c.carType}` : ""}</option>)}
-                    </optgroup>
-                  );
-                })}
-              </select>
-            </label>
+            <ExpenseTargets trips={targetTrips} defaultTripId={filter && tripIdSet.has(filter) ? filter : ""} />
             <label className="field"><span className="lbl">Expense type</span>
               <select name="category" defaultValue="misc">
                 {CATS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}

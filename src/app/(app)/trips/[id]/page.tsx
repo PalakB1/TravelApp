@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
-import { tripFinancials, reconcileTrip, bookingTotal, bookingPaid, bookingBalance, isNightGap, holdExpiringSoon, carCost, pricePerRoom, nightCost, nightBookedRooms, carPassengerSeats, tripIsOver, roomsNeededOnNight, paxOnNight, isShortStay } from "@/lib/calc";
+import { tripFinancials, reconcileTrip, bookingTotal, bookingPaid, bookingBalance, isNightGap, holdExpiringSoon, carCost, pricePerRoom, nightCost, nightBookedRooms, carPassengerSeats, tripIsOver, roomsNeededOnNight, paxOnNight, isShortStay, tripEndLabel } from "@/lib/calc";
 import BookingsTable from "@/components/BookingsTable";
 import { formatINR, formatINRShort } from "@/lib/money";
 import {
@@ -21,6 +22,8 @@ import ImportItinerary from "@/components/ImportItinerary";
 import CloseDetails from "@/components/CloseDetails";
 import AutoFill from "@/components/AutoFill";
 import VisaLinkBuilder from "@/components/VisaLinkBuilder";
+import MarkPaid from "@/components/MarkPaid";
+import { getOrgContext } from "@/lib/org";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +34,7 @@ function dateInput(d: Date | null) {
   return d ? new Date(d).toISOString().slice(0, 10) : "";
 }
 function statusBadge(s: string) {
-  const map: Record<string, string> = { confirmed: "green", travelled: "accent", enquiry: "amber", cancelled: "red", final: "green", hold: "amber", paid: "green", pending: "amber", unbooked: "red" };
+  const map: Record<string, string> = { confirmed: "green", travelled: "accent", enquiry: "amber", cancelled: "red", final: "green", hold: "amber", paid: "emerald", pending: "amber", unbooked: "red" };
   return <span className={`badge ${map[s] || "gray"}`}>{s}</span>;
 }
 
@@ -73,7 +76,17 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
 
   // Actual costs logged in the Costing ledger for this trip (each optionally tied
   // to a specific hotel or car). Used to reconcile the hold/estimate with reality.
-  const tripExpenses = await prisma.expense.findMany({ where: { tripId: id }, select: { amount: true, hotelId: true, carId: true } });
+  const tripExpenses = await prisma.expense.findMany({
+    where: { tripId: id },
+    select: { amount: true, hotelId: true, carId: true, items: { select: { hotelId: true, carId: true, amount: true } } },
+  });
+  // Accounts already used, so "paid from" autocompletes instead of being retyped.
+  const bankRows = await prisma.expense.findMany({
+    where: { orgId: scope.orgId, bankName: { not: null }, deletedAt: null },
+    select: { bankName: true }, distinct: ["bankName"], take: 40,
+  });
+  const banks = bankRows.map((b) => b.bankName!).filter(Boolean).sort((a, b) => a.localeCompare(b));
+  const myName = (await getOrgContext())?.session.name ?? "";
   const allHotelsFlat = trip.itinerary.flatMap((n) => n.hotels);
   const rec = reconcileTrip({
     revenue: f.revenue,
@@ -81,7 +94,11 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
     hotels: allHotelsFlat.map((h) => ({ id: h.id, estimate: h.cost })),
     cars: trip.cars.map((c) => ({ id: c.id, estimate: carCost(c) })),
     otherEstimate: f.extrasCost + f.inclusionsCost,
-    expenses: tripExpenses,
+    expenses: tripExpenses.flatMap((e) =>
+      e.items.length > 0
+        ? e.items.map((it) => ({ amount: it.amount, hotelId: it.hotelId, carId: it.carId }))
+        : [{ amount: e.amount, hotelId: e.hotelId, carId: e.carId }],
+    ),
   });
 
   // hotel names already used, for the "pick or type new" dropdown
@@ -346,7 +363,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                                 </div>
                                 <div className="row-3">
                                   <label className="field"><span className="lbl">Status</span>
-                                    <select name="status" defaultValue={h.status}><option value="unbooked">Not booked</option><option value="hold">On hold</option><option value="final">Confirmed</option></select>
+                                    <select name="status" defaultValue={h.status}><option value="unbooked">Not booked</option><option value="hold">On hold</option><option value="final">Confirmed</option><option value="paid">Paid</option></select>
                                   </label>
                                   <label className="field"><span className="lbl">Hold until</span><input name="holdUntil" type="date" defaultValue={dateInput(h.holdUntil)} /></label>
                                   <label className="field"><span className="lbl">Booked / held on</span><input name="source" list="source-list" defaultValue={h.source || ""} placeholder="Pick or type — Booking.com" /></label>
@@ -360,7 +377,10 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                                   <CloseDetails label="Close" />
                                 </div>
                               </form>
-                              <form action={deleteHotelBooking}><input type="hidden" name="id" value={h.id} /><button className="sm danger" type="submit">Remove hotel</button></form>
+                              {h.status !== "paid" && (
+                                <MarkPaid refId={`hotel:${h.id}`} label={h.hotelName} estimate={h.cost} banks={banks} myName={myName} />
+                              )}
+                              <form action={deleteHotelBooking} style={{ marginTop: 8 }}><input type="hidden" name="id" value={h.id} /><button className="sm danger" type="submit">Remove hotel</button></form>
                             </div>
                           </details>
                         );
@@ -378,7 +398,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                             </div>
                             <div className="row-3">
                               <label className="field"><span className="lbl">Status</span>
-                                <select name="status" defaultValue="hold"><option value="unbooked">Not booked</option><option value="hold">On hold</option><option value="final">Confirmed</option></select>
+                                <select name="status" defaultValue="hold"><option value="unbooked">Not booked</option><option value="hold">On hold</option><option value="final">Confirmed</option><option value="paid">Paid</option></select>
                               </label>
                               <label className="field"><span className="lbl">Hold until</span><input name="holdUntil" type="date" /></label>
                               <label className="field"><span className="lbl">Booked / held on</span><input name="source" list="source-list" placeholder="Pick or type — Booking.com" /></label>
@@ -439,7 +459,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                       <label className="field"><span className="lbl">Rooms</span><input name="rooms" type="number" min="0" placeholder="6" /></label>
                       <label className="field"><span className="lbl">Cost</span><input name="cost" placeholder="₹" /></label>
                       <label className="field"><span className="lbl">Status</span>
-                        <select name="status" defaultValue="hold"><option value="unbooked">Not booked</option><option value="hold">On hold</option><option value="final">Confirmed</option></select>
+                        <select name="status" defaultValue="hold"><option value="unbooked">Not booked</option><option value="hold">On hold</option><option value="final">Confirmed</option><option value="paid">Paid</option></select>
                       </label>
                     </div>
                     <label className="field" style={{ maxWidth: 320 }}><span className="lbl">Type of night</span>
@@ -544,13 +564,16 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                       </label>
                       <div className="row-3">
                         <label className="field"><span className="lbl">Status</span>
-                          <select name="status" defaultValue={c.status}><option value="hold">On hold</option><option value="final">Confirmed</option></select>
+                          <select name="status" defaultValue={c.status}><option value="hold">On hold</option><option value="final">Confirmed</option><option value="paid">Paid</option></select>
                         </label>
                         <label className="field"><span className="lbl">Hold until</span><input name="holdUntil" type="date" defaultValue={dateInput(c.holdUntil)} /></label>
                         <label className="field"><span className="lbl">Held on</span><input name="source" list="source-list" defaultValue={c.source || ""} placeholder="vendor / app" /></label>
                       </div>
                       <button className="primary sm" type="submit">Save car</button>
                     </form>
+                    {c.status !== "paid" && (
+                      <MarkPaid refId={`car:${c.id}`} label={c.label} estimate={carCost(c)} banks={banks} myName={myName} />
+                    )}
                     <form action={deleteCar} style={{ marginTop: 8 }}><input type="hidden" name="id" value={c.id} /><button className="sm danger" type="submit">Remove car</button></form>
                   </div>
                 </details>
@@ -585,7 +608,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
               </label>
               <div className="row-3">
                 <label className="field"><span className="lbl">Status</span>
-                  <select name="status" defaultValue="hold"><option value="hold">On hold</option><option value="final">Confirmed</option></select>
+                  <select name="status" defaultValue="hold"><option value="hold">On hold</option><option value="final">Confirmed</option><option value="paid">Paid</option></select>
                 </label>
                 <label className="field"><span className="lbl">Hold until</span><input name="holdUntil" type="date" /></label>
                 <label className="field"><span className="lbl">Held on</span><input name="source" list="source-list" placeholder="vendor / app" /></label>
@@ -726,7 +749,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
             visaStatus: b.visaStatus, visaHandledBy: b.visaHandledBy,
             total: bookingTotal(b), paid: bookingPaid(b), balance: bookingBalance(b),
             discount: b.discount, discountReason: b.discountReason,
-            invoiceNo: b.invoiceNo, tripOver: tripIsOver(trip),
+            invoiceNo: b.invoiceNo, tripOver: tripIsOver(trip), tripEnds: tripEndLabel(trip),
           }))} />
         )}
         <details className="add">
@@ -813,7 +836,8 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
               <thead><tr><th>Item</th><th>Status</th><th className="num">Planned</th><th className="num">Actual</th><th></th></tr></thead>
               <tbody>
                 {trip.vendorBookings.map((vb) => (
-                  <tr key={vb.id}>
+                  <Fragment key={vb.id}>
+                  <tr>
                     <td>
                       <form action={updateVendorBooking} id={`vb-${vb.id}`}><input type="hidden" name="id" value={vb.id} /></form>
                       {vb.vendorName}<div className="small muted">{vb.type}{vb.detail ? ` · ${vb.detail}` : ""}</div>
@@ -832,6 +856,16 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                       </span>
                     </td>
                   </tr>
+                  {/* Its own full-width row: the mark-paid form would be clipped
+                      inside the narrow actions cell. */}
+                  {vb.status !== "paid" && (
+                    <tr>
+                      <td colSpan={5} style={{ paddingTop: 0 }}>
+                        <MarkPaid refId={`vendor:${vb.id}`} label={vb.vendorName} estimate={vb.actualCost ?? vb.cost} banks={banks} myName={myName} />
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

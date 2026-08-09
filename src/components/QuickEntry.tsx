@@ -140,7 +140,7 @@ export default function QuickEntry({ payable, trips, customerNames, sources }: P
           <div className="row-3">
             <label className="field"><span className="lbl">Total cost (split across nights)</span><input name="cost" placeholder="₹ for the whole stay" /></label>
             <label className="field"><span className="lbl">Status</span>
-              <select name="status" defaultValue="hold"><option value="hold">On hold</option><option value="final">Confirmed</option><option value="unbooked">Not booked</option></select>
+              <select name="status" defaultValue="hold"><option value="hold">On hold</option><option value="final">Confirmed</option><option value="paid">Paid</option><option value="unbooked">Not booked</option></select>
             </label>
             <label className="field"><span className="lbl">Booked / held on</span><input name="source" list="qe-source-list" placeholder="Pick or type — Booking.com" /></label>
           </div>

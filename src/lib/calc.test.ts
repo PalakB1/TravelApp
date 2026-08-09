@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { bookingCoversNight, paxOnNight, roomsNeededOnNight, bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTotal, bookingRevenue, bookingTax, bookingBalance, reconcileTrip } from "./calc";
+import { bookingCoversNight, paxOnNight, roomsNeededOnNight, bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTotal, bookingRevenue, bookingTax, bookingBalance, reconcileTrip, isBookedStatus, isNightGap, nightBookedRooms } from "./calc";
 
 const base = { pax: 1, discount: 0, status: "confirmed" as const };
 
@@ -132,5 +132,28 @@ describe("per-night occupancy for short stays", () => {
 
   it("counts everyone when the night has no date set", () => {
     expect(paxOnNight([full, early, late], null)).toBe(4);
+  });
+});
+
+// "paid" was added to the hotel/car vocabulary after gap detection existed.
+// These pin the behaviour so a paid-for hotel is never reported as a gap.
+describe("paid hotels count as booked", () => {
+  const night = (status: string) => ({ hotels: [{ status, rooms: 3, cost: 0, holdUntil: null }] });
+
+  it("treats hold, final and paid as secured", () => {
+    expect(isBookedStatus("hold")).toBe(true);
+    expect(isBookedStatus("final")).toBe(true);
+    expect(isBookedStatus("paid")).toBe(true);
+    expect(isBookedStatus("unbooked")).toBe(false);
+  });
+
+  it("does not call a paid night a gap", () => {
+    expect(isNightGap(night("paid") as never)).toBe(false);
+    expect(isNightGap(night("unbooked") as never)).toBe(true);
+  });
+
+  it("counts rooms on a paid night", () => {
+    expect(nightBookedRooms(night("paid") as never)).toBe(3);
+    expect(nightBookedRooms(night("unbooked") as never)).toBe(0);
   });
 });

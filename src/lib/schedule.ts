@@ -78,3 +78,23 @@ export function scheduleStatus(
 export function scheduleTotal(items: { amount: number }[]): number {
   return items.reduce((s, i) => s + i.amount, 0);
 }
+
+// Split one amount across several items in proportion to `weights`, in whole
+// rupees, guaranteeing the parts add back to exactly the whole.
+//
+// Used when a single supplier invoice covers several hotel nights: each night
+// takes its share so the trip still reconciles night by night. Naive rounding
+// loses or invents a rupee or two, which then shows up as a phantom variance —
+// so the last item absorbs whatever the rounding left over.
+export function apportion(amount: number, weights: number[]): number[] {
+  const n = weights.length;
+  if (n === 0) return [];
+  const total = weights.reduce((s, w) => s + Math.max(0, w), 0);
+  // No usable weights (everything estimated at zero) → split it evenly.
+  const shares = total > 0
+    ? weights.map((w) => Math.round((amount * Math.max(0, w)) / total))
+    : weights.map(() => Math.round(amount / n));
+  const drift = amount - shares.reduce((s, v) => s + v, 0);
+  shares[n - 1] += drift;
+  return shares;
+}

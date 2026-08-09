@@ -51,7 +51,7 @@ export default async function HotelsPage() {
             <Link className="btn primary sm" href="/trips">Go to trips</Link>
           </div>
         ) : (
-          <TableSearch placeholder="Search hotel, location or trip…" tags={["final", "hold", "unbooked"]}>
+          <TableSearch placeholder="Search hotel, location or trip…" tags={["paid", "final", "hold", "unbooked"]}>
             <table className="t">
               <thead>
                 <tr>
@@ -70,7 +70,7 @@ export default async function HotelsPage() {
                     <td className="num">{h.rooms}</td>
                     <td className="num">{formatINR(h.cost)}</td>
                     <td className="num muted">{h.rooms > 0 ? formatINR(pricePerRoom(h)) : "—"}</td>
-                    <td><span className={`badge ${h.status === "final" ? "green" : h.status === "hold" ? "amber" : "red"}`}>{h.status}</span></td>
+                    <td><span className={`badge ${h.status === "paid" ? "emerald" : h.status === "final" ? "green" : h.status === "hold" ? "amber" : "red"}`}>{h.status}</span></td>
                     <td className="muted small">{fmtDate(h.holdUntil)}</td>
                     <td className="muted small">{h.source || "—"}</td>
                     <td><Stamp created={h.createdAt} updated={h.updatedAt} /></td>

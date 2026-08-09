@@ -7,7 +7,7 @@ import { getOrgContext } from "@/lib/org";
 import { getScope } from "@/lib/scope";
 import { parseAmount, parseRate, formatINR } from "@/lib/money";
 import { financialYear } from "@/lib/invoice";
-import { bookingTotal } from "@/lib/calc";
+import { bookingTotal, tripIsOver } from "@/lib/calc";
 
 // Every mutation runs through guard(), which returns the EFFECTIVE org id. All
 // reads/writes below are scoped to it so one org can never touch another's data.
@@ -25,9 +25,22 @@ function refresh() {
 export async function generateInvoice(formData: FormData) {
   const orgId = await guard();
   const id = String(formData.get("id"));
-  const booking = await prisma.booking.findFirst({ where: { id, trip: { orgId } }, select: { id: true, invoiceNo: true } });
+  const booking = await prisma.booking.findFirst({
+    where: { id, trip: { orgId } },
+    select: { id: true, invoiceNo: true, trip: { select: { departureDate: true, nights: true, days: true } } },
+  });
   if (!booking || booking.invoiceNo) { refresh(); return; }
   const now = new Date();
+
+  // Invoicing before the trip is over is allowed, but only through the
+  // multi-step confirmation — which posts confirmEarly. Enforced here and not
+  // just in the UI, or the extra steps would be decoration you could skip by
+  // submitting the plain form.
+  if (!tripIsOver(booking.trip, now) && String(formData.get("confirmEarly") || "") !== "yes") {
+    refresh();
+    return;
+  }
+
   const fy = financialYear(now);
   const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { name: true, legalName: true } });
   const prefix = (org?.legalName || org?.name || "INV").replace(/[^A-Za-z]/g, "").slice(0, 4).toUpperCase() || "INV";

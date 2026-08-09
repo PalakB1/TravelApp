@@ -114,6 +114,10 @@ model Expense {
   fileName    String? // original name of the uploaded invoice
   fileType    String? // mime type
   fileData    String? // base64 data URL of the invoice/receipt
+  // One bill often covers several things at once — three hotel nights on the
+  // same supplier invoice, or a car plus its driver. Each tagged item carries
+  // its share of the amount so trip reconciliation stays exact.
+  items       ExpenseItem[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   deletedAt   DateTime? // soft-delete: hidden everywhere, restorable from the recycle bin
@@ -411,6 +415,7 @@ model HotelBooking {
   createdAt      DateTime  @default(now())
   updatedAt DateTime @updatedAt
   expenses       Expense[]
+  expenseItems   ExpenseItem[]
 }
 
 // A car in the trip's self-drive fleet.
@@ -436,6 +441,7 @@ model Car {
   createdAt      DateTime  @default(now())
   updatedAt DateTime @updatedAt
   expenses       Expense[]
+  expenseItems   ExpenseItem[]
 }
 
 // Price options for a trip (Deluxe, Standard, single/twin, with/without flights...)
@@ -655,4 +661,27 @@ model VendorBooking {
   date           DateTime?
   createdAt      DateTime  @default(now())
   updatedAt DateTime @updatedAt
+  expenseItems   ExpenseItem[]
+}
+
+// Links one logged spend to one thing it paid for. An expense can have several,
+// so a single supplier invoice covering three nights is entered once and still
+// reconciles night by night. `amount` is that item's share, apportioned across
+// the tagged items in proportion to what each was estimated to cost.
+model ExpenseItem {
+  id        String         @id @default(cuid())
+  expenseId String
+  expense   Expense        @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  hotelId   String?
+  hotel     HotelBooking?  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  carId     String?
+  car       Car?           @relation(fields: [carId], references: [id], onDelete: Cascade)
+  vendorId  String?
+  vendor    VendorBooking? @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  amount    Int            @default(0)
+
+  @@index([expenseId])
+  @@index([hotelId])
+  @@index([carId])
+  @@index([vendorId])
 }

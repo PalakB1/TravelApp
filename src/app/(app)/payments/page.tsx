@@ -13,6 +13,7 @@ import RemindCancelWindow from "@/components/RemindCancelWindow";
 import { scheduleStatus } from "@/lib/schedule";
 import { addPayment, approvePendingPayment, rejectPendingPayment } from "../data-actions";
 import SubmitButton from "@/components/SubmitButton";
+import { visaMeta } from "@/lib/visaStatus";
 
 export const dynamic = "force-dynamic";
 
@@ -182,7 +183,20 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                       ? (r.overdue ? <span className="badge rose">{fmtDate(r.date)}</span> : <span className="muted">{fmtDate(r.date)}</span>)
                       : <span className="muted small">no plan</span>}
                   </td>
-                  <td><Link className="row-link" href={`/bookings/${r.b.id}`}>{r.b.customerName}</Link></td>
+                  <td>
+                    <Link className="row-link" href={`/bookings/${r.b.id}`}>{r.b.customerName}</Link>
+                    {/* Visa state as a single dot: chasing money and chasing
+                        documents happen in the same phone call, but a full badge
+                        here would push the money columns off a laptop screen.
+                        Hidden entirely when no visa is needed. */}
+                    {r.b.visaStatus && r.b.visaStatus !== "not_required" && (
+                      <span
+                        className={`visa-dot dot-${visaMeta(r.b.visaStatus).badge}`}
+                        title={visaMeta(r.b.visaStatus).label}
+                        aria-label={visaMeta(r.b.visaStatus).short}
+                      />
+                    )}
+                  </td>
                   <td className="muted small">{r.b.trip.name}</td>
                   <td className="muted small">{r.label ?? "—"}</td>
                   <td className="num" style={{ fontWeight: 600, color: r.dueNow > 0 ? (r.overdue ? "var(--rose-fg)" : "var(--text)") : "var(--text-3)" }}>

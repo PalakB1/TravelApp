@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatINR } from "@/lib/money";
 import { visaMeta, VISA_STATUSES } from "@/lib/visaStatus";
 import { generateInvoice } from "@/app/(app)/data-actions";
+import EarlyInvoice from "./EarlyInvoice";
 
 export type BookingRow = {
   id: string;
@@ -21,6 +22,8 @@ export type BookingRow = {
   discountReason?: string | null;
   invoiceNo?: string | null;
   tripOver?: boolean;
+  /** Formatted trip end date — shown when invoicing ahead of it. */
+  tripEnds?: string | null;
 };
 
 const STATUSES = ["confirmed", "enquiry", "travelled", "cancelled"];
@@ -93,7 +96,8 @@ export default function BookingsTable({ rows, showTrip = false, initialVisa = ""
     ) : b.tripOver ? (
       <form action={generateInvoice}><input type="hidden" name="id" value={b.id} /><button type="submit" className="btn sm primary">Generate invoice</button></form>
     ) : (
-      <button type="button" className="btn sm" disabled title="Available once the trip is over (all days done)">Invoice locked</button>
+      // Not blocked any more — just deliberate. See EarlyInvoice.
+      <EarlyInvoice id={b.id} customerName={b.name} endsOn={b.tripEnds} />
     );
 
   return (

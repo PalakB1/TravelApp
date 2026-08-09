@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getScope, canUseTrip } from "@/lib/scope";
+import { getScope, canUseTrip, type Scope } from "@/lib/scope";
 import { parseAmount, formatINR } from "@/lib/money";
+import { apportion } from "@/lib/schedule";
 import { logActivity } from "../data-actions";
 
 const str = (v: FormDataEntryValue | null) => String(v || "").trim() || null;
@@ -28,12 +29,29 @@ export async function addExpense(formData: FormData) {
   //   "car:<id>"      → a specific car (tripId derived from it)
   // Everything is re-validated against this org + the member's trip scope, so a
   // stale or forged id just falls back to a general spend.
+  //   ""              → general / overhead
+  //   "trip:<id>"     → the whole trip
+  //   "hotel:<id>" …  → one specific item
+  // The full form instead posts `tripId` plus any number of `items`, because one
+  // supplier bill often covers several nights or a car and its driver at once.
   const target = String(formData.get("target") || "");
   let tripId: string | null = null;
   let hotelId: string | null = null;
   let carId: string | null = null;
 
-  if (target.startsWith("hotel:")) {
+  const refs = formData.getAll("items").map((v) => String(v)).filter(Boolean);
+  const picked = (await Promise.all(refs.map((r) => resolvePaidTarget(scope, r)))).filter(
+    (x): x is NonNullable<typeof x> => x !== null,
+  );
+
+  if (picked.length > 0) {
+    tripId = picked[0].tripId; // the picker only ever offers one trip's items
+    if (picked.length === 1) {
+      // Keep the legacy single-link columns meaningful for one-item spends.
+      hotelId = picked[0].kind === "hotel" ? picked[0].id : null;
+      carId = picked[0].kind === "car" ? picked[0].id : null;
+    }
+  } else if (target.startsWith("hotel:")) {
     const id = target.slice(6);
     const h = await prisma.hotelBooking.findFirst({ where: { id, night: { trip: scope.tripWhere } }, select: { night: { select: { tripId: true } } } });
     if (h) { hotelId = id; tripId = h.night.tripId; }
@@ -45,6 +63,16 @@ export async function addExpense(formData: FormData) {
     const id = target.slice(5);
     if (await canUseTrip(scope, id)) tripId = id;
   }
+
+  // No items ticked, but a trip chosen — the spend belongs to the trip as a whole.
+  if (!tripId) {
+    const plainTrip = String(formData.get("tripId") || "");
+    if (plainTrip && (await canUseTrip(scope, plainTrip))) tripId = plainTrip;
+  }
+
+  // Each tagged item takes a share of the bill, weighted by what it was
+  // estimated to cost, so per-item reconciliation stays honest.
+  const shares = apportion(amount, picked.map((t) => t.estimate));
 
   // Optional invoice/receipt file → base64 data URL.
   let fileName: string | null = null;
@@ -85,11 +113,25 @@ export async function addExpense(formData: FormData) {
       fileName,
       fileType,
       fileData,
+      items: picked.length > 0 ? {
+        create: picked.map((t, idx) => ({
+          hotelId: t.kind === "hotel" ? t.id : null,
+          carId: t.kind === "car" ? t.id : null,
+          vendorId: t.kind === "vendor" ? t.id : null,
+          amount: shares[idx] ?? 0,
+        })),
+      } : undefined,
     },
     include: { trip: { select: { name: true } }, hotel: { select: { hotelName: true } }, car: { select: { label: true } } },
   });
 
-  const targetLabel = expense.hotel ? `${expense.trip?.name ?? "trip"} › ${expense.hotel.hotelName}` : expense.car ? `${expense.trip?.name ?? "trip"} › ${expense.car.label}` : expense.trip ? expense.trip.name : "general";
+  const targetLabel = picked.length > 1
+    ? `${expense.trip?.name ?? "trip"} › ${picked.length} items`
+    : picked.length === 1
+      ? `${expense.trip?.name ?? "trip"} › ${picked[0].label}`
+      : expense.hotel ? `${expense.trip?.name ?? "trip"} › ${expense.hotel.hotelName}`
+        : expense.car ? `${expense.trip?.name ?? "trip"} › ${expense.car.label}`
+          : expense.trip ? expense.trip.name : "general";
   await logActivity(
     scope.orgId,
     "expense",
@@ -181,5 +223,119 @@ export async function undoSettlement(formData: FormData) {
   await prisma.settlement.delete({ where: { id } });
   await logActivity(scope.orgId, "expense", "settle", `Reversed a ${formatINR(settlement.amount)} reimbursement (${settlement._count.expenses} spend${settlement._count.expenses === 1 ? "" : "s"} owed again)`, "/expenses");
   revalidatePath("/expenses");
+  revalidatePath("/", "layout");
+}
+
+// --- Marking a booked item as paid -----------------------------------------
+// Hotels, cars and vendor bookings carry an *estimate* — what you expect the
+// thing to cost. Money actually leaving the bank belongs in the Costing ledger.
+// Before this, marking something paid and then logging the spend were two
+// separate jobs, and the second one got skipped.
+//
+// Now one form does both: it flips the item to "paid" and writes the matching
+// expense, linked back to the exact hotel or car so the trip still reconciles
+// estimate against actual.
+
+type PaidTarget =
+  | { kind: "hotel"; id: string; tripId: string; label: string; payee: string; estimate: number }
+  | { kind: "car"; id: string; tripId: string; label: string; payee: string; estimate: number }
+  | { kind: "vendor"; id: string; tripId: string; label: string; payee: string; estimate: number };
+
+// Resolve "hotel:<id>" and friends, re-checking the org and the member's trip
+// scope. A stale or forged id resolves to nothing and the action is a no-op.
+async function resolvePaidTarget(scope: Scope, ref: string): Promise<PaidTarget | null> {
+  if (ref.startsWith("hotel:")) {
+    const id = ref.slice(6);
+    const h = await prisma.hotelBooking.findFirst({
+      where: { id, night: { trip: scope.tripWhere } },
+      select: { id: true, hotelName: true, cost: true, night: { select: { tripId: true, location: true } } },
+    });
+    if (!h) return null;
+    return { kind: "hotel", id: h.id, tripId: h.night.tripId, label: `${h.hotelName}${h.night.location ? ` · ${h.night.location}` : ""}`, payee: h.hotelName, estimate: h.cost };
+  }
+  if (ref.startsWith("car:")) {
+    const id = ref.slice(4);
+    const c = await prisma.car.findFirst({
+      where: { id, trip: scope.tripWhere },
+      select: { id: true, tripId: true, label: true, carType: true, vendor: true, rentalCost: true, driverMode: true, driverCost: true },
+    });
+    if (!c) return null;
+    // A hired driver's fee is part of what the car costs you.
+    const estimate = c.rentalCost + (c.driverMode === "hired" ? c.driverCost : 0);
+    return { kind: "car", id: c.id, tripId: c.tripId, label: `${c.label}${c.carType ? ` · ${c.carType}` : ""}`, payee: c.vendor || c.label, estimate };
+  }
+  if (ref.startsWith("vendor:")) {
+    const id = ref.slice(7);
+    const v = await prisma.vendorBooking.findFirst({
+      where: { id, trip: scope.tripWhere },
+      select: { id: true, tripId: true, vendorName: true, detail: true, cost: true, actualCost: true },
+    });
+    if (!v) return null;
+    return { kind: "vendor", id: v.id, tripId: v.tripId, label: `${v.vendorName}${v.detail ? ` · ${v.detail}` : ""}`, payee: v.vendorName, estimate: v.actualCost ?? v.cost };
+  }
+  return null;
+}
+
+const CATEGORY_FOR: Record<PaidTarget["kind"], string> = { hotel: "hotel", car: "transport", vendor: "misc" };
+
+export async function markItemPaid(formData: FormData) {
+  const scope = await getScope();
+  if (!scope) redirect("/login");
+
+  const target = await resolvePaidTarget(scope, String(formData.get("ref") || ""));
+  if (!target) { revalidatePath("/expenses"); return; }
+
+  // Blank amount means "exactly what it was held at" — the common case.
+  const amount = parseAmount(String(formData.get("amount") || "")) || target.estimate;
+  if (amount <= 0) return;
+
+  const dateStr = str(formData.get("date"));
+  const paidPersonally = String(formData.get("paidPersonally") || "") === "on";
+
+  await prisma.$transaction(async (tx) => {
+    await tx.expense.create({
+      data: {
+        orgId: scope.orgId,
+        tripId: target.tripId,
+        // Kept for the older single-link readers; `items` is what's read now.
+        hotelId: target.kind === "hotel" ? target.id : null,
+        carId: target.kind === "car" ? target.id : null,
+        date: dateStr ? new Date(dateStr) : new Date(),
+        category: CATEGORY_FOR[target.kind],
+        payee: str(formData.get("payee")) || target.payee,
+        amount,
+        status: "paid",
+        paymentMode: str(formData.get("paymentMode")),
+        bankName: str(formData.get("bankName")),
+        paidPersonally,
+        paidBy: paidPersonally ? str(formData.get("paidBy")) : null,
+        notes: str(formData.get("notes")),
+        items: {
+          create: [{
+            hotelId: target.kind === "hotel" ? target.id : null,
+            carId: target.kind === "car" ? target.id : null,
+            vendorId: target.kind === "vendor" ? target.id : null,
+            amount,
+          }],
+        },
+      },
+    });
+
+    if (target.kind === "hotel") await tx.hotelBooking.update({ where: { id: target.id }, data: { status: "paid" } });
+    else if (target.kind === "car") await tx.car.update({ where: { id: target.id }, data: { status: "paid" } });
+    // A vendor booking records what it really cost as well as its status.
+    else await tx.vendorBooking.update({ where: { id: target.id }, data: { status: "paid", actualCost: amount } });
+  });
+
+  await logActivity(
+    scope.orgId,
+    "expense",
+    "create",
+    `Marked ${target.label} paid — logged ${formatINR(amount)}${paidPersonally ? " (personal money, to be reimbursed)" : ""}`,
+    `/trips/${target.tripId}`,
+  );
+  revalidatePath(`/trips/${target.tripId}`);
+  revalidatePath("/expenses");
+  revalidatePath("/hotels");
   revalidatePath("/", "layout");
 }

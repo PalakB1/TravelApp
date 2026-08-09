@@ -97,16 +97,24 @@ export function pricePerRoom(b: { cost: number; rooms: number }): number {
   return b.rooms > 0 ? Math.round(b.cost / b.rooms) : 0;
 }
 
-// A night is a gap unless at least one hotel on it is held or confirmed.
+// A room is secured once it's held, confirmed OR paid for. This lives in one
+// place deliberately: "paid" was added after gap detection was written, and
+// every check that listed hold and final by hand would have quietly started
+// reporting paid-for hotels as unbooked nights.
+export function isBookedStatus(status: string): boolean {
+  return status === "hold" || status === "final" || status === "paid";
+}
+
+// A night is a gap unless at least one hotel on it is secured.
 export function isNightGap(n: NightLite): boolean {
-  return !n.hotels.some((h) => h.status === "hold" || h.status === "final");
+  return !n.hotels.some((h) => isBookedStatus(h.status));
 }
 export function nightRooms(n: NightLite): number {
   return n.hotels.reduce((s, h) => s + h.rooms, 0);
 }
-// Rooms actually secured for a night (held or confirmed).
+// Rooms actually secured for a night.
 export function nightBookedRooms(n: NightLite): number {
-  return n.hotels.filter((h) => h.status === "hold" || h.status === "final").reduce((s, h) => s + h.rooms, 0);
+  return n.hotels.filter((h) => isBookedStatus(h.status)).reduce((s, h) => s + h.rooms, 0);
 }
 // Minimum rooms the group needs each night, at maxPerRoom guests per room.
 export function roomsNeeded(pax: number, maxPerRoom: number): number {
@@ -343,4 +351,15 @@ export function tripIsOver(trip: { departureDate: Date | null; nights: number; d
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
   return today.getTime() > last.getTime();
+}
+
+// The last date of a trip, as a readable label — used when warning that an
+// invoice is being raised before the trip has happened. Derived the same way
+// tripIsOver derives it, so the two can never disagree.
+export function tripEndLabel(trip: { departureDate: Date | null; nights: number; days: number }): string | null {
+  if (!trip.departureDate) return null;
+  const span = trip.nights > 0 ? trip.nights : Math.max(0, trip.days - 1);
+  const last = new Date(trip.departureDate);
+  last.setDate(last.getDate() + span);
+  return last.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }

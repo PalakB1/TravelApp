@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
-import { bookingTotal, bookingPaid, bookingBalance, tripIsOver } from "@/lib/calc";
+import { bookingTotal, bookingPaid, bookingBalance, tripIsOver, tripEndLabel } from "@/lib/calc";
 import { formatINR } from "@/lib/money";
 import ActivityLog from "@/components/ActivityLog";
 import BookingsTable from "@/components/BookingsTable";
@@ -24,7 +24,7 @@ export default async function BookingsPage({ searchParams }: { searchParams: Pro
     visaStatus: b.visaStatus, visaHandledBy: b.visaHandledBy,
     total: bookingTotal(b), paid: bookingPaid(b), balance: bookingBalance(b),
     discount: b.discount, discountReason: b.discountReason,
-    invoiceNo: b.invoiceNo, tripOver: tripIsOver(b.trip, now),
+    invoiceNo: b.invoiceNo, tripOver: tripIsOver(b.trip, now), tripEnds: tripEndLabel(b.trip),
   }));
 
   return (
