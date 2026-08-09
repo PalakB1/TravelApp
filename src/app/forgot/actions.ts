@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/db";
 import { sendMail, resetEmail } from "@/lib/mail";
+import { isDemoUser } from "@/lib/demo";
 
 export type ForgotResult = { ok?: boolean; error?: string; notice?: string };
 export type ResetResult = { error?: string };
@@ -35,6 +36,10 @@ export async function requestReset(_prev: ForgotResult | undefined, formData: Fo
   const sameAnswer: ForgotResult = { ok: true };
 
   if (!user) return sameAnswer;
+  // The demo logins are published on the sign-in page. Anyone could ask for a
+  // reset on one; nobody should be able to complete it. Same bland answer, no
+  // token issued — the caller can't tell this address is special.
+  if (isDemoUser(user.email)) return sameAnswer;
 
   // Invalidate any earlier outstanding links for this user.
   await prisma.passwordResetToken.updateMany({
@@ -76,6 +81,12 @@ export async function resetPassword(_prev: ResetResult | undefined, formData: Fo
   });
   if (!row || row.usedAt || row.expiresAt < new Date()) {
     return { error: "This link has expired or has already been used. Please request a new one." };
+  }
+  // Belt and braces: even a token minted before the guard above went in, or by
+  // some future path, must not be able to move a demo password.
+  const target = await prisma.user.findUnique({ where: { id: row.userId }, select: { email: true } });
+  if (isDemoUser(target?.email)) {
+    return { error: "The demo workspace uses a shared password that can't be changed. Start a free trial for an account of your own." };
   }
 
   // Mark used and set the password together, so a link can never be replayed.

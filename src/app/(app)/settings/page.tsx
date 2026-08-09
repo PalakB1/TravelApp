@@ -7,6 +7,7 @@ import ChangePasswordForm from "./ChangePasswordForm";
 import { updateOrgProfile, updateRefundPolicy } from "./actions";
 import { STANDARD_REFUND_POLICY } from "@/lib/policy";
 import { createPlanTemplate, deletePlanTemplate, setDefaultPlanTemplate, addTemplateStep, deleteTemplateStep } from "../data-actions";
+import TourToggle from "@/components/TourToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,11 @@ export default async function SettingsPage() {
         <p className="small muted" style={{ marginTop: 10, marginBottom: 0 }}>
           Invite colleagues and set who can see which trips, or restore something you deleted.
         </p>
+      </div>
+
+      <div className="card">
+        <div className="card-title">Guided tour <span className="small muted">a walk through what each screen is for</span></div>
+        <TourToggle />
       </div>
 
       {org && (

@@ -11,6 +11,7 @@ import TableLabels from "@/components/TableLabels";
 import BottomNav from "@/components/BottomNav";
 import InstallApp from "@/components/InstallApp";
 import DemoBanner from "@/components/DemoBanner";
+import Tour from "@/components/Tour";
 import QuickEntryLauncher from "@/components/QuickEntryLauncher";
 import ThemeToggle from "@/components/ThemeToggle";
 import { logout, reapplyAction } from "./actions";
@@ -89,6 +90,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="app">
       <EscToClose />
+      <Tour autoStart />
       <InstallApp />
       <CollapseOnSave />
       <SaveToast />
