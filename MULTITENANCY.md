@@ -1,10 +1,12 @@
-# Multi-tenancy — build notes (branch: `multi-tenant`)
+# Multi-tenancy — how data isolation works
 
-This branch turns Trip Desk into a platform many travel companies can use, each
-with its own isolated data, plus a platform-admin console (you) to approve orgs.
+TripZei is a platform many travel companies use at once, each with its own
+isolated data, plus a platform-admin console at `/admin` for approving new
+agencies and stepping into one to help.
 
-**Status:** foundation committed (schema + migration). Migration NOT yet applied
-to the database. No app code wired to orgs yet.
+**Status: shipped and live.** These notes were written while building it and are
+kept as the reference for how scoping works — the plan sections below describe
+work that is already done.
 
 ---
 
@@ -38,7 +40,7 @@ The live Neon DB holds real business data. **In no way should this data be delet
   `Customer`, `ActivityLog`, `User`; `isPlatformAdmin` on `User`.
 - `prisma/migrations/20260704120000_multi_tenancy/migration.sql`: additive
   migration — creates `Organization`, adds the columns, seeds one default org
-  `org_default_0001` ("Trip Desk", approved), backfills all existing rows to it,
+  `org_default_0001` ("TripZei", approved), backfills all existing rows to it,
   makes `admin@travel.local` the platform admin, adds indexes + FKs.
 
 ## Apply order (when ready)
@@ -54,7 +56,7 @@ The live Neon DB holds real business data. **In no way should this data be delet
 
 ## Feature brief (paste into the fresh session as the first message)
 
-**Goal:** multi-tenant Trip Desk with self-serve signup gated by admin approval,
+**Goal:** multi-tenant TripZei with self-serve signup gated by admin approval,
 a platform-admin console, equal access within an org, and strict data isolation.
 
 **Model:** already added — `Organization { id, name, status(pending|approved|
