@@ -304,7 +304,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             </div>
             <div className="card">
               <div className="card-title">
-                GST / TCS to govt
+                {$.taxLabel}{$.taxLabel2 ? ` / ${$.taxLabel2}` : ""} to govt
                 <Link className="small" style={{ color: "var(--accent)" }} href="/tax">Manage →</Link>
               </div>
               <Donut

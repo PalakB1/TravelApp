@@ -340,8 +340,9 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
             {bookingInclTaxCharge(b) > 0 && <Line label="Inclusions (taxable)" value={$.fmt(bookingInclTaxCharge(b))} muted />}
             {b.travellerExtra > 0 && <Line label="Per-person extras" value={$.fmt(b.travellerExtra)} muted />}
             <Line label="Taxable value" value={$.fmt(taxable)} strong />
-            <Line label={`GST @ ${b.gstRate}%`} value={$.fmt(gst)} muted />
-            <Line label={`TCS @ ${b.tcsRate}%`} value={$.fmt(tcs)} muted />
+            <Line label={`${$.taxLabel} @ ${b.gstRate}%`} value={$.fmt(gst)} muted />
+            {/* Only India levies a second charge; elsewhere the row would read "@ 0%". */}
+            {$.taxLabel2 && <Line label={`${$.taxLabel2} @ ${b.tcsRate}%`} value={$.fmt(tcs)} muted />}
             {b.nonTaxable > 0 && <Line label="Non-taxable (no GST/TCS)" value={$.fmt(b.nonTaxable)} muted />}
             {bookingInclNonTaxCharge(b) > 0 && <Line label="Inclusions (no tax)" value={$.fmt(bookingInclNonTaxCharge(b))} muted />}
             <div className="between" style={{ paddingTop: 10 }}>

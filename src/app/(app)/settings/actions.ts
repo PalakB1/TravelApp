@@ -7,6 +7,8 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { getOrgContext } from "@/lib/org";
 import { isDemoUser } from "@/lib/demo";
+import { countryPreset } from "@/lib/countries";
+import { parseRate } from "@/lib/money";
 
 export type PwResult = { ok?: boolean; error?: string; message?: string };
 
@@ -88,4 +90,46 @@ export async function updateRefundPolicy(formData: FormData) {
   });
   revalidatePath("/settings");
   revalidatePath("/", "layout");
+}
+
+// Change where the agency operates, and with it the currency it bills in and
+// what its taxes are called.
+//
+// Picking a country reloads every field from that country's preset; the
+// individual fields are then editable, because an Indian operator selling
+// European tours may well bill in euros, and rates change without the country
+// changing. Nothing already recorded is converted — amounts are stored as plain
+// numbers, so switching currency re-labels history rather than re-pricing it.
+export async function updateRegion(formData: FormData) {
+  const ctx = await getOrgContext();
+  if (!ctx?.orgId) redirect("/login");
+
+  const country = String(formData.get("country") || "").trim();
+  const preset = countryPreset(country);
+  const usePreset = String(formData.get("usePreset") || "") === "yes";
+
+  const pick = (key: string, fallback: string) => (usePreset ? fallback : (str(formData.get(key)) ?? fallback));
+  const pickNum = (key: string, fallback: number) => {
+    if (usePreset) return fallback;
+    const raw = formData.get(key);
+    return parseRate(raw, fallback);
+  };
+
+  await prisma.organization.update({
+    where: { id: ctx.orgId },
+    data: {
+      country: preset.code,
+      currency: pick("currency", preset.currency).toUpperCase().slice(0, 3),
+      locale: pick("locale", preset.locale),
+      taxLabel: pick("taxLabel", preset.taxLabel),
+      taxRate: pickNum("taxRate", preset.taxRate),
+      // Blank clears the second levy entirely, which is what most countries want.
+      taxLabel2: usePreset ? preset.taxLabel2 : (str(formData.get("taxLabel2")) ?? ""),
+      taxRate2: pickNum("taxRate2", preset.taxRate2),
+      taxIdLabel: pick("taxIdLabel", preset.taxIdLabel),
+    },
+  });
+
+  revalidatePath("/", "layout");
+  revalidatePath("/settings");
 }

@@ -6,6 +6,7 @@ import { useActionState } from "react";
 import { signup } from "./actions";
 import Logo from "@/components/Logo";
 import DemoCard from "@/components/DemoCard";
+import { COUNTRIES } from "@/lib/countries";
 
 // Public Cloudflare Turnstile site key (safe to ship to the browser).
 const TURNSTILE_SITE_KEY = "0x4AAAAAADvpHod-6yzR28OY";
@@ -27,6 +28,15 @@ export default function SignupForm({ defaultEmail = "" }: { defaultEmail?: strin
           <label className="field">
             <span className="lbl">Company / agency name</span>
             <input name="company" placeholder="e.g. Nordic Self-Drive Tours" autoComplete="organization" />
+          </label>
+          <label className="field">
+            <span className="lbl">Country you operate from</span>
+            <select name="country" defaultValue="IN">
+              {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+            </select>
+            <span className="small muted" style={{ marginTop: 4 }}>
+              Sets your currency and what your sales tax is called. Both editable later.
+            </span>
           </label>
           <label className="field">
             <span className="lbl">Your name</span>

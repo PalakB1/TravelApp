@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { createSession } from "@/lib/auth";
 import { trialEndDate } from "@/lib/billing";
+import { countryPreset } from "@/lib/countries";
 
 // Verify the Cloudflare Turnstile token server-side. If no secret is configured
 // (e.g. local dev without the env var) we skip the check so signup still works.
@@ -102,10 +103,22 @@ export async function signup(_prev: { error?: string } | undefined, formData: Fo
 
   // New org starts in "pending" — it can't enter the app until an admin approves.
   // Business/GST details are optional here and fully editable later in Settings.
+  // The country decides currency, digit grouping and tax naming in one go, so
+  // a UK agency never sees the word GST and an Indian one keeps TCS.
+  const preset = countryPreset(String(formData.get("country") || ""));
+
   const org = await prisma.organization.create({
     data: {
       name: company,
       status: "pending",
+      country: preset.code,
+      currency: preset.currency,
+      locale: preset.locale,
+      taxLabel: preset.taxLabel,
+      taxRate: preset.taxRate,
+      taxLabel2: preset.taxLabel2,
+      taxRate2: preset.taxRate2,
+      taxIdLabel: preset.taxIdLabel,
       plan: "trial",
       trialEndsAt: trialEndDate(),
       legalName: s("legalName"),

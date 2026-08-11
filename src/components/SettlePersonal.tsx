@@ -27,12 +27,10 @@ export type PersonalRow = {
   amount: number;
 };
 
-// Money formatting comes from the agency, not from a hardcoded rupee.
-let inr = (n: number) => formatMoney(n, INR);
 
 // One person's unsettled personal spends: pick any/all, then reimburse them in a
 // single company transfer (bank + transaction number recorded once for the lot).
-function PersonGroup({ person, rows }: { person: string; rows: PersonalRow[] }) {
+function PersonGroup({ person, rows, inr }: { person: string; rows: PersonalRow[]; inr: (n: number) => string }) {
   const [sel, setSel] = useState<Set<string>>(() => new Set(rows.map((r) => r.id)));
 
   const allOn = sel.size === rows.length && rows.length > 0;
@@ -94,10 +92,12 @@ function PersonGroup({ person, rows }: { person: string; rows: PersonalRow[] }) 
 
 // The `bank-names` datalist is rendered once by the page and referenced here by id.
 export default function SettlePersonal({ groups, money = INR }: { groups: { person: string; rows: PersonalRow[] }[]; money?: MoneyCfg }) {
-  inr = (n: number) => formatMoney(n, money);
+  // Built here and passed down, never stored module-side: a shared mutable
+  // formatter would be overwritten by whichever render ran last.
+  const inr = (n: number) => formatMoney(n, money);
   return (
     <div>
-      {groups.map((g) => <PersonGroup key={g.person} person={g.person} rows={g.rows} />)}
+      {groups.map((g) => <PersonGroup key={g.person} person={g.person} rows={g.rows} inr={inr} />)}
     </div>
   );
 }

@@ -47,8 +47,6 @@ export default function InstallApp() {
       (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
     if (installed) return;
 
-    setGone(false);
-
     const onPrompt = (e: Event) => {
       e.preventDefault(); // stop Chrome's own mini-infobar; we ask in our words
       setDeferred(e as InstallEvent);
@@ -59,9 +57,19 @@ export default function InstallApp() {
     // desktop Safari has no home screen.
     const ua = navigator.userAgent;
     const isIosSafari = /iPhone|iPad|iPod/.test(ua) && /Safari/.test(ua) && !/CriOS|FxiOS/.test(ua);
-    if (isIosSafari) setShowIos(true);
 
-    return () => window.removeEventListener("beforeinstallprompt", onPrompt);
+    // Both flags flipped a tick later rather than in the effect body: setting
+    // state synchronously there forces a second render before the first paints,
+    // and this card has no reason to appear that urgently.
+    const reveal = setTimeout(() => {
+      setGone(false);
+      if (isIosSafari) setShowIos(true);
+    }, 0);
+
+    return () => {
+      clearTimeout(reveal);
+      window.removeEventListener("beforeinstallprompt", onPrompt);
+    };
   }, []);
 
   const close = () => {

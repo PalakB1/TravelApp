@@ -4,11 +4,13 @@ import { getOrgContext } from "@/lib/org";
 import { prisma } from "@/lib/db";
 
 import ChangePasswordForm from "./ChangePasswordForm";
-import { updateOrgProfile, updateRefundPolicy } from "./actions";
+import { updateOrgProfile, updateRefundPolicy, updateRegion } from "./actions";
 import { STANDARD_REFUND_POLICY } from "@/lib/policy";
 import { createPlanTemplate, deletePlanTemplate, setDefaultPlanTemplate, addTemplateStep, deleteTemplateStep } from "../data-actions";
 import TourToggle from "@/components/TourToggle";
+import { COUNTRIES } from "@/lib/countries";
 import { orgMoney } from "@/lib/orgMoney";
+import SubmitButton from "@/components/SubmitButton";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +28,7 @@ export default async function SettingsPage() {
   const org = ctx?.orgId
     ? await prisma.organization.findUnique({
         where: { id: ctx.orgId },
-        select: { name: true, legalName: true, gstin: true, gstAddress: true, gstState: true, gstStateCode: true, sacCode: true, invoiceNote: true, logo: true, defaultRefundPolicy: true },
+        select: { name: true, legalName: true, gstin: true, gstAddress: true, gstState: true, gstStateCode: true, sacCode: true, invoiceNote: true, logo: true, defaultRefundPolicy: true, country: true, currency: true, locale: true, taxLabel: true, taxRate: true, taxLabel2: true, taxRate2: true, taxIdLabel: true },
       })
     : null;
 
@@ -55,6 +57,49 @@ export default async function SettingsPage() {
         </p>
       </div>
 
+      {org && (
+        <div className="card">
+          <div className="card-title">
+            Country, currency &amp; tax <span className="small muted">how money is written and what your taxes are called</span>
+          </div>
+          <form action={updateRegion}>
+            <div className="row-3">
+              <label className="field"><span className="lbl">Country</span>
+                <select name="country" defaultValue={org.country}>
+                  {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+                </select>
+              </label>
+              <label className="field"><span className="lbl">Currency <span className="small muted">ISO code</span></span>
+                <input name="currency" defaultValue={org.currency} maxLength={3} placeholder="INR" />
+              </label>
+              <label className="field"><span className="lbl">Number format</span>
+                <input name="locale" defaultValue={org.locale} placeholder="en-IN" />
+              </label>
+            </div>
+            <div className="row-3">
+              <label className="field"><span className="lbl">Sales tax is called</span><input name="taxLabel" defaultValue={org.taxLabel} placeholder="GST / VAT" /></label>
+              <label className="field"><span className="lbl">Default rate %</span><input name="taxRate" defaultValue={org.taxRate} /></label>
+              <label className="field"><span className="lbl">Tax number is called</span><input name="taxIdLabel" defaultValue={org.taxIdLabel} placeholder="GSTIN / VAT number" /></label>
+            </div>
+            <div className="row-3">
+              <label className="field"><span className="lbl">Second levy <span className="small muted">blank if none</span></span><input name="taxLabel2" defaultValue={org.taxLabel2} placeholder="TCS" /></label>
+              <label className="field"><span className="lbl">Its rate %</span><input name="taxRate2" defaultValue={org.taxRate2} /></label>
+              <label className="field" style={{ justifyContent: "center" }}>
+                <span className="flex" style={{ gap: 8, alignItems: "center", cursor: "pointer" }}>
+                  <input type="checkbox" name="usePreset" value="yes" style={{ width: "auto" }} />
+                  <span className="lbl" style={{ margin: 0 }}>Reset everything to the country&apos;s defaults</span>
+                </span>
+              </label>
+            </div>
+            <p className="small muted" style={{ margin: "0 0 12px" }}>
+              This changes how amounts are written and labelled — it doesn&apos;t convert anything already recorded.
+              Current example: <b>{$.fmt(285000)}</b>.
+            </p>
+            <SubmitButton className="primary" pendingLabel="Saving…">Save region</SubmitButton>
+          </form>
+        </div>
+      )}
+
       <div className="card">
         <div className="card-title">Guided tour <span className="small muted">a walk through what each screen is for</span></div>
         <TourToggle />
@@ -77,7 +122,7 @@ export default async function SettingsPage() {
             )}
             <div className="row-2">
               <label className="field"><span className="lbl">Legal business name</span><input name="legalName" defaultValue={org.legalName || ""} placeholder="e.g. My Travel Storiis Pvt Ltd" /></label>
-              <label className="field"><span className="lbl">GSTIN</span><input name="gstin" defaultValue={org.gstin || ""} placeholder="15-digit GSTIN" /></label>
+              <label className="field"><span className="lbl">{$.taxIdLabel}</span><input name="gstin" defaultValue={org.gstin || ""} placeholder={$.taxIdLabel} /></label>
             </div>
             <label className="field"><span className="lbl">Registered address</span><input name="gstAddress" defaultValue={org.gstAddress || ""} placeholder="Full address as on GST registration" /></label>
             <div className="row-3">

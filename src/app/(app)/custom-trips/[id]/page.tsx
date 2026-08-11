@@ -57,7 +57,7 @@ export default async function CustomTripDetail({ params }: { params: Promise<{ i
       <div className="card" style={{ padding: 0 }}>
         <div className="card-title" style={{ padding: "18px 20px 0" }}>Line items <span className="small muted">flights, hotels, transfers — anything you’re booking</span></div>
         <table className="t" style={{ marginTop: 10 }}>
-          <thead><tr><th style={{ paddingLeft: 20 }}>Item</th><th>Supplier</th><th>Date</th><th className="num">Qty</th><th className="num">Cost</th><th className="num">Sell</th><th>GST</th><th className="num">Line</th><th></th></tr></thead>
+          <thead><tr><th style={{ paddingLeft: 20 }}>Item</th><th>Supplier</th><th>Date</th><th className="num">Qty</th><th className="num">Cost</th><th className="num">Sell</th><th>{$.taxLabel}</th><th className="num">Line</th><th></th></tr></thead>
           <tbody>
             {t.items.length === 0 && <tr><td colSpan={9} className="empty" style={{ padding: 24 }}>No items yet — add the first one below.</td></tr>}
             {t.items.map((i) => (
@@ -68,7 +68,7 @@ export default async function CustomTripDetail({ params }: { params: Promise<{ i
                 <td className="num">{i.qty}</td>
                 <td className="num">{$.fmt(i.cost)}</td>
                 <td className="num">{$.fmt(i.sell)}</td>
-                <td>{i.taxable ? <span className="badge sky">GST</span> : <span className="badge gray">no tax</span>}</td>
+                <td>{i.taxable ? <span className="badge sky">{$.taxLabel}</span> : <span className="badge gray">no tax</span>}</td>
                 <td className="num" style={{ fontWeight: 500 }}>{$.fmt(i.sell * i.qty)}</td>
                 <td className="num">
                   <div className="flex" style={{ gap: 6, justifyContent: "flex-end" }}>
@@ -138,8 +138,8 @@ export default async function CustomTripDetail({ params }: { params: Promise<{ i
             <tbody>
               <tr><td>Taxable value</td><td className="num">{$.fmt(ctTaxable(t))}</td></tr>
               {t.discount > 0 && <tr><td className="muted">— after discount {$.fmt(t.discount)}</td><td className="num muted">included</td></tr>}
-              <tr><td>GST @ {t.gstRate}%</td><td className="num">{$.fmt(ctGst(t))}</td></tr>
-              <tr><td>TCS @ {t.tcsRate}%</td><td className="num">{$.fmt(ctTcs(t))}</td></tr>
+              <tr><td>{$.taxLabel} @ {t.gstRate}%</td><td className="num">{$.fmt(ctGst(t))}</td></tr>
+              {$.taxLabel2 ? <tr><td>{$.taxLabel2} @ {t.tcsRate}%</td><td className="num">{$.fmt(ctTcs(t))}</td></tr> : null}
               {ctItemsNonTax(t) > 0 && <tr><td>Non-taxable items</td><td className="num">{$.fmt(ctItemsNonTax(t))}</td></tr>}
               <tr style={{ fontWeight: 600 }}><td>Total billed</td><td className="num">{$.fmt(ctTotal(t))}</td></tr>
               <tr><td className="muted">Received</td><td className="num muted">−{$.fmt(paid)}</td></tr>

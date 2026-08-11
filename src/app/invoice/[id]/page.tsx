@@ -29,6 +29,8 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   if (!b) notFound();
   const org = b.trip.org;
   const $ = buildMoney(org);
+  // India splits GST into CGST + SGST on an intra-state supply; nowhere else does.
+  const splitTax = org?.country === "IN";
   const agency = org?.legalName || org?.name || "TripZei";
 
   if (!b.invoiceNo) {
@@ -79,7 +81,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
               <div>
                 <div style={{ fontSize: 16, fontWeight: 700 }}>{agency}</div>
                 {org?.gstAddress && <div className="small muted">{org.gstAddress}</div>}
-                {org?.gstin && <div className="small muted">GSTIN: {org.gstin}{org.gstState ? ` · ${org.gstState}${org.gstStateCode ? ` (${org.gstStateCode})` : ""}` : ""}</div>}
+                {org?.gstin && <div className="small muted">{$.taxIdLabel}: {org.gstin}{org.gstState ? ` · ${org.gstState}${org.gstStateCode ? ` (${org.gstStateCode})` : ""}` : ""}</div>}
               </div>
             </div>
             <div style={{ textAlign: "right" }}>
@@ -111,9 +113,17 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             <table style={{ width: 300 }}>
               <tbody>
                 <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>Taxable value</td><td style={{ textAlign: "right" }}>{$.fmt(taxable)}</td></tr>
-                <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>CGST @ {rate / 2}%</td><td style={{ textAlign: "right" }}>{$.fmt(gstHalf)}</td></tr>
-                <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>SGST @ {rate / 2}%</td><td style={{ textAlign: "right" }}>{$.fmt(gst - gstHalf)}</td></tr>
-                <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>TCS @ {b.tcsRate ?? 2}%</td><td style={{ textAlign: "right" }}>{$.fmt(tcs)}</td></tr>
+                {/* Indian GST is billed as two halves on an intra-state supply.
+                    Every other regime is a single line, so don't invent a split. */}
+                {splitTax ? (
+                  <>
+                    <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>CGST @ {rate / 2}%</td><td style={{ textAlign: "right" }}>{$.fmt(gstHalf)}</td></tr>
+                    <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>SGST @ {rate / 2}%</td><td style={{ textAlign: "right" }}>{$.fmt(gst - gstHalf)}</td></tr>
+                  </>
+                ) : (
+                  <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>{$.taxLabel} @ {rate}%</td><td style={{ textAlign: "right" }}>{$.fmt(gst)}</td></tr>
+                )}
+                {$.taxLabel2 ? <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>{$.taxLabel2} @ {b.tcsRate ?? 2}%</td><td style={{ textAlign: "right" }}>{$.fmt(tcs)}</td></tr> : null}
                 {nonTax > 0 && <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>Non-taxable</td><td style={{ textAlign: "right" }}>{$.fmt(nonTax)}</td></tr>}
                 <tr className="doc-total" style={{ borderTop: "2px solid var(--border-strong)", fontWeight: 700, color: "var(--accent)" }}><td>Total</td><td style={{ textAlign: "right" }}>{$.fmt(total)}</td></tr>
                 <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>Received</td><td style={{ textAlign: "right", color: "var(--success)" }}>−{$.fmt(paid)}</td></tr>
@@ -123,7 +133,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           </div>
 
           <p className="small" style={{ marginTop: 14, fontStyle: "italic" }}>Amount chargeable (in words): Rupees {amountInWords(total).replace(/ Rupees Only$/, "")} only.</p>
-          <p className="small muted" style={{ marginTop: 6 }}>CGST/SGST shown assuming intra-state supply. {org?.invoiceNote || "This is a computer-generated invoice."}</p>
+          <p className="small muted" style={{ marginTop: 6 }}>{splitTax ? "CGST/SGST shown assuming intra-state supply. " : ""}{org?.invoiceNote || "This is a computer-generated invoice."}</p>
 
           {/* Cancellation & refund terms — the customer's copy of what applies. */}
           {policy && (

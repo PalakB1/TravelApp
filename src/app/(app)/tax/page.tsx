@@ -36,7 +36,7 @@ export default async function TaxPage() {
     <>
       <div className="page-head">
         <div>
-          <h1>GST / TCS — tax to govt</h1>
+          <h1>{$.taxLabel}{$.taxLabel2 ? ` / ${$.taxLabel2}` : ""} — tax to govt</h1>
           <p className="sub">Tax you collect from clients and owe the government. Tag bookings as remitted when you pay.</p>
         </div>
       </div>
@@ -58,7 +58,7 @@ export default async function TaxPage() {
               <thead>
                 <tr>
                   <th style={{ width: 28 }}><SelectAll /></th>
-                  <th>Customer</th><th>Trip</th><th className="num">GST</th><th className="num">TCS</th><th className="num">Total tax</th>
+                  <th>Customer</th><th>Trip</th><th className="num">{$.taxLabel}</th>{$.taxLabel2 ? <th className="num">{$.taxLabel2}</th> : null}<th className="num">Total tax</th>
                 </tr>
               </thead>
               <tbody>
