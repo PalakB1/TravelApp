@@ -2,9 +2,10 @@ import React from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { prisma } from "@/lib/db";
 import { bookingTotal } from "@/lib/calc";
-import { formatINR } from "@/lib/money";
+
 import { amountInWords } from "@/lib/invoice";
 import ReceiptDoc from "../ReceiptDoc";
+import { buildMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
@@ -19,12 +20,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const b = p.booking;
   const org = b.trip.org;
+  const $ = buildMoney(org);
   const receiptNo = `RCPT-${p.id.slice(-6).toUpperCase()}`;
   // Received total as of THIS receipt's date (not today's running total).
   const asOfMs = new Date(p.date).getTime();
   const receivedToDate = b.payments.filter((x) => new Date(x.date).getTime() <= asOfMs).reduce((s, x) => s + x.amount, 0);
   // The built-in PDF fonts have no ₹ glyph, so render amounts as "Rs."
-  const inr = (n: number) => formatINR(n).replace("₹", "Rs. ");
+  const inr = (n: number) => $.fmt(n).replace("₹", "Rs. ");
   const ascii = (s?: string | null) => (s || "").replace(/[—–]/g, "-").replace(/·/g, "-").replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/…/g, "...").replace(/[^\x00-\xff]/g, "");
 
   const element = React.createElement(ReceiptDoc, {

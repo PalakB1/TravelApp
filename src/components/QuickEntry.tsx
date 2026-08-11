@@ -14,6 +14,7 @@ type Props = {
   targetTrips: TargetTrip[];
   banks: string[];
   myName: string;
+  symbol: string;
   customerNames: string[];
   sources: string[];
 };
@@ -34,7 +35,7 @@ const EXP_CATS: [string, string][] = [
   ["salary", "Salary / payroll"], ["office", "Office / rent"], ["software", "Software / tools"], ["tax", "Tax / govt"], ["misc", "Miscellaneous"],
 ];
 
-export default function QuickEntry({ payable, trips, customerNames, sources, targetTrips, banks, myName }: Props) {
+export default function QuickEntry({ payable, trips, customerNames, sources, targetTrips, banks, myName, symbol }: Props) {
   const [action, setAction] = useState<ActionKey>("payment");
   // Client runtime — fine to read the clock here (defaults the date to today).
   const today = new Date().toISOString().slice(0, 10);
@@ -129,9 +130,9 @@ export default function QuickEntry({ payable, trips, customerNames, sources, tar
             </label>
           </div>
           <div className="row-3">
-            <label className="field"><span className="lbl">Land cost</span><input name="landAmount" placeholder="₹" /></label>
-            <label className="field"><span className="lbl">Visa</span><input name="visaAmount" placeholder="₹ (if any)" /></label>
-            <label className="field"><span className="lbl">Flights</span><input name="flightAmount" placeholder="₹ (if any)" /></label>
+            <label className="field"><span className="lbl">Land cost</span><input name="landAmount" placeholder={symbol} /></label>
+            <label className="field"><span className="lbl">Visa</span><input name="visaAmount" placeholder={`${symbol} (if any)`} /></label>
+            <label className="field"><span className="lbl">Flights</span><input name="flightAmount" placeholder={`${symbol} (if any)`} /></label>
           </div>
           <button className="primary" type="submit">Add booking</button>
         </form>
@@ -153,7 +154,7 @@ export default function QuickEntry({ payable, trips, customerNames, sources, tar
             <label className="field"><span className="lbl">Rooms / night</span><input name="rooms" type="number" min="0" placeholder="3" /></label>
           </div>
           <div className="row-3">
-            <label className="field"><span className="lbl">Total cost (split across nights)</span><input name="cost" placeholder="₹ for the whole stay" /></label>
+            <label className="field"><span className="lbl">Total cost (split across nights)</span><input name="cost" placeholder={`${symbol} for the whole stay`} /></label>
             <label className="field"><span className="lbl">Status</span>
               <select name="status" defaultValue="hold"><option value="hold">On hold</option><option value="final">Confirmed</option><option value="paid">Paid</option><option value="unbooked">Not booked</option></select>
             </label>

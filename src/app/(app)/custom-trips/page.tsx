@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { formatINRShort } from "@/lib/money";
+
 import { customOrgId, ctRevenue, ctOutstanding, ctCost, ctProfit } from "./lib";
 import { createCustomTrip } from "./actions";
 import TableSearch from "@/components/TableSearch";
+import { orgMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ function fmt(d: Date | null) {
 }
 
 export default async function CustomTripsPage() {
+  const $ = await orgMoney();
   const orgId = await customOrgId();
   if (!orgId) notFound();
 
@@ -41,10 +43,10 @@ export default async function CustomTripsPage() {
       </div>
 
       <div className="metrics">
-        <div className="metric c-emerald"><div className="label">Revenue</div><div className="value">{formatINRShort(totRev)}</div><div className="foot">across {live.length} trip{live.length === 1 ? "" : "s"}</div></div>
-        <div className="metric c-amber"><div className="label">Your cost</div><div className="value">{formatINRShort(totCost)}</div><div className="foot">all line items</div></div>
-        <div className="metric c-violet"><div className="label">Profit</div><div className="value">{formatINRShort(totProfit)}</div><div className="foot">{margin}% margin</div></div>
-        <div className={`metric ${totOut > 0 ? "c-rose" : "c-emerald"}`}><div className="label">Outstanding</div><div className="value">{formatINRShort(totOut)}</div><div className="foot">due from clients</div></div>
+        <div className="metric c-emerald"><div className="label">Revenue</div><div className="value">{$.short(totRev)}</div><div className="foot">across {live.length} trip{live.length === 1 ? "" : "s"}</div></div>
+        <div className="metric c-amber"><div className="label">Your cost</div><div className="value">{$.short(totCost)}</div><div className="foot">all line items</div></div>
+        <div className="metric c-violet"><div className="label">Profit</div><div className="value">{$.short(totProfit)}</div><div className="foot">{margin}% margin</div></div>
+        <div className={`metric ${totOut > 0 ? "c-rose" : "c-emerald"}`}><div className="label">Outstanding</div><div className="value">{$.short(totOut)}</div><div className="foot">due from clients</div></div>
       </div>
 
       <div className="card" style={{ background: "var(--accent-bg)", borderColor: "transparent" }}>
@@ -85,8 +87,8 @@ export default async function CustomTripsPage() {
                     <td className="muted small">{t.title}</td>
                     <td className="muted small">{fmt(t.startDate)}{t.endDate ? ` – ${fmt(t.endDate)}` : ""}</td>
                     <td><span className={`badge ${STATUS[t.status] || "gray"}`}>{t.status}</span></td>
-                    <td className="num">{formatINRShort(rev)}</td>
-                    <td className="num">{out > 0 ? <span className="badge amber">{formatINRShort(out)}</span> : <span className="badge green">clear</span>}</td>
+                    <td className="num">{$.short(rev)}</td>
+                    <td className="num">{out > 0 ? <span className="badge amber">{$.short(out)}</span> : <span className="badge green">clear</span>}</td>
                     <td className="num"><Link className="btn sm" href={`/custom-trips/${t.id}`}>Open →</Link></td>
                   </tr>
                 );

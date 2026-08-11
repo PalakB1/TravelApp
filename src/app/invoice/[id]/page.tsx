@@ -1,13 +1,14 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { bookingTaxable, bookingGst, bookingTcs, bookingTotal, bookingPaid, bookingBalance, bookingInclNonTaxCharge } from "@/lib/calc";
-import { formatINR } from "@/lib/money";
+
 import { amountInWords } from "@/lib/invoice";
 import { STANDARD_REFUND_POLICY } from "@/lib/policy";
 import PrintButton from "@/components/PrintButton";
 import PoweredBy from "@/components/PoweredBy";
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import { buildMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 const fmt = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
@@ -27,6 +28,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   });
   if (!b) notFound();
   const org = b.trip.org;
+  const $ = buildMoney(org);
   const agency = org?.legalName || org?.name || "TripZei";
 
   if (!b.invoiceNo) {
@@ -52,7 +54,6 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   const rate = b.gstRate ?? 5;
   // This booking's own wording wins; else the org default; else the standard terms.
   const policy = b.refundPolicy ?? org?.defaultRefundPolicy ?? STANDARD_REFUND_POLICY;
-
 
   return (
     <div className="doc-light" style={{ minHeight: "100vh", display: "grid", placeItems: "start center", padding: "24px 16px" }}>
@@ -100,8 +101,8 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           <table className="t" style={{ marginTop: 6 }}>
             <thead><tr><Cell head>Description</Cell><Cell head>SAC</Cell><Cell head num>Taxable value</Cell></tr></thead>
             <tbody>
-              <tr><Cell>Tour / travel package — {b.trip.name}{b.discount ? " (after discount)" : ""}</Cell><Cell>{org?.sacCode || "998555"}</Cell><Cell num>{formatINR(taxable)}</Cell></tr>
-              {nonTax > 0 && <tr><Cell>Other charges (non-taxable — e.g. embassy/visa fee)</Cell><Cell>—</Cell><Cell num>{formatINR(nonTax)}</Cell></tr>}
+              <tr><Cell>Tour / travel package — {b.trip.name}{b.discount ? " (after discount)" : ""}</Cell><Cell>{org?.sacCode || "998555"}</Cell><Cell num>{$.fmt(taxable)}</Cell></tr>
+              {nonTax > 0 && <tr><Cell>Other charges (non-taxable — e.g. embassy/visa fee)</Cell><Cell>—</Cell><Cell num>{$.fmt(nonTax)}</Cell></tr>}
             </tbody>
           </table>
 
@@ -109,14 +110,14 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
             <table style={{ width: 300 }}>
               <tbody>
-                <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>Taxable value</td><td style={{ textAlign: "right" }}>{formatINR(taxable)}</td></tr>
-                <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>CGST @ {rate / 2}%</td><td style={{ textAlign: "right" }}>{formatINR(gstHalf)}</td></tr>
-                <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>SGST @ {rate / 2}%</td><td style={{ textAlign: "right" }}>{formatINR(gst - gstHalf)}</td></tr>
-                <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>TCS @ {b.tcsRate ?? 2}%</td><td style={{ textAlign: "right" }}>{formatINR(tcs)}</td></tr>
-                {nonTax > 0 && <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>Non-taxable</td><td style={{ textAlign: "right" }}>{formatINR(nonTax)}</td></tr>}
-                <tr className="doc-total" style={{ borderTop: "2px solid var(--border-strong)", fontWeight: 700, color: "var(--accent)" }}><td>Total</td><td style={{ textAlign: "right" }}>{formatINR(total)}</td></tr>
-                <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>Received</td><td style={{ textAlign: "right", color: "var(--success)" }}>−{formatINR(paid)}</td></tr>
-                <tr style={{ fontWeight: 700 }}><td style={{ padding: "4px 0" }}>Balance due</td><td style={{ textAlign: "right", color: balance > 0 ? "var(--danger)" : "var(--success)" }}>{formatINR(balance)}</td></tr>
+                <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>Taxable value</td><td style={{ textAlign: "right" }}>{$.fmt(taxable)}</td></tr>
+                <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>CGST @ {rate / 2}%</td><td style={{ textAlign: "right" }}>{$.fmt(gstHalf)}</td></tr>
+                <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>SGST @ {rate / 2}%</td><td style={{ textAlign: "right" }}>{$.fmt(gst - gstHalf)}</td></tr>
+                <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>TCS @ {b.tcsRate ?? 2}%</td><td style={{ textAlign: "right" }}>{$.fmt(tcs)}</td></tr>
+                {nonTax > 0 && <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>Non-taxable</td><td style={{ textAlign: "right" }}>{$.fmt(nonTax)}</td></tr>}
+                <tr className="doc-total" style={{ borderTop: "2px solid var(--border-strong)", fontWeight: 700, color: "var(--accent)" }}><td>Total</td><td style={{ textAlign: "right" }}>{$.fmt(total)}</td></tr>
+                <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>Received</td><td style={{ textAlign: "right", color: "var(--success)" }}>−{$.fmt(paid)}</td></tr>
+                <tr style={{ fontWeight: 700 }}><td style={{ padding: "4px 0" }}>Balance due</td><td style={{ textAlign: "right", color: balance > 0 ? "var(--danger)" : "var(--success)" }}>{$.fmt(balance)}</td></tr>
               </tbody>
             </table>
           </div>

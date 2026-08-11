@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { settleExpenses } from "@/app/(app)/expenses/actions";
+import { formatMoney, INR, type MoneyCfg } from "@/lib/money";
 
 // Settle button: blocked when nothing is ticked, and while the transfer is
 // saving — so a slow tap can't record the same reimbursement twice.
@@ -26,7 +27,8 @@ export type PersonalRow = {
   amount: number;
 };
 
-const inr = (n: number) => "₹" + n.toLocaleString("en-IN");
+// Money formatting comes from the agency, not from a hardcoded rupee.
+let inr = (n: number) => formatMoney(n, INR);
 
 // One person's unsettled personal spends: pick any/all, then reimburse them in a
 // single company transfer (bank + transaction number recorded once for the lot).
@@ -91,7 +93,8 @@ function PersonGroup({ person, rows }: { person: string; rows: PersonalRow[] }) 
 }
 
 // The `bank-names` datalist is rendered once by the page and referenced here by id.
-export default function SettlePersonal({ groups }: { groups: { person: string; rows: PersonalRow[] }[] }) {
+export default function SettlePersonal({ groups, money = INR }: { groups: { person: string; rows: PersonalRow[] }[]; money?: MoneyCfg }) {
+  inr = (n: number) => formatMoney(n, money);
   return (
     <div>
       {groups.map((g) => <PersonGroup key={g.person} person={g.person} rows={g.rows} />)}

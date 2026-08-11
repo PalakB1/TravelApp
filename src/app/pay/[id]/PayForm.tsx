@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { submitPendingPayment, type PayResult } from "../actions";
 
-export default function PayForm({ bookingId, customerName, suggested }: { bookingId: string; customerName: string; suggested?: number }) {
+export default function PayForm({ bookingId, customerName, suggested, symbol = "₹" }: { bookingId: string; customerName: string; suggested?: number; symbol?: string }) {
   const [state, action, pending] = useActionState<PayResult | undefined, FormData>(submitPendingPayment, undefined);
   const today = new Date().toISOString().slice(0, 10);
 
@@ -22,7 +22,7 @@ export default function PayForm({ bookingId, customerName, suggested }: { bookin
       <input type="hidden" name="bookingId" value={bookingId} />
       <label className="field"><span className="lbl">Your name</span><input name="payerName" defaultValue={customerName} required /></label>
       <div className="row">
-        <label className="field"><span className="lbl">Amount paid (₹)</span><input name="amount" defaultValue={suggested || ""} placeholder="e.g. 50000" required /></label>
+        <label className="field"><span className="lbl">Amount paid ({symbol})</span><input name="amount" defaultValue={suggested || ""} placeholder="e.g. 50000" required /></label>
         <label className="field"><span className="lbl">Date paid</span><input name="date" type="date" defaultValue={today} /></label>
       </div>
       <div className="row">

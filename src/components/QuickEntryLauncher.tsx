@@ -13,6 +13,7 @@ type Data = {
   targetTrips: TargetTrip[];
   banks: string[];
   myName: string;
+  symbol: string;
 };
 
 // Global overlay that hosts Quick entry. Opened from anywhere via the
@@ -54,7 +55,7 @@ export default function QuickEntryLauncher() {
         </div>
         <div className="qe-body">
           {data
-            ? <QuickEntry payable={data.payable} trips={data.trips} customerNames={data.customerNames} sources={data.sources} targetTrips={data.targetTrips} banks={data.banks} myName={data.myName} />
+            ? <QuickEntry payable={data.payable} trips={data.trips} customerNames={data.customerNames} sources={data.sources} targetTrips={data.targetTrips} banks={data.banks} myName={data.myName} symbol={data.symbol} />
             : <div className="empty">Loading…</div>}
         </div>
       </div>

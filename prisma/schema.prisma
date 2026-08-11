@@ -18,7 +18,20 @@ model Organization {
   name               String
   status             String   @default("pending") // pending | approved | rejected | suspended
   customTripsEnabled Boolean  @default(false) // "Custom trips" module — off by default, toggled by platform admin
-  // Business / GST profile — printed on tax invoices (filled in Settings).
+  // Where the agency operates. Sets the currency it bills in and what its sales
+  // tax is called — "GST" in India, "VAT" in the UK, "IVA" in Spain. Every field
+  // is editable afterwards, since rates change and agencies sometimes bill in a
+  // currency other than their own.
+  country            String   @default("IN")
+  currency           String   @default("INR") // ISO 4217
+  locale             String   @default("en-IN") // digit grouping: en-IN gives 1,00,000
+  taxLabel           String   @default("GST")
+  taxRate            Int      @default(5) // default % on new bookings
+  taxLabel2          String   @default("TCS") // a second levy; only India has one
+  taxRate2           Int      @default(2)
+  taxIdLabel         String   @default("GSTIN") // what the registration number is called
+
+  // Business / tax profile — printed on tax invoices (filled in Settings).
   legalName          String?
   gstin              String?
   gstAddress         String?

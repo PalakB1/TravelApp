@@ -2,14 +2,16 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { bookingTotal, bookingPaid, bookingBalance, isActive } from "@/lib/calc";
-import { formatINR } from "@/lib/money";
+
 import TableSearch from "@/components/TableSearch";
 import ActivityLog from "@/components/ActivityLog";
 import Stamp from "@/components/Stamp";
+import { orgMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
 export default async function CustomersPage() {
+  const $ = await orgMoney();
   const scope = await requireScope();
   const customers = await prisma.customer.findMany({
     where: scope.tripIds
@@ -37,7 +39,7 @@ export default async function CustomersPage() {
       <div className="page-head">
         <div>
           <h1>Customers</h1>
-          <p className="sub">{customers.length} customers · {formatINR(totalOut)} outstanding</p>
+          <p className="sub">{customers.length} customers · {$.fmt(totalOut)} outstanding</p>
         </div>
       </div>
 
@@ -64,9 +66,9 @@ export default async function CustomersPage() {
                       {tripNames.length ? tripNames.map((tn) => <span key={tn} className="badge accent">{tn}</span>) : <span className="muted small">—</span>}
                     </div>
                   </td>
-                  <td className="num">{formatINR(invoiced)}</td>
-                  <td className="num">{formatINR(paid)}</td>
-                  <td className="num">{outstanding > 0 ? <span className="badge amber">{formatINR(outstanding)}</span> : <span className="badge green">clear</span>}</td>
+                  <td className="num">{$.fmt(invoiced)}</td>
+                  <td className="num">{$.fmt(paid)}</td>
+                  <td className="num">{outstanding > 0 ? <span className="badge amber">{$.fmt(outstanding)}</span> : <span className="badge green">clear</span>}</td>
                 </tr>
               ))}
             </tbody>

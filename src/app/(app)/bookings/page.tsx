@@ -2,13 +2,15 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { bookingTotal, bookingPaid, bookingBalance, tripIsOver, tripEndLabel } from "@/lib/calc";
-import { formatINR } from "@/lib/money";
+
 import ActivityLog from "@/components/ActivityLog";
 import BookingsTable from "@/components/BookingsTable";
+import { orgMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
 export default async function BookingsPage({ searchParams }: { searchParams: Promise<{ visa?: string }> }) {
+  const $ = await orgMoney();
   const initialVisa = (await searchParams).visa ?? "";
   const scope = await requireScope();
   const bookings = await prisma.booking.findMany({
@@ -32,7 +34,7 @@ export default async function BookingsPage({ searchParams }: { searchParams: Pro
       <div className="page-head">
         <div>
           <h1>Bookings</h1>
-          <p className="sub">{bookings.length} bookings · {formatINR(totalDue)} outstanding</p>
+          <p className="sub">{bookings.length} bookings · {$.fmt(totalDue)} outstanding</p>
         </div>
         {bookings.length > 0 && (
           <a className="btn sm" href="/api/export/bookings" title="Download all bookings as a spreadsheet (CSV)">⬇ Download CSV</a>
@@ -50,7 +52,7 @@ export default async function BookingsPage({ searchParams }: { searchParams: Pro
         </div>
       ) : (
         <div className="card" style={{ padding: "18px 20px" }}>
-          <BookingsTable rows={rows} showTrip initialVisa={initialVisa} />
+          <BookingsTable money={$.cfg} rows={rows} showTrip initialVisa={initialVisa} />
         </div>
       )}
 

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookingTotal, bookingPaid, bookingBalance, bookingInclTaxCharge, bookingInclNonTaxCharge } from "@/lib/calc";
-import { formatINR } from "@/lib/money";
+
 import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, generateInvoice, renameBooking, updateBookingVisa, addScheduleItem, deleteScheduleItem, updateBookingPolicy, applyPlanToBooking, tidyOverdueDates, updateBookingStay } from "../../data-actions";
 import { scheduleStatus, scheduleTotal } from "@/lib/schedule";
 import { bookingCoversNight } from "@/lib/calc";
@@ -16,6 +16,7 @@ import CopyLink from "@/components/CopyLink";
 import InlineStay from "@/components/InlineStay";
 import SubmitButton from "@/components/SubmitButton";
 import DeleteBooking from "@/components/DeleteBooking";
+import { orgMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,7 @@ function Line({ label, value, strong, muted }: { label: string; value: string; s
 }
 
 export default async function BookingDetail({ params }: { params: Promise<{ id: string }> }) {
+  const $ = await orgMoney();
   const { id } = await params;
   const scope = await requireScope();
   const b = await prisma.booking.findFirst({
@@ -101,7 +103,6 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
   const usesCustomPolicy = !!b.refundPolicy && b.refundPolicy !== (org?.defaultRefundPolicy ?? STANDARD_REFUND_POLICY);
   const toInput = (d: Date | null | undefined) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 
-
   return (
     <>
       <div className="page-head">
@@ -133,25 +134,25 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
             id={b.id}
             customerName={b.customerName}
             paymentCount={b.payments.length}
-            paidLabel={formatINR(paid)}
-            balanceLabel={formatINR(balance)}
+            paidLabel={$.fmt(paid)}
+            balanceLabel={$.fmt(balance)}
           />
         </div>
       </div>
 
       <div className="metrics">
-        <div className="metric c-violet"><div className="label">Invoice total</div><div className="value">{formatINR(total)}</div><div className="foot">incl. GST + TCS</div></div>
+        <div className="metric c-violet"><div className="label">Invoice total</div><div className="value">{$.fmt(total)}</div><div className="foot">incl. GST + TCS</div></div>
         {/* Paid and Balance are one number read two ways — one tile, not two. */}
         <div className={`metric ${balance > 0 ? "c-rose" : "c-emerald"}`}>
           <div className="label">{balance > 0 ? "Balance left" : "Fully paid"}</div>
-          <div className="value">{formatINR(balance > 0 ? balance : total)}</div>
-          <div className="foot">{formatINR(paid)} paid of {formatINR(total)}</div>
+          <div className="value">{$.fmt(balance > 0 ? balance : total)}</div>
+          <div className="foot">{$.fmt(paid)} paid of {$.fmt(total)}</div>
         </div>
         {/* GST used to be a full-width banner for a single figure. */}
         {bookingTax(b) > 0 && (
           <div className={`metric ${b.taxRemitted ? "c-emerald" : "c-amber"}`}>
             <div className="label">GST + TCS</div>
-            <div className="value">{formatINR(bookingTax(b))}</div>
+            <div className="value">{$.fmt(bookingTax(b))}</div>
             <div className="foot" style={{ marginTop: 7 }}>
               <form action={setTaxRemitted}>
                 <input type="hidden" name="id" value={b.id} />
@@ -237,7 +238,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                   </td>
                   <td>
                     <span className="flex" style={{ gap: 6 }}>
-                      <input name="extraCharge" defaultValue={tr.extraCharge || ""} form={`tr-${tr.id}`} placeholder="₹0" style={{ width: 90 }} />
+                      <input name="extraCharge" defaultValue={tr.extraCharge || ""} form={`tr-${tr.id}`} placeholder={`${$.symbol}0`} style={{ width: 90 }} />
                       <input name="extraNote" defaultValue={tr.extraNote || ""} form={`tr-${tr.id}`} placeholder="why? e.g. single room" style={{ width: 150 }} />
                     </span>
                   </td>
@@ -261,7 +262,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
               <div className="row-3">
                 <label className="field"><span className="lbl">Name</span><input id="tr-name" name="name" list="people-list" defaultValue={b.travellers.length === 0 ? b.customerName : ""} placeholder="Aarav Sharma" required /></label>
                 <label className="field"><span className="lbl">Age</span><input id="tr-age" name="age" type="number" min="0" max="120" placeholder="optional" /></label>
-                <label className="field"><span className="lbl">Extra charge (optional)</span><input name="extraCharge" placeholder="₹ for this person only" /></label>
+                <label className="field"><span className="lbl">Extra charge (optional)</span><input name="extraCharge" placeholder={`${$.symbol} for this person only`} /></label>
               </div>
               <label className="field"><span className="lbl">Extra charge reason</span><input name="extraNote" placeholder="e.g. single room supplement" /></label>
               <datalist id="people-list">
@@ -302,18 +303,18 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                         {!inc.taxable && <span className="badge gray">no tax</span>}
                       </div>
                       <div className="small muted">
-                        {inc.isDefault ? `cost ${formatINR(inc.cost)}/pp · in package` : `charge ${formatINR(inc.sellContribution)}/pp · cost ${formatINR(inc.cost)}/pp`}
-                        {sel ? ` · booked ${fmtDate(sel.bookedAt)} @ ${formatINR(inc.isDefault ? sel.cost : sel.charge)}/pp` : ""}
+                        {inc.isDefault ? `cost ${$.fmt(inc.cost)}/pp · in package` : `charge ${$.fmt(inc.sellContribution)}/pp · cost ${$.fmt(inc.cost)}/pp`}
+                        {sel ? ` · booked ${fmtDate(sel.bookedAt)} @ ${$.fmt(inc.isDefault ? sel.cost : sel.charge)}/pp` : ""}
                       </div>
                     </div>
                   </div>
                   <div className="right" style={{ whiteSpace: "nowrap" }}>
                     {on ? (
                       <>
-                        <div style={{ fontWeight: 600 }}>{inc.isDefault ? <span className="muted">cost {formatINR(sel!.cost * b.pax)}</span> : `+ ${formatINR(sel!.charge * b.pax)}`}</div>
-                        <div className="small muted">{formatINR(inc.isDefault ? sel!.cost : sel!.charge)} × {b.pax}</div>
+                        <div style={{ fontWeight: 600 }}>{inc.isDefault ? <span className="muted">cost {$.fmt(sel!.cost * b.pax)}</span> : `+ ${$.fmt(sel!.charge * b.pax)}`}</div>
+                        <div className="small muted">{$.fmt(inc.isDefault ? sel!.cost : sel!.charge)} × {b.pax}</div>
                       </>
-                    ) : <span className="muted small">not added · {formatINR(perPP)}/pp</span>}
+                    ) : <span className="muted small">not added · {$.fmt(perPP)}/pp</span>}
                   </div>
                 </div>
               );
@@ -331,21 +332,21 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
         <div className="stack-col">
           <div className="card">
             <div className="card-title">Invoice</div>
-            {b.landAmount > 0 && <Line label="Land package" value={formatINR(b.landAmount)} />}
-            {b.visaAmount > 0 && <Line label="Visa assistance" value={formatINR(b.visaAmount)} />}
-            {b.flightAmount > 0 && <Line label="Flights" value={formatINR(b.flightAmount)} />}
+            {b.landAmount > 0 && <Line label="Land package" value={$.fmt(b.landAmount)} />}
+            {b.visaAmount > 0 && <Line label="Visa assistance" value={$.fmt(b.visaAmount)} />}
+            {b.flightAmount > 0 && <Line label="Flights" value={$.fmt(b.flightAmount)} />}
             {base === 0 && <div className="empty small">No package amount set yet. Edit the invoice below.</div>}
-            {b.discount > 0 && <Line label={`Discount${b.discountReason ? " · " + b.discountReason : ""}`} value={`− ${formatINR(b.discount)}`} muted />}
-            {bookingInclTaxCharge(b) > 0 && <Line label="Inclusions (taxable)" value={formatINR(bookingInclTaxCharge(b))} muted />}
-            {b.travellerExtra > 0 && <Line label="Per-person extras" value={formatINR(b.travellerExtra)} muted />}
-            <Line label="Taxable value" value={formatINR(taxable)} strong />
-            <Line label={`GST @ ${b.gstRate}%`} value={formatINR(gst)} muted />
-            <Line label={`TCS @ ${b.tcsRate}%`} value={formatINR(tcs)} muted />
-            {b.nonTaxable > 0 && <Line label="Non-taxable (no GST/TCS)" value={formatINR(b.nonTaxable)} muted />}
-            {bookingInclNonTaxCharge(b) > 0 && <Line label="Inclusions (no tax)" value={formatINR(bookingInclNonTaxCharge(b))} muted />}
+            {b.discount > 0 && <Line label={`Discount${b.discountReason ? " · " + b.discountReason : ""}`} value={`− ${$.fmt(b.discount)}`} muted />}
+            {bookingInclTaxCharge(b) > 0 && <Line label="Inclusions (taxable)" value={$.fmt(bookingInclTaxCharge(b))} muted />}
+            {b.travellerExtra > 0 && <Line label="Per-person extras" value={$.fmt(b.travellerExtra)} muted />}
+            <Line label="Taxable value" value={$.fmt(taxable)} strong />
+            <Line label={`GST @ ${b.gstRate}%`} value={$.fmt(gst)} muted />
+            <Line label={`TCS @ ${b.tcsRate}%`} value={$.fmt(tcs)} muted />
+            {b.nonTaxable > 0 && <Line label="Non-taxable (no GST/TCS)" value={$.fmt(b.nonTaxable)} muted />}
+            {bookingInclNonTaxCharge(b) > 0 && <Line label="Inclusions (no tax)" value={$.fmt(bookingInclNonTaxCharge(b))} muted />}
             <div className="between" style={{ paddingTop: 10 }}>
               <span style={{ fontSize: 15, fontWeight: 500 }}>Invoice total</span>
-              <span style={{ fontSize: 16, fontWeight: 500 }}>{formatINR(total)}</span>
+              <span style={{ fontSize: 16, fontWeight: 500 }}>{$.fmt(total)}</span>
             </div>
 
             <details className="add">
@@ -384,7 +385,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           <div className="card" id="payments" style={{ scrollMarginTop: 72 }}>
             <div className="card-title">Payments</div>
             <div className="bar" style={{ marginBottom: 6 }}><span className={balance > 0 ? "amber" : ""} style={{ width: `${pct}%` }} /></div>
-            <div className="small muted" style={{ marginBottom: 12 }}>{pct}% collected · {formatINR(balance)} remaining</div>
+            <div className="small muted" style={{ marginBottom: 12 }}>{pct}% collected · {$.fmt(balance)} remaining</div>
             <div className="form-box" style={{ marginBottom: 12 }}>
               <div className="small" style={{ fontWeight: 600, marginBottom: 6 }}>🔗 Payment link for the customer</div>
               <CopyLink path={`/pay/${b.id}`} label="Copy link" waPhone={b.customerPhone} waText={`Hi ${b.customerName}, please confirm your payment for ${b.trip.name} here:`} />
@@ -401,7 +402,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                     <tr key={p.id}>
                       <td className="muted small">{fmtDate(p.date)}</td>
                       <td><span className="badge gray">{p.mode}</span>{p.note ? <div className="small muted">{p.note}</div> : null}</td>
-                      <td className="num" style={{ fontWeight: 500 }}>{formatINR(p.amount)}</td>
+                      <td className="num" style={{ fontWeight: 500 }}>{$.fmt(p.amount)}</td>
                       <td className="num"><form action={deletePayment}><input type="hidden" name="id" value={p.id} /><button className="sm" type="submit" aria-label="Delete">✕</button></form></td>
                     </tr>
                   ))}
@@ -451,7 +452,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
               <div className="between" style={{ padding: "10px 12px", borderRadius: 10, marginBottom: 12, flexWrap: "wrap", gap: 8,
                 background: planAllPaid ? "var(--success-bg)" : behindByNow > 0 ? "var(--warning-bg)" : "var(--success-bg)" }}>
                 <span style={{ fontWeight: 600, color: planAllPaid ? "var(--success)" : behindByNow > 0 ? "var(--warning)" : "var(--success)" }}>
-                  {planAllPaid ? "✅ Fully paid" : behindByNow > 0 ? `🔴 Behind by ${formatINR(behindByNow)}` : "✅ On track — nothing due yet"}
+                  {planAllPaid ? "✅ Fully paid" : behindByNow > 0 ? `🔴 Behind by ${$.fmt(behindByNow)}` : "✅ On track — nothing due yet"}
                 </span>
                 {hasPastDates && !planAllPaid && (
                   <form action={tidyOverdueDates}>
@@ -479,10 +480,10 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                               through so the trimming is visible, not silent. */}
                           {l.effectiveAmount !== l.item.amount ? (
                             <>
-                              <span className="muted" style={{ textDecoration: "line-through", fontWeight: 400 }}>{formatINR(l.item.amount)}</span>{" "}
-                              {formatINR(l.effectiveAmount)}
+                              <span className="muted" style={{ textDecoration: "line-through", fontWeight: 400 }}>{$.fmt(l.item.amount)}</span>{" "}
+                              {$.fmt(l.effectiveAmount)}
                             </>
-                          ) : formatINR(l.item.amount)}
+                          ) : $.fmt(l.item.amount)}
                         </td>
                         <td>
                           {l.beyondInvoice
@@ -490,9 +491,9 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                             : l.covered
                               ? <span className="badge emerald">paid</span>
                               : l.overdue
-                                ? <span className="badge rose">overdue · {formatINR(l.remaining)} left</span>
+                                ? <span className="badge rose">overdue · {$.fmt(l.remaining)} left</span>
                                 : l.paidHere > 0
-                                  ? <span className="badge amber">part-paid · {formatINR(l.remaining)} left</span>
+                                  ? <span className="badge amber">part-paid · {$.fmt(l.remaining)} left</span>
                                   : <span className="badge gray">due</span>}
                         </td>
                         <td className="num"><form action={deleteScheduleItem}><input type="hidden" name="id" value={l.item.id} /><button className="sm" type="submit" aria-label="Delete">✕</button></form></td>
@@ -501,16 +502,16 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                   </tbody>
                 </table>
                 <div className="small muted" style={{ marginTop: 8 }}>
-                  Plan totals {formatINR(planTotal)} · invoice {formatINR(total)}
+                  Plan totals {$.fmt(planTotal)} · invoice {$.fmt(total)}
                   {planMismatch > 0 && (
                     <span style={{ color: "var(--warning)" }}>
-                      {" "}· ⚠ this plan was built for {formatINR(planTotal)}. Only {formatINR(total)} is collectable — re-apply a plan to tidy the steps.
+                      {" "}· ⚠ this plan was built for {$.fmt(planTotal)}. Only {$.fmt(total)} is collectable — re-apply a plan to tidy the steps.
                     </span>
                   )}
                   {planMismatch < 0 && (
-                    <span style={{ color: "var(--warning)" }}> · ⚠ the steps are {formatINR(-planMismatch)} short of the invoice</span>
+                    <span style={{ color: "var(--warning)" }}> · ⚠ the steps are {$.fmt(-planMismatch)} short of the invoice</span>
                   )}
-                  {nextDue && <> · next: <b>{formatINR(nextDue.remaining)}</b> {nextDue.item.dueDate ? `by ${fmtDate(new Date(nextDue.item.dueDate))}` : ""}</>}
+                  {nextDue && <> · next: <b>{$.fmt(nextDue.remaining)}</b> {nextDue.item.dueDate ? `by ${fmtDate(new Date(nextDue.item.dueDate))}` : ""}</>}
                 </div>
               </>
             )}

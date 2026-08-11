@@ -2,23 +2,25 @@ import Link from "next/link";
 import { getSession } from "@/lib/auth";
 import { getOrgContext } from "@/lib/org";
 import { prisma } from "@/lib/db";
-import { formatINR } from "@/lib/money";
+
 import ChangePasswordForm from "./ChangePasswordForm";
 import { updateOrgProfile, updateRefundPolicy } from "./actions";
 import { STANDARD_REFUND_POLICY } from "@/lib/policy";
 import { createPlanTemplate, deletePlanTemplate, setDefaultPlanTemplate, addTemplateStep, deleteTemplateStep } from "../data-actions";
 import TourToggle from "@/components/TourToggle";
+import { orgMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
 // Plain-English description of a template step.
-function stepDesc(s: { kind: string; percent: number | null; amount: number | null; daysBeforeTravel: number | null }) {
-  const amt = s.kind === "fixed" ? formatINR(s.amount ?? 0) : s.kind === "balance" ? "remaining balance" : `${s.percent ?? 0}%`;
+function stepDesc(s: { kind: string; percent: number | null; amount: number | null; daysBeforeTravel: number | null }, fmt: (n: number) => string) {
+  const amt = s.kind === "fixed" ? fmt(s.amount ?? 0) : s.kind === "balance" ? "remaining balance" : `${s.percent ?? 0}%`;
   const when = s.daysBeforeTravel == null ? "due now" : `${s.daysBeforeTravel} days before travel`;
   return `${amt} · ${when}`;
 }
 
 export default async function SettingsPage() {
+  const $ = await orgMoney();
   const session = await getSession();
   const ctx = await getOrgContext();
   const org = ctx?.orgId
@@ -152,7 +154,7 @@ export default async function SettingsPage() {
                         {t.steps.map((s) => (
                           <tr key={s.id}>
                             <td style={{ fontWeight: 500 }}>{s.label}</td>
-                            <td className="muted small">{stepDesc(s)}</td>
+                            <td className="muted small">{stepDesc(s, $.fmt)}</td>
                             <td className="num"><form action={deleteTemplateStep}><input type="hidden" name="id" value={s.id} /><button className="sm" type="submit" aria-label="Delete step">✕</button></form></td>
                           </tr>
                         ))}
@@ -170,16 +172,16 @@ export default async function SettingsPage() {
                           <label className="field"><span className="lbl">Type</span>
                             <select name="kind" defaultValue="percent">
                               <option value="percent">% of total</option>
-                              <option value="fixed">Flat amount ₹</option>
+                              <option value="fixed">Flat amount</option>
                               <option value="balance">Whatever&apos;s left</option>
                             </select>
                           </label>
-                          <label className="field"><span className="lbl">Value <span className="small muted">% or ₹ (skip for &quot;left&quot;)</span></span>
+                          <label className="field"><span className="lbl">Value <span className="small muted">% or amount (skip for &quot;left&quot;)</span></span>
                             <input name="percent" placeholder="25 (for %)" />
                           </label>
                         </div>
                         <div className="row-3" style={{ alignItems: "end" }}>
-                          <label className="field"><span className="lbl">Flat ₹ <span className="small muted">only if type = flat</span></span><input name="amount" placeholder="15000 or 15k" /></label>
+                          <label className="field"><span className="lbl">Flat amount <span className="small muted">only if type = flat</span></span><input name="amount" placeholder="15000 or 15k" /></label>
                           <label className="field"><span className="lbl">Due <span className="small muted">days before travel · blank = now</span></span><input name="daysBeforeTravel" type="number" min="0" placeholder="21 (blank = due now)" /></label>
                           <button className="primary sm" type="submit">Add step</button>
                         </div>

@@ -1,18 +1,69 @@
-// All money is stored as whole rupees (Int). These helpers format for display.
+// Money is stored as a whole number of the org's currency unit (Int) — rupees,
+// pounds, dollars. No minor units anywhere: a booking is 285000, not 28500000.
+//
+// Formatting is per-organisation, because the same number is "₹1,00,000" to an
+// Indian agency and "£100,000" to a British one — note the digit grouping
+// differs too, not just the symbol.
 
-export function formatINR(amount: number): string {
-  const n = Math.round(amount || 0);
-  return "₹" + n.toLocaleString("en-IN");
+export type MoneyCfg = { currency: string; locale: string };
+
+export const INR: MoneyCfg = { currency: "INR", locale: "en-IN" };
+
+// Symbol only, no digits — for input prefixes and column headers.
+export function currencySymbol(cfg: MoneyCfg): string {
+  try {
+    const parts = new Intl.NumberFormat(cfg.locale, { style: "currency", currency: cfg.currency }).formatToParts(0);
+    return parts.find((p) => p.type === "currency")?.value ?? cfg.currency;
+  } catch {
+    return cfg.currency;
+  }
 }
 
-// Compact form for big metric numbers, e.g. ₹8.4L, ₹1.2Cr
-export function formatINRShort(amount: number): string {
+// The everyday formatter. Whole units only — nobody bills a tour in pence.
+export function formatMoney(amount: number, cfg: MoneyCfg = INR): string {
+  const n = Math.round(amount || 0);
+  try {
+    return new Intl.NumberFormat(cfg.locale, {
+      style: "currency",
+      currency: cfg.currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(n);
+  } catch {
+    // Unknown currency code (someone typed one into Settings) — still show the
+    // number rather than crashing the page it appears on.
+    return `${cfg.currency} ${n.toLocaleString()}`;
+  }
+}
+
+// Compact form for metric tiles. India counts in lakh and crore and everyone
+// there reads them instantly; everywhere else that would be gibberish, so those
+// get K/M instead.
+export function formatMoneyShort(amount: number, cfg: MoneyCfg = INR): string {
   const n = Math.round(amount || 0);
   const abs = Math.abs(n);
-  if (abs >= 10000000) return "₹" + (n / 10000000).toFixed(2).replace(/\.00$/, "") + "Cr";
-  if (abs >= 100000) return "₹" + (n / 100000).toFixed(2).replace(/\.00$/, "") + "L";
-  if (abs >= 1000) return "₹" + (n / 1000).toFixed(1).replace(/\.0$/, "") + "K";
-  return "₹" + n.toLocaleString("en-IN");
+  const sym = currencySymbol(cfg);
+  const trim = (v: string) => v.replace(/\.0+$/, "");
+
+  if (cfg.locale === "en-IN" || cfg.currency === "INR") {
+    if (abs >= 1_00_00_000) return sym + trim((n / 1_00_00_000).toFixed(2)) + "Cr";
+    if (abs >= 1_00_000) return sym + trim((n / 1_00_000).toFixed(2)) + "L";
+    if (abs >= 1000) return sym + trim((n / 1000).toFixed(1)) + "K";
+    return formatMoney(n, cfg);
+  }
+  if (abs >= 1_000_000_000) return sym + trim((n / 1_000_000_000).toFixed(2)) + "B";
+  if (abs >= 1_000_000) return sym + trim((n / 1_000_000).toFixed(2)) + "M";
+  if (abs >= 1000) return sym + trim((n / 1000).toFixed(1)) + "K";
+  return formatMoney(n, cfg);
+}
+
+// Legacy names, still used by a few call sites. Always rupees — new code should
+// take a MoneyCfg from the organisation instead.
+export function formatINR(amount: number): string {
+  return formatMoney(amount, INR);
+}
+export function formatINRShort(amount: number): string {
+  return formatMoneyShort(amount, INR);
 }
 
 // Tax rates (GST / TCS %) off a form. Three cases have to stay distinct:
@@ -31,11 +82,15 @@ export function parseRate(input: unknown, fallback: number): number {
   return Math.max(0, Math.round(n));
 }
 
+// Shorthand in the amount box: "45k", "1.2l", "2cr". The Indian units are
+// accepted everywhere rather than gated on the org's country — an operator
+// typing "2l" means 200000 whatever their billing currency is, and refusing it
+// would only be surprising.
 export function parseAmount(input: string | number | null | undefined): number {
   if (input == null) return 0;
   if (typeof input === "number") return Math.round(input);
   // strip ₹, commas, spaces; support shorthand like 45k, 1.2l, 2cr
-  const s = input.toLowerCase().replace(/[₹,\s]/g, "").trim();
+  const s = input.toLowerCase().replace(/[^0-9a-z.]/g, "").trim();
   const m = s.match(/^([\d.]+)(k|l|lakh|cr|crore)?$/);
   if (!m) {
     const n = parseFloat(s);

@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { formatINRShort } from "@/lib/money";
 
+// Charts render money, so they need the agency's formatter. Defaults to rupees
+// so an unmigrated caller still renders something sane.
+type Fmt = (n: number) => string;
+
 type Seg = { name: string; value: number; color: string };
 
 // SVG donut chart with a center label and a legend.
-export function Donut({ segments, centerTop, centerBottom, size = 150 }: { segments: Seg[]; centerTop?: string; centerBottom?: string; size?: number }) {
+export function Donut({ segments, centerTop, centerBottom, size = 150 , fmt = formatINRShort }: { segments: Seg[]; centerTop?: string; centerBottom?: string; size?: number ; fmt?: Fmt }) {
   const total = segments.reduce((s, x) => s + x.value, 0);
   const r = size / 2 - 13;
   const circ = 2 * Math.PI * r;
@@ -32,7 +36,7 @@ export function Donut({ segments, centerTop, centerBottom, size = 150 }: { segme
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
             <span style={{ width: 11, height: 11, borderRadius: 3, background: s.color, flexShrink: 0 }} />
             <span style={{ color: "var(--text-2)" }}>{s.name}</span>
-            <span style={{ marginLeft: "auto", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{formatINRShort(s.value)}</span>
+            <span style={{ marginLeft: "auto", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{fmt(s.value)}</span>
           </div>
         ))}
       </div>
@@ -41,7 +45,7 @@ export function Donut({ segments, centerTop, centerBottom, size = 150 }: { segme
 }
 
 // Horizontal bars — good for labelled categories like trips.
-export function HBars({ rows, max }: { rows: { label: string; value: number; sub?: string; color?: string; href?: string }[]; max?: number }) {
+export function HBars({ rows, max, fmt = formatINRShort }: { rows: { label: string; value: number; sub?: string; color?: string; href?: string }[]; max?: number; fmt?: Fmt }) {
   const top = max ?? Math.max(...rows.map((r) => r.value), 1);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -50,7 +54,7 @@ export function HBars({ rows, max }: { rows: { label: string; value: number; sub
           <>
             <div className="between" style={{ marginBottom: 4 }}>
               <span style={{ fontSize: 13, fontWeight: 500 }}>{r.label}{r.href && <span className="hbar-go"> ›</span>}</span>
-              <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{formatINRShort(r.value)}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{fmt(r.value)}</span>
             </div>
             <div style={{ height: 9, background: "var(--surface-2)", borderRadius: 20, overflow: "hidden" }}>
               <div style={{ width: `${Math.max(2, (r.value / top) * 100)}%`, height: "100%", background: r.color || "var(--accent-grad)", borderRadius: 20 }} />

@@ -2,10 +2,11 @@ import React from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { prisma } from "@/lib/db";
 import { bookingTaxable, bookingGst, bookingTcs, bookingTotal, bookingPaid, bookingBalance, bookingInclNonTaxCharge } from "@/lib/calc";
-import { formatINR } from "@/lib/money";
+
 import { amountInWords } from "@/lib/invoice";
 import { STANDARD_REFUND_POLICY } from "@/lib/policy";
 import InvoiceDoc from "../InvoiceDoc";
+import { buildMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!b.invoiceNo) return new Response("Invoice not generated", { status: 400 });
 
   const org = b.trip.org;
-  const inr = (n: number) => formatINR(n).replace("₹", "Rs. ");
+  const $ = buildMoney(org);
+  const inr = (n: number) => $.fmt(n).replace("₹", "Rs. ");
   // The base PDF fonts can't draw — – · … or non-Latin1 glyphs; normalise them.
   const ascii = (s?: string | null) => (s || "").replace(/[—–]/g, "-").replace(/·/g, "-").replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/…/g, "...").replace(/[^\x00-\xff]/g, "");
   const gst = bookingGst(b);

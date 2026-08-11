@@ -5,7 +5,7 @@ import { submitPendingPayment, type PayResult } from "../../actions";
 
 type Trip = { id: string; name: string };
 
-export default function UniversalPayForm({ trips }: { trips: Trip[] }) {
+export default function UniversalPayForm({ trips, symbol = "₹" }: { trips: Trip[]; symbol?: string }) {
   const [state, action, pending] = useActionState<PayResult | undefined, FormData>(submitPendingPayment, undefined);
   const [tripId, setTripId] = useState("");
   const today = new Date().toISOString().slice(0, 10);
@@ -34,7 +34,7 @@ export default function UniversalPayForm({ trips }: { trips: Trip[] }) {
         <>
           <label className="field"><span className="lbl">Your name</span><input name="payerName" placeholder="Exactly as given at booking" required /></label>
           <div className="row">
-            <label className="field"><span className="lbl">Amount paid (₹)</span><input name="amount" placeholder="e.g. 50000" required /></label>
+            <label className="field"><span className="lbl">Amount paid ({symbol})</span><input name="amount" placeholder="e.g. 50000" required /></label>
             <label className="field"><span className="lbl">Date paid</span><input name="date" type="date" defaultValue={today} /></label>
           </div>
           <div className="row">

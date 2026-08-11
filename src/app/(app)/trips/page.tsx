@@ -2,10 +2,11 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { tripFinancials } from "@/lib/calc";
-import { formatINR } from "@/lib/money";
+
 import { duplicateTrip } from "../data-actions";
 import ActivityLog from "@/components/ActivityLog";
 import TableSearch from "@/components/TableSearch";
+import { orgMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ function fmtDate(d: Date | null) {
 }
 
 export default async function TripsPage() {
+  const $ = await orgMoney();
   const scope = await requireScope();
   const trips = await prisma.trip.findMany({
     where: scope.tripWhere,
@@ -73,9 +75,9 @@ export default async function TripsPage() {
                     </td>
                     <td className="muted small">{fmtDate(t.departureDate)}</td>
                     <td className="muted small">{f.nightCount}</td>
-                    <td className="num">{formatINR(f.revenue)}</td>
-                    <td className="num" style={{ color: f.profit >= 0 ? "var(--success)" : "var(--danger)" }}>{formatINR(f.profit)}</td>
-                    <td className="num">{f.outstanding > 0 ? <span className="badge amber">{formatINR(f.outstanding)}</span> : <span className="muted">—</span>}</td>
+                    <td className="num">{$.fmt(f.revenue)}</td>
+                    <td className="num" style={{ color: f.profit >= 0 ? "var(--success)" : "var(--danger)" }}>{$.fmt(f.profit)}</td>
+                    <td className="num">{f.outstanding > 0 ? <span className="badge amber">{$.fmt(f.outstanding)}</span> : <span className="muted">—</span>}</td>
                     <td>{alerts > 0 ? <span className="badge red">{[f.unbookedNights ? `${f.unbookedNights} unbooked` : "", f.shortRoomNights ? `${f.shortRoomNights} short rooms` : "", f.seatsShort ? `${f.seatsShort} no seat` : "", f.expiringHolds ? `${f.expiringHolds} holds` : ""].filter(Boolean).join(" · ")}</span> : <span className="badge green">all set</span>}</td>
                   </tr>
                 );

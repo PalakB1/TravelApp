@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getScope } from "@/lib/scope";
 import { isActive, bookingBalance } from "@/lib/calc";
-import { formatINRShort } from "@/lib/money";
+import { orgMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
@@ -23,10 +23,13 @@ export async function GET() {
     },
   });
 
+  // Resolved once — the map callback below is synchronous.
+  const $ = await orgMoney();
+
   const payable = trips
     .flatMap((t) => t.bookings.filter((b) => isActive(b.status)).map((b) => {
       const bal = bookingBalance(b);
-      return { id: b.id, label: b.customerName, sub: `${t.name}${bal > 0 ? ` · ${formatINRShort(bal)} due` : " · fully paid"}`, _bal: bal };
+      return { id: b.id, label: b.customerName, sub: `${t.name}${bal > 0 ? ` · ${$.short(bal)} due` : " · fully paid"}`, _bal: bal };
     }))
     .sort((a, b) => b._bal - a._bal)
     .map(({ _bal, ...o }) => o);
@@ -74,5 +77,6 @@ export async function GET() {
     targetTrips,
     banks,
     myName: me?.name ?? "",
+    symbol: $.symbol,
   });
 }

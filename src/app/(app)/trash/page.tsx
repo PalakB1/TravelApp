@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
-import { formatINR } from "@/lib/money";
+
 import ConfirmSubmit from "@/components/ConfirmSubmit";
 import { restoreItem, purgeItem } from "../trash-actions";
+import { orgMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,7 @@ function Row({ kind, id, title, sub, when }: { kind: string; id: string; title: 
 }
 
 export default async function TrashPage() {
+  const $ = await orgMoney();
   const scope = await requireScope();
   const orgId = scope.orgId;
   const notDeleted = { deletedAt: { not: null } as const };
@@ -83,7 +85,7 @@ export default async function TrashPage() {
           {expenses.length > 0 && (
             <div className="card">
               <div className="card-title">Costing entries <span className="small muted">{expenses.length}</span></div>
-              {expenses.map((e) => <Row key={e.id} kind="expense" id={e.id} title={`${formatINR(e.amount)}${e.payee ? " · " + e.payee : ""}`} sub={e.trip?.name || "General"} when={e.deletedAt} />)}
+              {expenses.map((e) => <Row key={e.id} kind="expense" id={e.id} title={`${$.fmt(e.amount)}${e.payee ? " · " + e.payee : ""}`} sub={e.trip?.name || "General"} when={e.deletedAt} />)}
             </div>
           )}
           {customers.length > 0 && (

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { formatINR } from "@/lib/money";
+import { formatMoney, INR, type MoneyCfg } from "@/lib/money";
 import { visaMeta, VISA_STATUSES } from "@/lib/visaStatus";
 import { generateInvoice } from "@/app/(app)/data-actions";
 import EarlyInvoice from "./EarlyInvoice";
@@ -47,7 +47,10 @@ const VISA_ORDER = ["rejected", "required", "initiated", "submitted", "approved"
 const CAP_MOBILE = 5; // rows shown before "Show all" — phone
 const CAP_DESKTOP = 10; // ...and laptop
 
-export default function BookingsTable({ rows, showTrip = false, initialVisa = "" }: { rows: BookingRow[]; showTrip?: boolean; initialVisa?: string }) {
+export default function BookingsTable({ rows, showTrip = false, initialVisa = "", money = INR }: { rows: BookingRow[]; showTrip?: boolean; initialVisa?: string; money?: MoneyCfg }) {
+  // A client component can't await the org lookup, so the currency arrives as a
+  // plain serialisable object and the formatter is built here.
+  const fmt = (n: number) => formatMoney(n, money);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   // Pre-set when arriving from the dashboard's "visas need action" tile.
@@ -127,17 +130,17 @@ export default function BookingsTable({ rows, showTrip = false, initialVisa = ""
                 <div>
                   <Link className="row-link" href={`/bookings/${b.id}`} style={{ fontWeight: 600 }}>{b.name}</Link>
                   {showTrip && b.trip && <div className="small muted">{b.trip}</div>}
-                  {b.discount ? <div className="small muted">−{formatINR(b.discount)} {b.discountReason || "discount"}</div> : null}
+                  {b.discount ? <div className="small muted">−{fmt(b.discount)} {b.discountReason || "discount"}</div> : null}
                 </div>
                 {statusBadge(b.status)}
               </div>
               <div className="between" style={{ marginTop: 10, alignItems: "center" }}>
                 <div>
                   <div className="small muted" style={{ marginBottom: 3 }}>Balance</div>
-                  {b.balance > 0 ? <span className="badge amber">{formatINR(b.balance)}</span> : <span className="badge green">paid</span>}
+                  {b.balance > 0 ? <span className="badge amber">{fmt(b.balance)}</span> : <span className="badge green">paid</span>}
                 </div>
                 <div className="small muted" style={{ textAlign: "right" }}>
-                  {b.pax} pax · {formatINR(b.paid)} / {formatINR(b.total)}
+                  {b.pax} pax · {fmt(b.paid)} / {fmt(b.total)}
                   {b.visaStatus !== "not_required" && <div style={{ marginTop: 4 }}><span className={`badge ${visaMeta(b.visaStatus).badge}`}>{visaMeta(b.visaStatus).short}</span></div>}
                 </div>
               </div>
@@ -165,15 +168,15 @@ export default function BookingsTable({ rows, showTrip = false, initialVisa = ""
               <tr key={b.id}>
                 <td>
                   <Link className="row-link" href={`/bookings/${b.id}`}>{b.name}</Link>
-                  {b.discount ? <div className="small muted">−{formatINR(b.discount)} {b.discountReason || "discount"}</div> : null}
+                  {b.discount ? <div className="small muted">−{fmt(b.discount)} {b.discountReason || "discount"}</div> : null}
                 </td>
                 {showTrip && <td className="muted">{b.trip}</td>}
                 <td className="muted">{b.pax}</td>
                 <td>{statusBadge(b.status)}</td>
                 <td>{b.visaStatus === "not_required" ? <span className="small muted">—</span> : <span className={`badge ${visaMeta(b.visaStatus).badge}`}>{visaMeta(b.visaStatus).short}</span>}</td>
-                <td className="num">{formatINR(b.total)}</td>
-                <td className="num">{formatINR(b.paid)}</td>
-                <td className="num">{b.balance > 0 ? <span className="badge amber">{formatINR(b.balance)}</span> : <span className="badge green">paid</span>}</td>
+                <td className="num">{fmt(b.total)}</td>
+                <td className="num">{fmt(b.paid)}</td>
+                <td className="num">{b.balance > 0 ? <span className="badge amber">{fmt(b.balance)}</span> : <span className="badge green">paid</span>}</td>
                 <td className="num">{invoiceAction(b)}</td>
               </tr>
             ))}

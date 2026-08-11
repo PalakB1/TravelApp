@@ -6,7 +6,7 @@ import { getOrgContext } from "@/lib/org";
 import { parseCommand } from "@/lib/chat";
 import { matchCustomer, applyDefaultPlan } from "./data-actions";
 import { bookingBalance, bookingTotal } from "@/lib/calc";
-import { formatINR } from "@/lib/money";
+import { orgMoney } from "@/lib/orgMoney";
 
 export type ChatResult = { ok: boolean; message: string };
 
@@ -62,7 +62,7 @@ export async function interpretCommand(text: string): Promise<ChatResult> {
       revalidatePath("/", "layout");
       return {
         ok: true,
-        message: `Logged ${formatINR(cmd.amount)} (${cmd.mode}) for ${booking.customerName} · ${booking.trip.name}. Balance now ${formatINR(bal)}.`,
+        message: `Logged ${(await orgMoney()).fmt(cmd.amount)} (${cmd.mode}) for ${booking.customerName} · ${booking.trip.name}. Balance now ${(await orgMoney()).fmt(bal)}.`,
       };
     }
 
@@ -124,7 +124,7 @@ export async function interpretCommand(text: string): Promise<ChatResult> {
       return {
         ok: true,
         message: `Added ${booking.customerName}${variantNote} to ${trip.name}, ${cmd.pax} pax. ${
-          total > 0 ? "Total " + formatINR(total) + " due." : "Set a price/variant to compute the total."
+          total > 0 ? "Total " + (await orgMoney()).fmt(total) + " due." : "Set a price/variant to compute the total."
         }`,
       };
     }

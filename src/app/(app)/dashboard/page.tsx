@@ -3,11 +3,12 @@ import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { tripFinancials, bookingBalance, bookingPaid, bookingTotal, bookingRevenue, bookingTax, isActive, tripIsOver } from "@/lib/calc";
 import { scheduleStatus } from "@/lib/schedule";
-import { formatINR, formatINRShort } from "@/lib/money";
+
 import QuickAddButton from "@/components/QuickAddButton";
 import { Donut, HBars } from "@/components/Charts";
 import DateRangeFilter from "@/components/DateRangeFilter";
 import { ctRevenue, ctProfit, ctCost, ctOutstanding, ctTax, ctTotal, ctPaid } from "../custom-trips/lib";
+import { orgMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ function fmtDate(d: Date | null) {
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
+  const $ = await orgMoney();
   const scope = await requireScope();
 
   // Date-range filter — default is a rolling one-year window from today.
@@ -119,7 +121,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const packageMix = [...pkgMap.entries()].map(([k, v]) => ({ name: PKG[k]?.name || k, value: v, color: PKG[k]?.color || "#9094ac" }));
 
   const revByTrip = perTrip
-    .map(({ trip, f }) => ({ label: trip.name, value: f.revenue, sub: `${f.pax} travellers${f.hiredDrivers > 0 ? ` + ${f.hiredDrivers} driver${f.hiredDrivers > 1 ? "s" : ""}` : ""} · profit ${formatINRShort(f.profit)} · ${Math.round(f.margin * 100)}%`, color: "var(--accent-grad)", href: `/trips/${trip.id}` }))
+    .map(({ trip, f }) => ({ label: trip.name, value: f.revenue, sub: `${f.pax} travellers${f.hiredDrivers > 0 ? ` + ${f.hiredDrivers} driver${f.hiredDrivers > 1 ? "s" : ""}` : ""} · profit ${$.short(f.profit)} · ${Math.round(f.margin * 100)}%`, color: "var(--accent-grad)", href: `/trips/${trip.id}` }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
 
@@ -183,7 +185,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
   type ActionTile = { emoji: string; n: string; label: string; href: string; tone: string };
   const actionTiles: ActionTile[] = [];
-  if (overdueAmt > 0) actionTiles.push({ emoji: "💸", n: formatINRShort(overdueAmt), label: `overdue · ${overdueCustomers} to chase`, href: "/payments?due=amount", tone: "c-rose" });
+  if (overdueAmt > 0) actionTiles.push({ emoji: "💸", n: $.short(overdueAmt), label: `overdue · ${overdueCustomers} to chase`, href: "/payments?due=amount", tone: "c-rose" });
   if (departingSoon > 0) actionTiles.push({ emoji: "✈️", n: String(departingSoon), label: departingSoon === 1 ? "trip departs ≤7 days" : "trips depart ≤7 days", href: "/trips", tone: "c-sky" });
   // Links to the bookings themselves — /visas only lists people who filled the
   // public visa form, so it looked empty when a booking's visa was mid-flight.
@@ -237,26 +239,26 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       <div className="metrics">
         <Link className="metric c-emerald" href="/reports/revenue">
           <div className="label">Revenue booked</div>
-          <div className="value">{formatINRShort(revenue)}</div>
-          <div className="foot">+ GST/TCS {formatINRShort(taxCollected)} → billed {formatINRShort(totalInvoiced)}</div>
+          <div className="value">{$.short(revenue)}</div>
+          <div className="foot">+ GST/TCS {$.short(taxCollected)} → billed {$.short(totalInvoiced)}</div>
         </Link>
         <Link className="metric c-amber" href="/reports/cost">
           <div className="label">Your cost</div>
-          <div className="value">{formatINRShort(expectedCost)}</div>
+          <div className="value">{$.short(expectedCost)}</div>
           <div className="foot">
-            {roomsToBookCost > 0 && <><b>{formatINRShort(cost)}</b> booked so far · +{formatINRShort(roomsToBookCost)} for {roomNightsToBook} rooms still to book<br /></>}
-            hotels {formatINRShort(hotelCost)} · cars {formatINRShort(carRental)}{driverCost > 0 ? ` · drivers ${formatINRShort(driverCost)}` : ""}{extrasCost > 0 ? ` · extras ${formatINRShort(extrasCost)}` : ""}{inclusionsCost > 0 ? ` · inclusions ${formatINRShort(inclusionsCost)}` : ""}
+            {roomsToBookCost > 0 && <><b>{$.short(cost)}</b> booked so far · +{$.short(roomsToBookCost)} for {roomNightsToBook} rooms still to book<br /></>}
+            hotels {$.short(hotelCost)} · cars {$.short(carRental)}{driverCost > 0 ? ` · drivers ${$.short(driverCost)}` : ""}{extrasCost > 0 ? ` · extras ${$.short(extrasCost)}` : ""}{inclusionsCost > 0 ? ` · inclusions ${$.short(inclusionsCost)}` : ""}
           </div>
         </Link>
         <Link className="metric c-violet" href="/reports/profit">
           <div className="label">Profit</div>
-          <div className="value">{formatINRShort(expectedProfit)}</div>
-          <div className="foot">{expectedMargin}% margin{roomsToBookCost > 0 ? ` · ${formatINRShort(profit)} (${margin}%) on what's booked so far` : ""}</div>
+          <div className="value">{$.short(expectedProfit)}</div>
+          <div className="foot">{expectedMargin}% margin{roomsToBookCost > 0 ? ` · ${$.short(profit)} (${margin}%) on what's booked so far` : ""}</div>
         </Link>
         <Link className="metric c-sky" href="/reports/outstanding">
           <div className="label">Outstanding</div>
-          <div className="value">{formatINRShort(outstanding)}</div>
-          <div className="foot">{formatINRShort(totalPaid)} received · due from customers</div>
+          <div className="value">{$.short(outstanding)}</div>
+          <div className="foot">{$.short(totalPaid)} received · due from customers</div>
         </Link>
         <Link className={`metric ${unbookedNights + expiringHolds + shortRoomNights + seatIssues > 0 ? "c-rose" : "c-emerald"}`} href="/reports/attention">
           <div className="label">Needs attention</div>
@@ -278,7 +280,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                     {customTripRows.map((ct) => (
                       <Link key={ct.id} href={`/custom-trips/${ct.id}`} className="between" style={{ fontSize: 13.5, padding: "5px 2px", gap: 10 }}>
                         <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>✦ {ct.title} <span className="muted">· {ct.clientName}</span></span>
-                        <span style={{ fontWeight: 500, whiteSpace: "nowrap" }}>{formatINRShort(ct.rev)} <span className="muted small">· {formatINRShort(ct.profit)} profit</span></span>
+                        <span style={{ fontWeight: 500, whiteSpace: "nowrap" }}>{$.short(ct.rev)} <span className="muted small">· {$.short(ct.profit)} profit</span></span>
                       </Link>
                     ))}
                   </div>
@@ -287,7 +289,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             </div>
             <div className="card">
               <div className="card-title">Package mix <span className="small muted">by revenue</span></div>
-              <Donut segments={packageMix} centerTop={formatINRShort(revenue)} centerBottom="revenue" />
+              <Donut segments={packageMix} centerTop={$.short(revenue)} centerBottom="revenue" />
             </div>
           </div>
 
@@ -307,7 +309,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               </div>
               <Donut
                 segments={[{ name: "Remitted", value: taxRemitted, color: "#0f9d6b" }, { name: "Pending to pay", value: taxPending, color: "#e1670a" }]}
-                centerTop={formatINRShort(taxPending)}
+                centerTop={$.short(taxPending)}
                 centerBottom="pending"
               />
             </div>
@@ -338,13 +340,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                     <Link key={trip.id} href={`/trips/${trip.id}`} className="hbar-row" style={{ padding: "7px 8px" }}>
                       <div className="between" style={{ marginBottom: 6, gap: 10 }}>
                         <span style={{ fontWeight: 500, fontSize: 13.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{trip.name}</span>
-                        <span className="small" style={{ whiteSpace: "nowrap" }}><b style={{ color: pcol }}>{pct}%</b> · {formatINRShort(f.profit)}</span>
+                        <span className="small" style={{ whiteSpace: "nowrap" }}><b style={{ color: pcol }}>{pct}%</b> · {$.short(f.profit)}</span>
                       </div>
                       <div style={{ display: "flex", height: 12, borderRadius: 6, overflow: "hidden", background: "var(--surface-2)" }}>
                         {segs.map((s, i) => <span key={i} style={{ width: `${(s.v / denom) * 100}%`, background: s.c }} />)}
                       </div>
                       <div className="small muted" style={{ marginTop: 5 }}>
-                        {f.pax} pax · {formatINRShort(f.pax ? Math.round(f.revenue / f.pax) : 0)}/pax revenue · {formatINRShort(f.pax ? Math.round(f.cost / f.pax) : 0)}/pax cost
+                        {f.pax} pax · {$.short(f.pax ? Math.round(f.revenue / f.pax) : 0)}/pax revenue · {$.short(f.pax ? Math.round(f.cost / f.pax) : 0)}/pax cost
                       </div>
                     </Link>
                   );
@@ -375,7 +377,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                       </div>
                       <div className="right" style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div>
-                          <div style={{ fontWeight: 500, fontSize: 14 }}>{formatINRShort(f.revenue)}</div>
+                          <div style={{ fontWeight: 500, fontSize: 14 }}>{$.short(f.revenue)}</div>
                           <div className="small muted">{trip.capacity > 0 ? `${f.pax}/${trip.capacity} seats` : `${f.pax} pax`}</div>
                         </div>
                         <span style={{ color: "var(--text-3)", fontSize: 18 }}>›</span>
@@ -408,7 +410,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                       {tripNames.map((tn) => <span key={tn} className="badge accent">{tn}</span>)}
                     </div>
                   </td>
-                  <td className="num">{out > 0 ? <span className="badge amber">{formatINR(out)}</span> : <span className="badge green">clear</span>}</td>
+                  <td className="num">{out > 0 ? <span className="badge amber">{$.fmt(out)}</span> : <span className="badge green">clear</span>}</td>
                 </tr>
               ))}
             </tbody>
@@ -432,7 +434,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                   <td className="muted">{p.booking.trip.name}</td>
                   <td><span className="badge gray">{p.mode}</span></td>
                   <td className="muted small">{fmtDate(p.date)}</td>
-                  <td className="num" style={{ fontWeight: 500 }}>{formatINR(p.amount)}</td>
+                  <td className="num" style={{ fontWeight: 500 }}>{$.fmt(p.amount)}</td>
                 </tr>
               ))}
             </tbody>

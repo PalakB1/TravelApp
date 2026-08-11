@@ -5,9 +5,10 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getOrgContext } from "@/lib/org";
 import { getScope } from "@/lib/scope";
-import { parseAmount, parseRate, formatINR } from "@/lib/money";
+import { parseAmount, parseRate } from "@/lib/money";
 import { financialYear } from "@/lib/invoice";
 import { bookingTotal, tripIsOver } from "@/lib/calc";
+import { orgMoney } from "@/lib/orgMoney";
 
 // Every mutation runs through guard(), which returns the EFFECTIVE org id. All
 // reads/writes below are scoped to it so one org can never touch another's data.
@@ -690,7 +691,7 @@ export async function addHotelBooking(formData: FormData) {
     },
   });
   const night = await prisma.night.findUnique({ where: { id: nightId }, include: { trip: { select: { id: true, name: true } } } });
-  await logActivity(orgId, "hotel", "added", `Added “${hotelName}” · ${rooms} room${rooms === 1 ? "" : "s"} · ${formatINR(cost)}${night ? ` — ${night.location} (${night.trip.name})` : ""}`, night ? `/trips/${night.trip.id}` : null);
+  await logActivity(orgId, "hotel", "added", `Added “${hotelName}” · ${rooms} room${rooms === 1 ? "" : "s"} · ${(await orgMoney()).fmt(cost)}${night ? ` — ${night.location} (${night.trip.name})` : ""}`, night ? `/trips/${night.trip.id}` : null);
   refresh();
 }
 
@@ -762,7 +763,7 @@ export async function addHotelStay(formData: FormData) {
       data: { nightId: night.id, hotelName, rooms, cost: perNight + (i === 0 ? remainder : 0), status, holdUntil, source },
     });
   }
-  await logActivity(orgId, "hotel", "added", `Booked “${hotelName}” for ${nights} night${nights === 1 ? "" : "s"} · ${formatINR(totalCost)} — ${trip.name}`, `/trips/${tripId}`);
+  await logActivity(orgId, "hotel", "added", `Booked “${hotelName}” for ${nights} night${nights === 1 ? "" : "s"} · ${(await orgMoney()).fmt(totalCost)} — ${trip.name}`, `/trips/${tripId}`);
   refresh();
 }
 
@@ -784,7 +785,7 @@ export async function updateHotelBooking(formData: FormData) {
       notes: String(formData.get("notes") || "") || null,
     },
   });
-  await logActivity(orgId, "hotel", "updated", `Updated “${updated.hotelName}” · ${updated.rooms} rooms · ${formatINR(updated.cost)} · ${updated.status}`, `/trips/${updated.night.trip.id}`);
+  await logActivity(orgId, "hotel", "updated", `Updated “${updated.hotelName}” · ${updated.rooms} rooms · ${(await orgMoney()).fmt(updated.cost)} · ${updated.status}`, `/trips/${updated.night.trip.id}`);
   refresh();
 }
 
@@ -971,7 +972,7 @@ export async function addPayment(formData: FormData) {
       date: dateStr ? new Date(dateStr) : new Date(),
     },
   });
-  await logActivity(orgId, "payment", "added", `${payment.booking.customerName} paid ${formatINR(amount)} (${mode})`, `/bookings/${payment.booking.id}`);
+  await logActivity(orgId, "payment", "added", `${payment.booking.customerName} paid ${(await orgMoney()).fmt(amount)} (${mode})`, `/bookings/${payment.booking.id}`);
   refresh();
 }
 
@@ -981,7 +982,7 @@ export async function deletePayment(formData: FormData) {
   const p = await prisma.payment.findFirst({ where: { id, booking: { trip: { orgId } } }, include: { booking: { select: { customerName: true } } } });
   if (!p) return;
   await prisma.payment.delete({ where: { id } });
-  await logActivity(orgId, "payment", "deleted", p ? `Removed ${formatINR(p.amount)} payment — ${p.booking.customerName}` : "Removed a payment");
+  await logActivity(orgId, "payment", "deleted", p ? `Removed ${(await orgMoney()).fmt(p.amount)} payment — ${p.booking.customerName}` : "Removed a payment");
   refresh();
 }
 
@@ -1235,7 +1236,7 @@ export async function approvePendingPayment(formData: FormData) {
     },
   });
   await prisma.pendingPayment.delete({ where: { id } });
-  await logActivity(orgId, "payment", "added", `Approved ${formatINR(p.amount)} (${p.mode}) — ${cust?.customerName ?? p.payerName ?? ""}`, `/bookings/${bookingId}`);
+  await logActivity(orgId, "payment", "added", `Approved ${(await orgMoney()).fmt(p.amount)} (${p.mode}) — ${cust?.customerName ?? p.payerName ?? ""}`, `/bookings/${bookingId}`);
   refresh();
 }
 
@@ -1268,6 +1269,6 @@ export async function rejectPendingPayment(formData: FormData) {
   const p = await prisma.pendingPayment.findFirst({ where: { id, OR: [{ booking: { trip: { orgId } } }, { trip: { orgId } }] }, include: { booking: { select: { customerName: true } } } });
   if (!p) return;
   await prisma.pendingPayment.delete({ where: { id } });
-  await logActivity(orgId, "payment", "deleted", `Rejected self-reported ${formatINR(p.amount)} — ${p.booking?.customerName ?? p.payerName ?? "unmatched"}`);
+  await logActivity(orgId, "payment", "deleted", `Rejected self-reported ${(await orgMoney()).fmt(p.amount)} — ${p.booking?.customerName ?? p.payerName ?? "unmatched"}`);
   refresh();
 }

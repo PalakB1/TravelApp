@@ -4,9 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getScope, canUseTrip, type Scope } from "@/lib/scope";
-import { parseAmount, formatINR } from "@/lib/money";
+import { parseAmount } from "@/lib/money";
 import { apportion } from "@/lib/schedule";
 import { logActivity } from "../data-actions";
+import { orgMoney } from "@/lib/orgMoney";
 
 const str = (v: FormDataEntryValue | null) => String(v || "").trim() || null;
 
@@ -136,7 +137,7 @@ export async function addExpense(formData: FormData) {
     scope.orgId,
     "expense",
     "create",
-    `Added ${formatINR(amount)} spend${expense.payee ? " to " + expense.payee : ""} · ${targetLabel}`,
+    `Added ${(await orgMoney()).fmt(amount)} spend${expense.payee ? " to " + expense.payee : ""} · ${targetLabel}`,
     "/expenses",
   );
   revalidatePath("/expenses");
@@ -156,7 +157,7 @@ export async function deleteExpense(formData: FormData) {
   if (!exp) { revalidatePath("/expenses"); return; }
 
   await prisma.expense.update({ where: { id: exp.id }, data: { deletedAt: new Date() } });
-  await logActivity(scope.orgId, "expense", "delete", `Removed ${formatINR(exp.amount)} spend${exp.payee ? " to " + exp.payee : ""} (recoverable)`, "/expenses");
+  await logActivity(scope.orgId, "expense", "delete", `Removed ${(await orgMoney()).fmt(exp.amount)} spend${exp.payee ? " to " + exp.payee : ""} (recoverable)`, "/expenses");
   revalidatePath("/expenses");
   revalidatePath("/", "layout");
 }
@@ -199,7 +200,7 @@ export async function settleExpenses(formData: FormData) {
     scope.orgId,
     "expense",
     "settle",
-    `Reimbursed ${formatINR(total)} across ${rows.length} personal spend${rows.length === 1 ? "" : "s"}${settlement.paidTo ? " to " + settlement.paidTo : ""}${settlement.reference ? " · ref " + settlement.reference : ""}`,
+    `Reimbursed ${(await orgMoney()).fmt(total)} across ${rows.length} personal spend${rows.length === 1 ? "" : "s"}${settlement.paidTo ? " to " + settlement.paidTo : ""}${settlement.reference ? " · ref " + settlement.reference : ""}`,
     "/expenses",
   );
   revalidatePath("/expenses");
@@ -221,7 +222,7 @@ export async function undoSettlement(formData: FormData) {
 
   await prisma.expense.updateMany({ where: { settlementId: id, orgId: scope.orgId }, data: { settlementId: null } });
   await prisma.settlement.delete({ where: { id } });
-  await logActivity(scope.orgId, "expense", "settle", `Reversed a ${formatINR(settlement.amount)} reimbursement (${settlement._count.expenses} spend${settlement._count.expenses === 1 ? "" : "s"} owed again)`, "/expenses");
+  await logActivity(scope.orgId, "expense", "settle", `Reversed a ${(await orgMoney()).fmt(settlement.amount)} reimbursement (${settlement._count.expenses} spend${settlement._count.expenses === 1 ? "" : "s"} owed again)`, "/expenses");
   revalidatePath("/expenses");
   revalidatePath("/", "layout");
 }
@@ -331,7 +332,7 @@ export async function markItemPaid(formData: FormData) {
     scope.orgId,
     "expense",
     "create",
-    `Marked ${target.label} paid — logged ${formatINR(amount)}${paidPersonally ? " (personal money, to be reimbursed)" : ""}`,
+    `Marked ${target.label} paid — logged ${(await orgMoney()).fmt(amount)}${paidPersonally ? " (personal money, to be reimbursed)" : ""}`,
     `/trips/${target.tripId}`,
   );
   revalidatePath(`/trips/${target.tripId}`);

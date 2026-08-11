@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
-import { formatINR } from "@/lib/money";
+
 import TableLabels from "@/components/TableLabels";
 import TableSearch from "@/components/TableSearch";
+import { orgMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ export default async function ExpenseLogPage({
 }: {
   searchParams: Promise<{ view?: string; person?: string }>;
 }) {
+  const $ = await orgMoney();
   const scope = await requireScope();
   const { view, person } = await searchParams;
 
@@ -92,15 +94,15 @@ export default async function ExpenseLogPage({
       </div>
 
       <div className="metrics">
-        <div className="metric"><div className="label">Total logged</div><div className="value">{formatINR(totalSpend)}</div><div className="foot">{all.length} entries</div></div>
+        <div className="metric"><div className="label">Total logged</div><div className="value">{$.fmt(totalSpend)}</div><div className="foot">{all.length} entries</div></div>
         <div className={`metric ${owedTotal > 0 ? "c-amber" : "c-emerald"}`}>
           <div className="label">Owed to staff</div>
-          <div className="value">{formatINR(owedTotal)}</div>
+          <div className="value">{$.fmt(owedTotal)}</div>
           <div className="foot">{outstanding.length} unreimbursed {outstanding.length === 1 ? "spend" : "spends"}</div>
         </div>
         <div className={`metric ${unpaidBills > 0 ? "c-amber" : "c-emerald"}`}>
           <div className="label">Bills not yet paid</div>
-          <div className="value">{formatINR(unpaidBills)}</div>
+          <div className="value">{$.fmt(unpaidBills)}</div>
           <div className="foot">supplier invoices sitting due</div>
         </div>
       </div>
@@ -120,7 +122,7 @@ export default async function ExpenseLogPage({
                 className="btn sm"
                 style={{ borderColor: person === who ? "var(--accent)" : undefined }}
               >
-                {who} · <b>{formatINR(amt)}</b>
+                {who} · <b>{$.fmt(amt)}</b>
               </Link>
             ))}
           </div>
@@ -189,7 +191,7 @@ export default async function ExpenseLogPage({
                           </>
                         )}
                       </td>
-                      <td className="num" style={{ fontWeight: 500 }}>{formatINR(e.amount)}</td>
+                      <td className="num" style={{ fontWeight: 500 }}>{$.fmt(e.amount)}</td>
                       <td>
                         {e.paidPersonally ? (
                           e.settlement ? (

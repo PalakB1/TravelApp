@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { bookingTotal, bookingPaid, bookingBalance } from "@/lib/calc";
-import { formatINR } from "@/lib/money";
+
 import PayForm from "./PayForm";
 import { STANDARD_REFUND_POLICY } from "@/lib/policy";
 import PoweredBy from "@/components/PoweredBy";
 import Logo from "@/components/Logo";
+import { buildMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +14,11 @@ export default async function PublicPayPage({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const b = await prisma.booking.findUnique({
     where: { id },
-    include: { trip: { select: { name: true, destination: true, org: { select: { defaultRefundPolicy: true, hideBranding: true } } } }, payments: true },
+    include: { trip: { select: { name: true, destination: true, org: { select: { defaultRefundPolicy: true, hideBranding: true, currency: true, locale: true, taxLabel: true, taxLabel2: true, taxRate: true, taxRate2: true, taxIdLabel: true } } } }, payments: true },
   });
   if (!b) notFound();
 
+  const $ = buildMoney(b.trip.org);
   const total = bookingTotal(b);
   const paid = bookingPaid(b);
   const balance = bookingBalance(b);
@@ -36,12 +38,12 @@ export default async function PublicPayPage({ params }: { params: Promise<{ id: 
         </p>
 
         <div className="metrics" style={{ gridTemplateColumns: "1fr 1fr 1fr", marginTop: 16, marginBottom: 18 }}>
-          <div className="metric c-violet"><div className="label">Invoice</div><div className="value" style={{ fontSize: 17 }}>{formatINR(total)}</div></div>
-          <div className="metric c-emerald"><div className="label">Paid</div><div className="value" style={{ fontSize: 17 }}>{formatINR(paid)}</div></div>
-          <div className={`metric ${balance > 0 ? "c-rose" : "c-emerald"}`}><div className="label">Balance</div><div className="value" style={{ fontSize: 17 }}>{formatINR(balance)}</div></div>
+          <div className="metric c-violet"><div className="label">Invoice</div><div className="value" style={{ fontSize: 17 }}>{$.fmt(total)}</div></div>
+          <div className="metric c-emerald"><div className="label">Paid</div><div className="value" style={{ fontSize: 17 }}>{$.fmt(paid)}</div></div>
+          <div className={`metric ${balance > 0 ? "c-rose" : "c-emerald"}`}><div className="label">Balance</div><div className="value" style={{ fontSize: 17 }}>{$.fmt(balance)}</div></div>
         </div>
 
-        <PayForm bookingId={b.id} customerName={b.customerName} suggested={balance > 0 ? balance : undefined} />
+        <PayForm bookingId={b.id} customerName={b.customerName} suggested={balance > 0 ? balance : undefined} symbol={$.symbol} />
 
         {/* Terms are available but collapsed — the payment form stays the focus. */}
         {policy && (

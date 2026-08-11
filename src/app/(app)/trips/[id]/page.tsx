@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { tripFinancials, reconcileTrip, bookingTotal, bookingPaid, bookingBalance, isNightGap, holdExpiringSoon, carCost, pricePerRoom, nightCost, nightBookedRooms, carPassengerSeats, tripIsOver, roomsNeededOnNight, paxOnNight, isShortStay, tripEndLabel } from "@/lib/calc";
 import BookingsTable from "@/components/BookingsTable";
-import { formatINR, formatINRShort } from "@/lib/money";
+
 import {
   addVariant, deleteVariant,
   addVendorBooking, updateVendorBooking, deleteVendorBooking,
@@ -24,6 +24,7 @@ import AutoFill from "@/components/AutoFill";
 import VisaLinkBuilder from "@/components/VisaLinkBuilder";
 import MarkPaid from "@/components/MarkPaid";
 import { getOrgContext } from "@/lib/org";
+import { orgMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ function statusBadge(s: string) {
 }
 
 // A single completeness bar — nudges the user to finish filling a trip.
-function Prog({ label, done, total, color, money, unit }: { label: string; done: number; total: number; color: string; money?: boolean; unit?: string }) {
+function Prog({ label, done, total, color, money, unit, fmt }: { label: string; done: number; total: number; color: string; money?: boolean; unit?: string; fmt: (n: number) => string }) {
   const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
   const complete = total > 0 && done >= total;
   const left = Math.max(0, total - done);
@@ -47,7 +48,7 @@ function Prog({ label, done, total, color, money, unit }: { label: string; done:
     <div className="prog">
       <div className="ptop">
         <span className="plabel">{label}</span>
-        <span className={`pcount ${complete ? "pdone" : ""}`}>{money ? `${formatINRShort(done)} / ${formatINRShort(total)}` : `${done} / ${total}`}{complete ? " ✓" : ""}</span>
+        <span className={`pcount ${complete ? "pdone" : ""}`}>{money ? `${fmt(done)} / ${fmt(total)}` : `${done} / ${total}`}{complete ? " ✓" : ""}</span>
       </div>
       <div className="bar lg"><span className={color} style={{ width: `${pct}%` }} /></div>
       <div className="pfoot">{total === 0 ? "nothing to do yet" : complete ? "all done 🎉" : money ? `${pct}% collected` : `${pct}% · ${left} ${unit || ""} to go`}</div>
@@ -56,6 +57,7 @@ function Prog({ label, done, total, color, money, unit }: { label: string; done:
 }
 
 export default async function TripDetail({ params }: { params: Promise<{ id: string }> }) {
+  const $ = await orgMoney();
   const { id } = await params;
   const scope = await requireScope();
   const trip = await prisma.trip.findFirst({
@@ -190,27 +192,27 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
       </div>
 
       <div className="metrics">
-        <div className="metric c-emerald"><div className="label">Revenue</div><div className="value">{formatINR(f.revenue)}</div><div className="foot">+ GST/TCS {formatINRShort(f.taxCollected)} → billed {formatINRShort(f.invoiced)}</div></div>
+        <div className="metric c-emerald"><div className="label">Revenue</div><div className="value">{$.fmt(f.revenue)}</div><div className="foot">+ GST/TCS {$.short(f.taxCollected)} → billed {$.short(f.invoiced)}</div></div>
         {/* Lead with the full expected cost — the booked spend alone understates it
             while rooms are still unbooked, which flatters the profit below. */}
         <div className="metric c-amber">
           <div className="label">Your cost</div>
-          <div className="value">{formatINR(f.assumedRoomCost > 0 ? f.assumedCost : f.cost)}</div>
+          <div className="value">{$.fmt(f.assumedRoomCost > 0 ? f.assumedCost : f.cost)}</div>
           <div className="foot">
-            {f.assumedRoomCost > 0 && <><b>{formatINR(f.cost)}</b> booked so far · +{formatINR(f.assumedRoomCost)} for {f.roomNightsToBook} rooms still to book (@ {formatINR(f.avgRoomCost)})<br /></>}
-            hotels {formatINR(f.hotelCost)} · cars {formatINR(f.carRental)}{f.driverCost > 0 ? ` · drivers ${formatINR(f.driverCost)}` : ""}{f.extrasCost > 0 ? ` · extras ${formatINR(f.extrasCost)}` : ""}{f.inclusionsCost > 0 ? ` · inclusions ${formatINR(f.inclusionsCost)}` : ""}
+            {f.assumedRoomCost > 0 && <><b>{$.fmt(f.cost)}</b> booked so far · +{$.fmt(f.assumedRoomCost)} for {f.roomNightsToBook} rooms still to book (@ {$.fmt(f.avgRoomCost)})<br /></>}
+            hotels {$.fmt(f.hotelCost)} · cars {$.fmt(f.carRental)}{f.driverCost > 0 ? ` · drivers ${$.fmt(f.driverCost)}` : ""}{f.extrasCost > 0 ? ` · extras ${$.fmt(f.extrasCost)}` : ""}{f.inclusionsCost > 0 ? ` · inclusions ${$.fmt(f.inclusionsCost)}` : ""}
           </div>
         </div>
         <div className="metric c-violet">
           <div className="label">Profit</div>
-          <div className="value">{formatINR(f.assumedRoomCost > 0 ? f.assumedProfit : f.profit)}</div>
+          <div className="value">{$.fmt(f.assumedRoomCost > 0 ? f.assumedProfit : f.profit)}</div>
           <div className="foot">
             {Math.round((f.assumedRoomCost > 0 ? f.assumedMargin : f.margin) * 100)}% margin
-            {f.assumedRoomCost > 0 ? ` · ${formatINR(f.profit)} (${Math.round(f.margin * 100)}%) on what's booked so far` : ""}
-            {rec.hasActuals ? ` · actual ${formatINR(rec.reconciledProfit)} (${Math.round(rec.reconciledMargin * 100)}%)` : ""}
+            {f.assumedRoomCost > 0 ? ` · ${$.fmt(f.profit)} (${Math.round(f.margin * 100)}%) on what's booked so far` : ""}
+            {rec.hasActuals ? ` · actual ${$.fmt(rec.reconciledProfit)} (${Math.round(rec.reconciledMargin * 100)}%)` : ""}
           </div>
         </div>
-        <div className="metric c-sky"><div className="label">Outstanding</div><div className="value">{formatINR(f.outstanding)}</div><div className="foot">{formatINR(f.paid)} collected</div></div>
+        <div className="metric c-sky"><div className="label">Outstanding</div><div className="value">{$.fmt(f.outstanding)}</div><div className="foot">{$.fmt(f.paid)} collected</div></div>
         <div className={`metric ${f.unbookedNights + f.expiringHolds + f.shortRoomNights > 0 ? "c-rose" : "c-emerald"}`}><div className="label">Needs attention</div><div className="value">{f.unbookedNights + f.expiringHolds + f.shortRoomNights}</div><div className="foot">{f.unbookedNights} unbooked · {f.shortRoomNights} short rooms · {f.expiringHolds} holds expiring</div></div>
       </div>
 
@@ -219,13 +221,13 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
           <div className="between" style={{ flexWrap: "wrap", gap: 8 }}>
             <div className="card-title" style={{ margin: 0 }}>Estimate vs actual <span className="small muted">from invoices logged in <Link href="/expenses" className="row-link">Costing</Link></span></div>
             <span className="badge" style={{ background: rec.variance > 0 ? "var(--warning-bg)" : "var(--emerald-bg)", color: rec.variance > 0 ? "var(--warning)" : "var(--emerald-fg)" }}>
-              {rec.variance === 0 ? "on budget" : rec.variance > 0 ? `₹${formatINR(rec.variance).replace("₹", "")} over the hold` : `${formatINR(-rec.variance)} under the hold`}
+              {rec.variance === 0 ? "on budget" : rec.variance > 0 ? `${$.fmt(rec.variance)} over the hold` : `${$.fmt(-rec.variance)} under the hold`}
             </span>
           </div>
           <div className="row-3" style={{ marginTop: 12 }}>
-            <div><div className="small muted">Estimated cost (holds)</div><div style={{ fontSize: 18, fontWeight: 600 }}>{formatINR(f.cost)}</div><div className="small muted">→ profit {formatINR(f.profit)} ({Math.round(f.margin * 100)}%)</div></div>
-            <div><div className="small muted">Reconciled cost (actuals where logged)</div><div style={{ fontSize: 18, fontWeight: 600 }}>{formatINR(rec.reconciledCost)}</div><div className="small muted">→ profit {formatINR(rec.reconciledProfit)} ({Math.round(rec.reconciledMargin * 100)}%)</div></div>
-            <div><div className="small muted">Invoiced so far</div><div style={{ fontSize: 18, fontWeight: 600 }}>{formatINR(rec.totalActual)}</div><div className="small muted">🏨 {formatINR(rec.hotelActual)} · 🚗 {formatINR(rec.carActual)}{rec.otherActual > 0 ? ` · other ${formatINR(rec.otherActual)}` : ""}</div></div>
+            <div><div className="small muted">Estimated cost (holds)</div><div style={{ fontSize: 18, fontWeight: 600 }}>{$.fmt(f.cost)}</div><div className="small muted">→ profit {$.fmt(f.profit)} ({Math.round(f.margin * 100)}%)</div></div>
+            <div><div className="small muted">Reconciled cost (actuals where logged)</div><div style={{ fontSize: 18, fontWeight: 600 }}>{$.fmt(rec.reconciledCost)}</div><div className="small muted">→ profit {$.fmt(rec.reconciledProfit)} ({Math.round(rec.reconciledMargin * 100)}%)</div></div>
+            <div><div className="small muted">Invoiced so far</div><div style={{ fontSize: 18, fontWeight: 600 }}>{$.fmt(rec.totalActual)}</div><div className="small muted">🏨 {$.fmt(rec.hotelActual)} · 🚗 {$.fmt(rec.carActual)}{rec.otherActual > 0 ? ` · other ${$.fmt(rec.otherActual)}` : ""}</div></div>
           </div>
           <p className="small muted" style={{ margin: "10px 0 0" }}>Reconciled cost uses the real invoice for any hotel/car you&rsquo;ve logged, the hold estimate for the rest, plus any trip-level spend (fuel, guides, permits…).</p>
         </div>
@@ -238,8 +240,8 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
           <div className="card">
             <div className="card-title">Trip setup <span className="small muted">how ready this trip is — fill the gaps to reach 100%</span></div>
             <div className="prog-strip">
-              <Prog label="Hotels booked" done={roomNightsBooked} total={roomNightsNeeded} color="emerald" unit="room-nights" />
-              <Prog label="Payments collected" done={f.paid} total={f.invoiced} color="" money />
+              <Prog label="Hotels booked" done={roomNightsBooked} total={roomNightsNeeded} color="emerald" unit="room-nights" fmt={$.short} />
+              <Prog label="Payments collected" done={f.paid} total={f.invoiced} color="" money fmt={$.short} />
             </div>
           </div>
         );
@@ -282,7 +284,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
               </div>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, padding: "6px 20px 12px" }}>
-              <span className="small muted">{totalRooms} rooms held · {formatINR(f.hotelCost)} · avg {formatINR(avgPerRoom)}/room · click a day to add / edit its hotels</span>
+              <span className="small muted">{totalRooms} rooms held · {$.fmt(f.hotelCost)} · avg {$.fmt(avgPerRoom)}/room · click a day to add / edit its hotels</span>
               <span className="flex" style={{ gap: 8 }}>
                 <form action={updateTripRooms} className="inline-form">
                   <input type="hidden" name="id" value={trip.id} />
@@ -340,11 +342,11 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                             <summary style={{ listStyle: "none", cursor: "pointer", padding: "8px 0", display: "grid", gridTemplateColumns: "1fr auto", gap: 8, alignItems: "center" }}>
                               <div>
                                 <div style={{ fontSize: 13.5, fontWeight: 500 }}>{h.hotelName}</div>
-                                <div className="small muted">{h.rooms} rooms · {formatINR(h.cost)}{h.rooms > 0 ? ` · ${formatINR(pricePerRoom(h))}/room` : ""}{h.source ? ` · ${h.source}` : ""}</div>
+                                <div className="small muted">{h.rooms} rooms · {$.fmt(h.cost)}{h.rooms > 0 ? ` · ${$.fmt(pricePerRoom(h))}/room` : ""}{h.source ? ` · ${h.source}` : ""}</div>
                                 {rec.hotelActualBy.has(h.id) ? (() => {
                                   const actual = rec.hotelActualBy.get(h.id)!;
                                   const over = actual > h.cost;
-                                  return <div className="small" style={{ color: over ? "var(--danger)" : "var(--emerald-fg)", fontWeight: 500 }}>Actual invoiced {formatINR(actual)}{h.cost > 0 ? (actual === h.cost ? " · on the hold" : over ? ` · ${formatINR(actual - h.cost)} over hold` : ` · ${formatINR(h.cost - actual)} under hold`) : ""}</div>;
+                                  return <div className="small" style={{ color: over ? "var(--danger)" : "var(--emerald-fg)", fontWeight: 500 }}>Actual invoiced {$.fmt(actual)}{h.cost > 0 ? (actual === h.cost ? " · on the hold" : over ? ` · ${$.fmt(actual - h.cost)} over hold` : ` · ${$.fmt(h.cost - actual)} under hold`) : ""}</div>;
                                 })() : null}
                                 {h.notes ? <div className="small" style={{ color: "var(--text-3)" }}>{h.notes}</div> : null}
                               </div>
@@ -359,7 +361,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                                 <div className="row-3">
                                   <label className="field"><span className="lbl">Hotel</span><input name="hotelName" list="hotel-list" defaultValue={h.hotelName} /></label>
                                   <label className="field"><span className="lbl">Rooms</span><input name="rooms" type="number" min="0" defaultValue={h.rooms || ""} /></label>
-                                  <label className="field"><span className="lbl">Total cost</span><input name="cost" defaultValue={h.cost || ""} placeholder="₹ e.g. 60k" /></label>
+                                  <label className="field"><span className="lbl">Total cost</span><input name="cost" defaultValue={h.cost || ""} placeholder={`${$.symbol} e.g. 60k`} /></label>
                                 </div>
                                 <div className="row-3">
                                   <label className="field"><span className="lbl">Status</span>
@@ -457,7 +459,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                     </div>
                     <div className="row-3">
                       <label className="field"><span className="lbl">Rooms</span><input name="rooms" type="number" min="0" placeholder="6" /></label>
-                      <label className="field"><span className="lbl">Cost</span><input name="cost" placeholder="₹" /></label>
+                      <label className="field"><span className="lbl">Cost</span><input name="cost" placeholder={`${$.symbol}`} /></label>
                       <label className="field"><span className="lbl">Status</span>
                         <select name="status" defaultValue="hold"><option value="unbooked">Not booked</option><option value="hold">On hold</option><option value="final">Confirmed</option><option value="paid">Paid</option></select>
                       </label>
@@ -513,7 +515,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
         <summary>
           <span className="sec-title">Car fleet</span>
           <span className="sec-hi" style={{ marginLeft: "auto", marginRight: 12 }}>
-            {trip.cars.length} car{trip.cars.length !== 1 ? "s" : ""}{trip.cars.length > 0 ? ` · rental ${formatINR(f.carRental)}${f.driverCost > 0 ? ` + drivers ${formatINR(f.driverCost)}` : ""}` : ""}
+            {trip.cars.length} car{trip.cars.length !== 1 ? "s" : ""}{trip.cars.length > 0 ? ` · rental ${$.fmt(f.carRental)}${f.driverCost > 0 ? ` + drivers ${$.fmt(f.driverCost)}` : ""}` : ""}
             {f.carSeats > 0 ? <> · seats {f.carSeats} for {f.pax}{f.seatsShort > 0 ? <span style={{ color: "var(--danger)" }}> · {f.seatsShort} without a seat</span> : <span style={{ color: "var(--success)" }}> ✓</span>}</> : null}
           </span>
         </summary>
@@ -532,14 +534,14 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                       {statusBadge(c.status)}
                     </div>
                     <div className="small" style={{ marginTop: 4, color: c.driverMode === "hired" ? "var(--accent)" : "var(--text-2)" }}>
-                      {c.driverMode === "hired" ? `+ Hired driver · ${formatINR(c.driverCost)}${c.driverNeedsStay ? " · needs a room" : ""}` : "Client drives"}
+                      {c.driverMode === "hired" ? `+ Hired driver · ${$.fmt(c.driverCost)}${c.driverNeedsStay ? " · needs a room" : ""}` : "Client drives"}
                     </div>
-                    <div className="small muted" style={{ marginTop: 4 }}>Rental {formatINR(c.rentalCost)} · total {formatINR(carCost(c))}</div>
+                    <div className="small muted" style={{ marginTop: 4 }}>Rental {$.fmt(c.rentalCost)} · total {$.fmt(carCost(c))}</div>
                     {rec.carActualBy.has(c.id) ? (() => {
                       const actual = rec.carActualBy.get(c.id)!;
                       const est = carCost(c);
                       const over = actual > est;
-                      return <div className="small" style={{ color: over ? "var(--danger)" : "var(--emerald-fg)", fontWeight: 500 }}>Actual invoiced {formatINR(actual)}{est > 0 ? (actual === est ? " · on the hold" : over ? ` · ${formatINR(actual - est)} over hold` : ` · ${formatINR(est - actual)} under hold`) : ""}</div>;
+                      return <div className="small" style={{ color: over ? "var(--danger)" : "var(--emerald-fg)", fontWeight: 500 }}>Actual invoiced {$.fmt(actual)}{est > 0 ? (actual === est ? " · on the hold" : over ? ` · ${$.fmt(actual - est)} over hold` : ` · ${$.fmt(est - actual)} under hold`) : ""}</div>;
                     })() : null}
                     {c.seats > 0 ? <div className="small muted">{c.seats} seats · {carPassengerSeats(c)} for guests</div> : null}
                     {c.status === "hold" && c.holdUntil ? <div className="small" style={{ color: expiring ? "var(--danger)" : "var(--warning)", marginTop: 4 }}>hold till {fmtDate(c.holdUntil)}{c.source ? ` · ${c.source}` : ""}</div> : null}
@@ -597,11 +599,11 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                 <label className="field"><span className="lbl">Vendor</span><input id="car-vendor" name="vendor" placeholder="Blue Car Rental" /></label>
               </div>
               <div className="row-3">
-                <label className="field"><span className="lbl">Rental cost</span><input id="car-rental" name="rentalCost" placeholder="₹" /></label>
+                <label className="field"><span className="lbl">Rental cost</span><input id="car-rental" name="rentalCost" placeholder={`${$.symbol}`} /></label>
                 <label className="field"><span className="lbl">Driver</span>
                   <select name="driverMode" defaultValue="self"><option value="self">Client drives</option><option value="hired">Hired driver</option></select>
                 </label>
-                <label className="field"><span className="lbl">Driver cost</span><input id="car-driver-cost" name="driverCost" placeholder="₹ (if hired)" /></label>
+                <label className="field"><span className="lbl">Driver cost</span><input id="car-driver-cost" name="driverCost" placeholder={`${$.symbol} (if hired)`} /></label>
               </div>
               <label className="field" style={{ maxWidth: 280 }}><span className="lbl">Driver needs a room? (if hired)</span>
                 <select name="driverNeedsStay" defaultValue="no"><option value="no">No</option><option value="yes">Yes — book a room each night</option></select>
@@ -641,7 +643,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                     <span style={{ fontWeight: 500 }}>{inc.name}</span>
                     {inc.isDefault ? <span className="badge green">default</span> : <span className="badge gray">optional</span>}
                     {inc.taxable ? <span className="badge sky">GST/TCS</span> : <span className="badge gray">no tax</span>}
-                    <span className="small muted" style={{ marginLeft: "auto" }}>cost {formatINR(inc.cost)}/pp{!inc.isDefault ? ` · charge ${formatINR(inc.sellContribution)}/pp` : ""}</span>
+                    <span className="small muted" style={{ marginLeft: "auto" }}>cost {$.fmt(inc.cost)}/pp{!inc.isDefault ? ` · charge ${$.fmt(inc.sellContribution)}/pp` : ""}</span>
                   </summary>
                   <div className="form-box" style={{ marginTop: 10 }}>
                     <form action={updateInclusion}>
@@ -686,7 +688,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                 </div>
                 <div className="row">
                   <label className="field"><span className="lbl">Your cost / person</span><input name="cost" placeholder="10000 or 10k" /></label>
-                  <label className="field"><span className="lbl">Customer charge / person</span><input name="charge" placeholder="₹ (optional upsells only)" /></label>
+                  <label className="field"><span className="lbl">Customer charge / person</span><input name="charge" placeholder={`${$.symbol} (optional upsells only)`} /></label>
                 </div>
                 <button className="primary sm" type="submit">Add inclusion</button>
               </form>
@@ -744,7 +746,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
             <span className="btn primary sm" style={{ pointerEvents: "none" }}>↓ Add a booking below</span>
           </div>
         ) : (
-          <BookingsTable rows={trip.bookings.map((b) => ({
+          <BookingsTable money={$.cfg} rows={trip.bookings.map((b) => ({
             id: b.id, name: b.customerName, pax: b.pax, status: b.status,
             visaStatus: b.visaStatus, visaHandledBy: b.visaHandledBy,
             total: bookingTotal(b), paid: bookingPaid(b), balance: bookingBalance(b),
@@ -766,13 +768,13 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                 </label>
               </div>
               <div className="row-3">
-                <label className="field"><span className="lbl">Land cost</span><input name="landAmount" placeholder="₹" /></label>
-                <label className="field"><span className="lbl">Visa assistance</span><input name="visaAmount" placeholder="₹ (LVA / Full)" /></label>
-                <label className="field"><span className="lbl">Flights</span><input name="flightAmount" placeholder="₹ (Full only)" /></label>
+                <label className="field"><span className="lbl">Land cost</span><input name="landAmount" placeholder={`${$.symbol}`} /></label>
+                <label className="field"><span className="lbl">Visa assistance</span><input name="visaAmount" placeholder={`${$.symbol} (LVA / Full)`} /></label>
+                <label className="field"><span className="lbl">Flights</span><input name="flightAmount" placeholder={`${$.symbol} (Full only)`} /></label>
               </div>
               <div className="row-3">
                 <label className="field"><span className="lbl">Travellers (pax)</span><input name="pax" type="number" min="1" defaultValue={1} /></label>
-                <label className="field"><span className="lbl">Discount</span><input name="discount" placeholder="₹ or 5k" /></label>
+                <label className="field"><span className="lbl">Discount</span><input name="discount" placeholder={`${$.symbol} or 5k`} /></label>
                 <label className="field"><span className="lbl">Discount reason</span><input name="discountReason" placeholder="early bird" /></label>
               </div>
               <div className="row-3">
@@ -802,7 +804,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                 {trip.variants.map((v) => (
                   <tr key={v.id}>
                     <td>{v.name}<div className="small muted">{v.occupancy || ""}</div></td>
-                    <td className="num" style={{ fontWeight: 500 }}>{formatINR(v.sellPrice)}</td>
+                    <td className="num" style={{ fontWeight: 500 }}>{$.fmt(v.sellPrice)}</td>
                     <td className="num"><form action={deleteVariant}><input type="hidden" name="id" value={v.id} /><button className="sm" type="submit" aria-label="Delete">✕</button></form></td>
                   </tr>
                 ))}
@@ -816,7 +818,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                 <input type="hidden" name="tripId" value={trip.id} />
                 <div className="row">
                   <label className="field"><span className="lbl">Name</span><input name="name" placeholder="Standard" required /></label>
-                  <label className="field"><span className="lbl">Per person</span><input name="sellPrice" placeholder="₹" /></label>
+                  <label className="field"><span className="lbl">Per person</span><input name="sellPrice" placeholder={`${$.symbol}`} /></label>
                 </div>
                 <button className="primary sm" type="submit">Add</button>
               </form>
@@ -827,7 +829,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
         <div className="card">
           <div className="card-title">
             <span>Extras &amp; other suppliers</span>
-            {trip.vendorBookings.length > 0 ? <span className="small muted" style={{ fontWeight: 400 }}>planned {formatINR(f.extrasPlanned)} · actual {formatINR(f.extrasActual)}</span> : null}
+            {trip.vendorBookings.length > 0 ? <span className="small muted" style={{ fontWeight: 400 }}>planned {$.fmt(f.extrasPlanned)} · actual {$.fmt(f.extrasActual)}</span> : null}
           </div>
           {trip.vendorBookings.length === 0 ? (
             <div className="empty small">Fuel, parking, activities, permits, guides — anything else you pay for. Add a planned estimate now, fill the actual after the trip.</div>
@@ -847,7 +849,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                         <option value="pending">pending</option><option value="confirmed">confirmed</option><option value="paid">paid</option>
                       </select>
                     </td>
-                    <td className="num"><input name="cost" form={`vb-${vb.id}`} defaultValue={vb.cost || ""} placeholder="₹" style={{ width: 92, padding: "5px 8px", fontSize: 13, textAlign: "right" }} /></td>
+                    <td className="num"><input name="cost" form={`vb-${vb.id}`} defaultValue={vb.cost || ""} placeholder={`${$.symbol}`} style={{ width: 92, padding: "5px 8px", fontSize: 13, textAlign: "right" }} /></td>
                     <td className="num"><input name="actualCost" form={`vb-${vb.id}`} defaultValue={vb.actualCost ?? ""} placeholder="—" style={{ width: 92, padding: "5px 8px", fontSize: 13, textAlign: "right" }} /></td>
                     <td className="num">
                       <span className="flex" style={{ justifyContent: "flex-end", gap: 6 }}>
@@ -885,7 +887,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
                   </label>
                 </div>
                 <div className="row-3">
-                  <label className="field"><span className="lbl">Planned cost (estimate)</span><input name="cost" placeholder="₹ rough estimate" /></label>
+                  <label className="field"><span className="lbl">Planned cost (estimate)</span><input name="cost" placeholder={`${$.symbol} rough estimate`} /></label>
                   <label className="field"><span className="lbl">Actual cost (after trip)</span><input name="actualCost" placeholder="leave blank for now" /></label>
                   <label className="field"><span className="lbl">Detail</span><input name="detail" placeholder="optional" /></label>
                 </div>

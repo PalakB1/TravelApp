@@ -1,12 +1,13 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { bookingTotal } from "@/lib/calc";
-import { formatINR } from "@/lib/money";
+
 import { amountInWords } from "@/lib/invoice";
 import PrintButton from "@/components/PrintButton";
 import PoweredBy from "@/components/PoweredBy";
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import { buildMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
@@ -33,13 +34,13 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
 
   const b = p.booking;
   const org = b.trip.org;
+  const $ = buildMoney(org);
   const agency = org?.legalName || org?.name || "TripZei";
   const total = bookingTotal(b);
   // As of THIS receipt's date — so an older receipt isn't polluted by later payments.
   const asOf = new Date(p.date).getTime();
   const receivedToDate = b.payments.filter((x) => new Date(x.date).getTime() <= asOf).reduce((s, x) => s + x.amount, 0);
   const balance = total - receivedToDate;
-
 
   return (
     <div className="doc-light" style={{ minHeight: "100vh", display: "grid", placeItems: "start center", padding: "24px 16px" }}>
@@ -72,16 +73,16 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
           <Row l="Towards" v={b.trip.name} />
           <Row l="Payment mode" v={p.mode.toUpperCase()} />
           {p.note && <Row l="Reference / note" v={p.note} />}
-          <Row l="Amount received" v={formatINR(p.amount)} strong />
+          <Row l="Amount received" v={$.fmt(p.amount)} strong />
 
           <p className="small" style={{ margin: "12px 0 16px", fontStyle: "italic" }}>
             Rupees {amountInWords(p.amount).replace(/ Rupees Only$/, "")} only.
           </p>
 
           <div style={{ background: "var(--surface-2)", borderRadius: 10, padding: 12 }}>
-            <div className="between small"><span className="muted">Total invoiced</span><span>{formatINR(total)}</span></div>
-            <div className="between small" style={{ marginTop: 4 }}><span className="muted">Received up to {fmt(p.date)}</span><span>{formatINR(receivedToDate)}</span></div>
-            <div className="between" style={{ marginTop: 6, fontWeight: 600 }}><span>Balance as on {fmt(p.date)}</span><span>{formatINR(balance)}</span></div>
+            <div className="between small"><span className="muted">Total invoiced</span><span>{$.fmt(total)}</span></div>
+            <div className="between small" style={{ marginTop: 4 }}><span className="muted">Received up to {fmt(p.date)}</span><span>{$.fmt(receivedToDate)}</span></div>
+            <div className="between" style={{ marginTop: 6, fontWeight: 600 }}><span>Balance as on {fmt(p.date)}</span><span>{$.fmt(balance)}</span></div>
           </div>
 
           <p className="small muted" style={{ marginTop: 16, textAlign: "center" }}>

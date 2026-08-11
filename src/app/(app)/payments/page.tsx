@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { bookingPaid, bookingBalance, bookingTotal, isActive } from "@/lib/calc";
-import { formatINR, formatINRShort } from "@/lib/money";
+
 import TableSearch from "@/components/TableSearch";
 import Combobox from "@/components/Combobox";
 import ActivityLog from "@/components/ActivityLog";
@@ -14,6 +14,7 @@ import { scheduleStatus } from "@/lib/schedule";
 import { addPayment, approvePendingPayment, rejectPendingPayment } from "../data-actions";
 import SubmitButton from "@/components/SubmitButton";
 import { visaMeta } from "@/lib/visaStatus";
+import { orgMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ const VIEWS = ["due", "record", "history", "approve"] as const;
 type View = (typeof VIEWS)[number];
 
 export default async function PaymentsPage({ searchParams }: { searchParams: Promise<{ due?: string; view?: string }> }) {
+  const $ = await orgMoney();
   const scope = await requireScope();
   const orgId = scope.orgId;
   const sp = await searchParams;
@@ -137,7 +139,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
       <div className="page-head">
         <div>
           <h1>Payments</h1>
-          <p className="sub">{formatINR(totalCollected)} collected · {formatINR(totalDue)} outstanding{pending.length > 0 ? ` · ${pending.length} awaiting approval` : ""}</p>
+          <p className="sub">{$.fmt(totalCollected)} collected · {$.fmt(totalDue)} outstanding{pending.length > 0 ? ` · ${pending.length} awaiting approval` : ""}</p>
         </div>
         <a className="btn sm" href="/api/export/payments" title="Download all payments as a spreadsheet (CSV)">⬇ Download CSV</a>
       </div>
@@ -165,7 +167,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
       {moneyRows.length > 0 && (
         <div className="card">
           <div className="between" style={{ marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
-            <div className="card-title" style={{ margin: 0 }}>Who owes you <span className="small muted">{formatINR(totalDue)} outstanding{overdueCount > 0 ? ` · ${overdueCount} overdue` : ""}</span></div>
+            <div className="card-title" style={{ margin: 0 }}>Who owes you <span className="small muted">{$.fmt(totalDue)} outstanding{overdueCount > 0 ? ` · ${overdueCount} overdue` : ""}</span></div>
             <div className="flex" style={{ gap: 6 }}>
               <span className="small muted" style={{ alignSelf: "center" }}>Sort:</span>
               <Link href="/payments?view=due&due=date" className={`btn sm ${dueSort === "date" ? "primary" : ""}`}>By due date</Link>
@@ -202,14 +204,14 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                   <td className="muted small">{r.b.trip.name}</td>
                   <td className="muted small">{r.label ?? "—"}</td>
                   <td className="num" style={{ fontWeight: 600, color: r.dueNow > 0 ? (r.overdue ? "var(--rose-fg)" : "var(--text)") : "var(--text-3)" }}>
-                    {r.dueNow > 0 ? formatINR(r.dueNow) : "—"}
+                    {r.dueNow > 0 ? $.fmt(r.dueNow) : "—"}
                   </td>
-                  <td className="num">{r.balance > 0 ? <span className="badge amber">{formatINR(r.balance)}</span> : <span className="badge green">paid</span>}</td>
+                  <td className="num">{r.balance > 0 ? <span className="badge amber">{$.fmt(r.balance)}</span> : <span className="badge green">paid</span>}</td>
                   <td className="num">
                     <RemindPayment
                       phone={r.b.customerPhone}
                       customerName={r.b.customerName}
-                      amount={formatINR(r.dueNow > 0 ? r.dueNow : r.balance)}
+                      amount={$.fmt(r.dueNow > 0 ? r.dueNow : r.balance)}
                       dueLabel={r.date ? fmtDate(r.date) : null}
                       tripName={r.b.trip.name}
                       payPath={`/pay/${r.b.id}`}
@@ -266,7 +268,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                     </a>
                   ) : <div style={{ width: 54, height: 54, borderRadius: 8, background: "var(--surface-2)", display: "grid", placeItems: "center", fontSize: 11, color: "var(--text-3)" }}>no img</div>}
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 600 }}>{formatINR(p.amount)} <span className="badge gray">{p.mode}</span>{!p.booking && <span className="badge amber" style={{ marginLeft: 6 }}>unmatched</span>}</div>
+                    <div style={{ fontWeight: 600 }}>{$.fmt(p.amount)} <span className="badge gray">{p.mode}</span>{!p.booking && <span className="badge amber" style={{ marginLeft: 6 }}>unmatched</span>}</div>
                     <div className="small muted">{p.payerName || p.booking?.customerName || "—"} · {p.booking?.trip.name || p.trip?.name || "—"} · {fmtDate(p.date)}{p.reference ? ` · ref ${p.reference}` : ""}</div>
                     {p.note ? <div className="small" style={{ color: "var(--text-3)" }}>{p.note}</div> : null}
                   </div>
@@ -316,7 +318,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                   options={payable.map(({ b, bal }) => ({
                     id: b.id,
                     label: b.customerName,
-                    sub: `${b.trip.name}${bal > 0 ? ` · ${formatINRShort(bal)} due` : " · fully paid"}`,
+                    sub: `${b.trip.name}${bal > 0 ? ` · ${$.short(bal)} due` : " · fully paid"}`,
                   }))}
                 />
               </label>
@@ -361,8 +363,8 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                   <td><Link className="row-link" href={`/bookings/${p.bookingId}`}>{p.booking.customerName}</Link></td>
                   <td className="muted">{p.booking.trip.name}</td>
                   <td><span className="badge gray">{p.mode}</span></td>
-                  <td className="num" style={{ fontWeight: 500 }}>{formatINR(p.amount)}</td>
-                  <td className="num"><ShareReceipt paymentId={p.id} customerName={p.booking.customerName} amount={formatINR(p.amount)} phone={p.booking.customerPhone} /></td>
+                  <td className="num" style={{ fontWeight: 500 }}>{$.fmt(p.amount)}</td>
+                  <td className="num"><ShareReceipt paymentId={p.id} customerName={p.booking.customerName} amount={$.fmt(p.amount)} phone={p.booking.customerPhone} /></td>
                 </tr>
               ))}
             </tbody>

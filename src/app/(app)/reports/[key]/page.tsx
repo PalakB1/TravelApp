@@ -6,11 +6,12 @@ import {
   tripFinancials, bookingRevenue, bookingTotal, bookingPaid, bookingBalance,
   isActive, isNightGap, holdExpiringSoon, vendorCost, nightBookedRooms,
 } from "@/lib/calc";
-import { formatINR, formatINRShort } from "@/lib/money";
+
 import { addBooking, addPayment, addVendorBooking } from "../../data-actions";
 import AutoFill from "@/components/AutoFill";
 import TableSearch from "@/components/TableSearch";
 import SubmitButton from "@/components/SubmitButton";
+import { orgMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ function fmtDate(d: Date | null) {
 }
 
 export default async function Report({ params }: { params: Promise<{ key: string }> }) {
+  const $ = await orgMoney();
   const { key } = await params;
   if (!KEYS.includes(key as Key)) notFound();
   const k = key as Key;
@@ -78,7 +80,7 @@ export default async function Report({ params }: { params: Promise<{ key: string
         return (
           <>
             <div className="metrics">
-              <div className={`metric ${meta.color}`}><div className="label">Total revenue booked</div><div className="value">{formatINR(total)}</div><div className="foot">{rows.length} bookings</div></div>
+              <div className={`metric ${meta.color}`}><div className="label">Total revenue booked</div><div className="value">{$.fmt(total)}</div><div className="foot">{rows.length} bookings</div></div>
             </div>
             <div className="card" style={{ padding: "16px 20px" }}>
               <TableSearch placeholder="Search this report…">
@@ -92,11 +94,11 @@ export default async function Report({ params }: { params: Promise<{ key: string
                       <td className="muted"><Link href={`/trips/${t.id}`} style={{ color: "var(--text-2)" }}>{t.name}</Link></td>
                       <td><span className="badge gray">{b.packageType}</span></td>
                       <td className="num">{b.pax}</td>
-                      <td className="num" style={{ fontWeight: 500 }}>{formatINR(bookingRevenue(b))}</td>
+                      <td className="num" style={{ fontWeight: 500 }}>{$.fmt(bookingRevenue(b))}</td>
                     </tr>
                   ))}
                 </tbody>
-                {rows.length > 0 && <tfoot><tr><td colSpan={5} style={{ paddingLeft: 20, fontWeight: 500 }}>Total</td><td className="num" style={{ fontWeight: 600 }}>{formatINR(total)}</td></tr></tfoot>}
+                {rows.length > 0 && <tfoot><tr><td colSpan={5} style={{ paddingLeft: 20, fontWeight: 500 }}>Total</td><td className="num" style={{ fontWeight: 600 }}>{$.fmt(total)}</td></tr></tfoot>}
               </table>
               </TableSearch>
             </div>
@@ -120,13 +122,13 @@ export default async function Report({ params }: { params: Promise<{ key: string
                     </label>
                   </div>
                   <div className="row-3">
-                    <label className="field"><span className="lbl">Land cost</span><input name="landAmount" placeholder="₹" /></label>
-                    <label className="field"><span className="lbl">Visa assistance</span><input name="visaAmount" placeholder="₹ (LVA / Full)" /></label>
-                    <label className="field"><span className="lbl">Flights</span><input name="flightAmount" placeholder="₹ (Full)" /></label>
+                    <label className="field"><span className="lbl">Land cost</span><input name="landAmount" placeholder={`${$.symbol}`} /></label>
+                    <label className="field"><span className="lbl">Visa assistance</span><input name="visaAmount" placeholder={`${$.symbol} (LVA / Full)`} /></label>
+                    <label className="field"><span className="lbl">Flights</span><input name="flightAmount" placeholder={`${$.symbol} (Full)`} /></label>
                   </div>
                   <div className="row-3">
                     <label className="field"><span className="lbl">Non-taxable amount</span><input name="nonTaxable" placeholder="visa/embassy fee" /></label>
-                    <label className="field"><span className="lbl">Discount</span><input name="discount" placeholder="₹" /></label>
+                    <label className="field"><span className="lbl">Discount</span><input name="discount" placeholder={`${$.symbol}`} /></label>
                     <label className="field"><span className="lbl">Discount reason</span><input name="discountReason" placeholder="optional" /></label>
                   </div>
                   <button className="primary sm" type="submit">Add booking</button>
@@ -144,7 +146,7 @@ export default async function Report({ params }: { params: Promise<{ key: string
         return (
           <>
             <div className="metrics">
-              <div className={`metric ${meta.color}`}><div className="label">Total outstanding</div><div className="value">{formatINR(total)}</div><div className="foot">{rows.length} bookings with a balance</div></div>
+              <div className={`metric ${meta.color}`}><div className="label">Total outstanding</div><div className="value">{$.fmt(total)}</div><div className="foot">{rows.length} bookings with a balance</div></div>
             </div>
             <div className="card" style={{ padding: "16px 20px" }}>
               <TableSearch placeholder="Search this report…">
@@ -156,13 +158,13 @@ export default async function Report({ params }: { params: Promise<{ key: string
                       <td style={{ paddingLeft: 20 }}><Link className="row-link" href={`/bookings/${b.id}`}>{b.customerName}</Link></td>
                       <td className="muted"><Link href={`/trips/${t.id}`} style={{ color: "var(--text-2)" }}>{t.name}</Link></td>
                       <td className="muted small">{fmtDate(b.createdAt)}</td>
-                      <td className="num">{formatINR(bookingTotal(b))}</td>
-                      <td className="num">{formatINR(bookingPaid(b))}</td>
-                      <td className="num"><span className="badge amber">{formatINR(bal)}</span></td>
+                      <td className="num">{$.fmt(bookingTotal(b))}</td>
+                      <td className="num">{$.fmt(bookingPaid(b))}</td>
+                      <td className="num"><span className="badge amber">{$.fmt(bal)}</span></td>
                     </tr>
                   ))}
                 </tbody>
-                {rows.length > 0 && <tfoot><tr><td colSpan={5} style={{ paddingLeft: 20, fontWeight: 500 }}>Total due</td><td className="num" style={{ fontWeight: 600 }}>{formatINR(total)}</td></tr></tfoot>}
+                {rows.length > 0 && <tfoot><tr><td colSpan={5} style={{ paddingLeft: 20, fontWeight: 500 }}>Total due</td><td className="num" style={{ fontWeight: 600 }}>{$.fmt(total)}</td></tr></tfoot>}
               </table>
               </TableSearch>
             </div>
@@ -173,7 +175,7 @@ export default async function Report({ params }: { params: Promise<{ key: string
                   <div className="row-3">
                     <label className="field"><span className="lbl">Booking</span>
                       <select name="bookingId" required defaultValue={rows[0]?.b.id || ""}>
-                        {rows.map(({ b, t, bal }) => <option key={b.id} value={b.id}>{b.customerName} · {t.name} — {formatINRShort(bal)} due</option>)}
+                        {rows.map(({ b, t, bal }) => <option key={b.id} value={b.id}>{b.customerName} · {t.name} — {$.short(bal)} due</option>)}
                       </select>
                     </label>
                     <label className="field"><span className="lbl">Amount</span><input name="amount" placeholder="40000 or 40k" required /></label>
@@ -213,7 +215,7 @@ export default async function Report({ params }: { params: Promise<{ key: string
         return (
           <>
             <div className="metrics">
-              <div className={`metric ${meta.color}`}><div className="label">Total cost</div><div className="value">{formatINR(total)}</div><div className="foot">{items.length} line items</div></div>
+              <div className={`metric ${meta.color}`}><div className="label">Total cost</div><div className="value">{$.fmt(total)}</div><div className="foot">{items.length} line items</div></div>
             </div>
             <div className="card" style={{ padding: "16px 20px" }}>
               <TableSearch placeholder="Search this report…">
@@ -226,11 +228,11 @@ export default async function Report({ params }: { params: Promise<{ key: string
                       <td>{i.detail}</td>
                       <td className="muted"><Link href={`/trips/${i.tripId}`} style={{ color: "var(--text-2)" }}>{i.trip}</Link></td>
                       <td className="muted small">{fmtDate(i.date)}</td>
-                      <td className="num" style={{ fontWeight: 500 }}>{formatINR(i.amount)}</td>
+                      <td className="num" style={{ fontWeight: 500 }}>{$.fmt(i.amount)}</td>
                     </tr>
                   ))}
                 </tbody>
-                {items.length > 0 && <tfoot><tr><td colSpan={4} style={{ paddingLeft: 20, fontWeight: 500 }}>Total</td><td className="num" style={{ fontWeight: 600 }}>{formatINR(total)}</td></tr></tfoot>}
+                {items.length > 0 && <tfoot><tr><td colSpan={4} style={{ paddingLeft: 20, fontWeight: 500 }}>Total</td><td className="num" style={{ fontWeight: 600 }}>{$.fmt(total)}</td></tr></tfoot>}
               </table>
               </TableSearch>
             </div>
@@ -247,8 +249,8 @@ export default async function Report({ params }: { params: Promise<{ key: string
                     <label className="field"><span className="lbl">Vendor / name</span><input name="vendorName" placeholder="e.g. Shell, N1" required /></label>
                   </div>
                   <div className="row-3">
-                    <label className="field"><span className="lbl">Planned cost</span><input name="cost" placeholder="₹ estimate" /></label>
-                    <label className="field"><span className="lbl">Actual cost</span><input name="actualCost" placeholder="₹ after trip" /></label>
+                    <label className="field"><span className="lbl">Planned cost</span><input name="cost" placeholder={`${$.symbol} estimate`} /></label>
+                    <label className="field"><span className="lbl">Actual cost</span><input name="actualCost" placeholder={`${$.symbol} after trip`} /></label>
                     <label className="field"><span className="lbl">Date</span><input name="date" type="date" /></label>
                   </div>
                   <label className="field"><span className="lbl">Detail</span><input name="detail" placeholder="optional note" /></label>
@@ -270,9 +272,9 @@ export default async function Report({ params }: { params: Promise<{ key: string
         return (
           <>
             <div className="metrics">
-              <div className="metric c-emerald"><div className="label">Revenue</div><div className="value">{formatINR(rev)}</div></div>
-              <div className="metric c-amber"><div className="label">Cost</div><div className="value">{formatINR(cost)}</div></div>
-              <div className="metric c-violet"><div className="label">Profit</div><div className="value">{formatINR(profit)}</div><div className="foot">{rev > 0 ? Math.round((profit / rev) * 100) : 0}% margin</div></div>
+              <div className="metric c-emerald"><div className="label">Revenue</div><div className="value">{$.fmt(rev)}</div></div>
+              <div className="metric c-amber"><div className="label">Cost</div><div className="value">{$.fmt(cost)}</div></div>
+              <div className="metric c-violet"><div className="label">Profit</div><div className="value">{$.fmt(profit)}</div><div className="foot">{rev > 0 ? Math.round((profit / rev) * 100) : 0}% margin</div></div>
             </div>
             <div className="card" style={{ padding: "16px 20px" }}>
               <TableSearch placeholder="Search this report…">
@@ -283,14 +285,14 @@ export default async function Report({ params }: { params: Promise<{ key: string
                     <tr key={t.id}>
                       <td style={{ paddingLeft: 20 }}><Link className="row-link" href={`/trips/${t.id}`}>{t.name}</Link></td>
                       <td className="muted small">{fmtDate(t.departureDate)}</td>
-                      <td className="num">{formatINR(f.revenue)}</td>
-                      <td className="num">{formatINR(f.cost)}</td>
-                      <td className="num" style={{ fontWeight: 600, color: "var(--emerald)" }}>{formatINR(f.profit)}</td>
+                      <td className="num">{$.fmt(f.revenue)}</td>
+                      <td className="num">{$.fmt(f.cost)}</td>
+                      <td className="num" style={{ fontWeight: 600, color: "var(--emerald)" }}>{$.fmt(f.profit)}</td>
                       <td className="num">{Math.round(f.margin * 100)}%</td>
                     </tr>
                   ))}
                 </tbody>
-                {rows.length > 0 && <tfoot><tr><td colSpan={2} style={{ paddingLeft: 20, fontWeight: 500 }}>Total</td><td className="num" style={{ fontWeight: 600 }}>{formatINR(rev)}</td><td className="num" style={{ fontWeight: 600 }}>{formatINR(cost)}</td><td className="num" style={{ fontWeight: 600 }}>{formatINR(profit)}</td><td className="num">{rev > 0 ? Math.round((profit / rev) * 100) : 0}%</td></tr></tfoot>}
+                {rows.length > 0 && <tfoot><tr><td colSpan={2} style={{ paddingLeft: 20, fontWeight: 500 }}>Total</td><td className="num" style={{ fontWeight: 600 }}>{$.fmt(rev)}</td><td className="num" style={{ fontWeight: 600 }}>{$.fmt(cost)}</td><td className="num" style={{ fontWeight: 600 }}>{$.fmt(profit)}</td><td className="num">{rev > 0 ? Math.round((profit / rev) * 100) : 0}%</td></tr></tfoot>}
               </table>
               </TableSearch>
             </div>

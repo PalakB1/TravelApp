@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { formatINR, formatINRShort } from "@/lib/money";
+
 import {
   customOrgId, ITEM_TYPES, ITEM_ICON, ITEM_LABEL,
   ctRevenue, ctCost, ctProfit, ctTaxable, ctGst, ctTcs, ctItemsNonTax, ctTotal, ctPaid, ctOutstanding,
@@ -9,6 +9,7 @@ import {
 import { addItem, updateItem, deleteItem, addPayment, deletePayment, updateCustomTrip, deleteCustomTrip } from "../actions";
 import StatusPicker from "../StatusPicker";
 import SubmitButton from "@/components/SubmitButton";
+import { orgMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ function d(v: Date | null) { return v ? new Date(v).toISOString().slice(0, 10) :
 function fmt(v: Date | null) { return v ? new Date(v).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"; }
 
 export default async function CustomTripDetail({ params }: { params: Promise<{ id: string }> }) {
+  const $ = await orgMoney();
   const { id } = await params;
   const orgId = await customOrgId();
   if (!orgId) notFound();
@@ -45,10 +47,10 @@ export default async function CustomTripDetail({ params }: { params: Promise<{ i
 
       {/* Financials */}
       <div className="metrics">
-        <div className="metric c-emerald"><div className="label">Revenue</div><div className="value">{formatINRShort(rev)}</div><div className="foot">pre-tax sale value</div></div>
-        <div className="metric c-amber"><div className="label">Your cost</div><div className="value">{formatINRShort(cost)}</div><div className="foot">across all items</div></div>
-        <div className="metric c-violet"><div className="label">Profit</div><div className="value">{formatINRShort(profit)}</div><div className="foot">{margin}% margin</div></div>
-        <div className="metric c-sky"><div className="label">Outstanding</div><div className="value">{formatINRShort(out)}</div><div className="foot">{formatINRShort(paid)} received</div></div>
+        <div className="metric c-emerald"><div className="label">Revenue</div><div className="value">{$.short(rev)}</div><div className="foot">pre-tax sale value</div></div>
+        <div className="metric c-amber"><div className="label">Your cost</div><div className="value">{$.short(cost)}</div><div className="foot">across all items</div></div>
+        <div className="metric c-violet"><div className="label">Profit</div><div className="value">{$.short(profit)}</div><div className="foot">{margin}% margin</div></div>
+        <div className="metric c-sky"><div className="label">Outstanding</div><div className="value">{$.short(out)}</div><div className="foot">{$.short(paid)} received</div></div>
       </div>
 
       {/* Line items */}
@@ -64,10 +66,10 @@ export default async function CustomTripDetail({ params }: { params: Promise<{ i
                 <td className="muted small">{i.supplier || "—"}</td>
                 <td className="muted small">{fmt(i.date)}</td>
                 <td className="num">{i.qty}</td>
-                <td className="num">{formatINR(i.cost)}</td>
-                <td className="num">{formatINR(i.sell)}</td>
+                <td className="num">{$.fmt(i.cost)}</td>
+                <td className="num">{$.fmt(i.sell)}</td>
                 <td>{i.taxable ? <span className="badge sky">GST</span> : <span className="badge gray">no tax</span>}</td>
-                <td className="num" style={{ fontWeight: 500 }}>{formatINR(i.sell * i.qty)}</td>
+                <td className="num" style={{ fontWeight: 500 }}>{$.fmt(i.sell * i.qty)}</td>
                 <td className="num">
                   <div className="flex" style={{ gap: 6, justifyContent: "flex-end" }}>
                     <details className="menu-pop" style={{ position: "relative" }}>
@@ -117,8 +119,8 @@ export default async function CustomTripDetail({ params }: { params: Promise<{ i
               <label className="field"><span className="lbl">Qty / pax</span><input name="qty" type="number" min="1" defaultValue="1" /></label>
             </div>
             <div className="row-3">
-              <label className="field"><span className="lbl">Cost (your buy)</span><input name="cost" placeholder="₹ per unit" /></label>
-              <label className="field"><span className="lbl">Sell (you charge)</span><input name="sell" placeholder="₹ per unit" /></label>
+              <label className="field"><span className="lbl">Cost (your buy)</span><input name="cost" placeholder={`${$.symbol} per unit`} /></label>
+              <label className="field"><span className="lbl">Sell (you charge)</span><input name="sell" placeholder={`${$.symbol} per unit`} /></label>
               <label className="field"><span className="lbl">GST/TCS on this line?</span>
                 <select name="taxable" defaultValue="yes"><option value="yes">Yes — taxable</option><option value="no">No tax</option></select>
               </label>
@@ -134,14 +136,14 @@ export default async function CustomTripDetail({ params }: { params: Promise<{ i
           <div className="card-title">Invoice</div>
           <table className="t mini">
             <tbody>
-              <tr><td>Taxable value</td><td className="num">{formatINR(ctTaxable(t))}</td></tr>
-              {t.discount > 0 && <tr><td className="muted">— after discount {formatINR(t.discount)}</td><td className="num muted">included</td></tr>}
-              <tr><td>GST @ {t.gstRate}%</td><td className="num">{formatINR(ctGst(t))}</td></tr>
-              <tr><td>TCS @ {t.tcsRate}%</td><td className="num">{formatINR(ctTcs(t))}</td></tr>
-              {ctItemsNonTax(t) > 0 && <tr><td>Non-taxable items</td><td className="num">{formatINR(ctItemsNonTax(t))}</td></tr>}
-              <tr style={{ fontWeight: 600 }}><td>Total billed</td><td className="num">{formatINR(ctTotal(t))}</td></tr>
-              <tr><td className="muted">Received</td><td className="num muted">−{formatINR(paid)}</td></tr>
-              <tr style={{ fontWeight: 600 }}><td>Outstanding</td><td className="num">{formatINR(out)}</td></tr>
+              <tr><td>Taxable value</td><td className="num">{$.fmt(ctTaxable(t))}</td></tr>
+              {t.discount > 0 && <tr><td className="muted">— after discount {$.fmt(t.discount)}</td><td className="num muted">included</td></tr>}
+              <tr><td>GST @ {t.gstRate}%</td><td className="num">{$.fmt(ctGst(t))}</td></tr>
+              <tr><td>TCS @ {t.tcsRate}%</td><td className="num">{$.fmt(ctTcs(t))}</td></tr>
+              {ctItemsNonTax(t) > 0 && <tr><td>Non-taxable items</td><td className="num">{$.fmt(ctItemsNonTax(t))}</td></tr>}
+              <tr style={{ fontWeight: 600 }}><td>Total billed</td><td className="num">{$.fmt(ctTotal(t))}</td></tr>
+              <tr><td className="muted">Received</td><td className="num muted">−{$.fmt(paid)}</td></tr>
+              <tr style={{ fontWeight: 600 }}><td>Outstanding</td><td className="num">{$.fmt(out)}</td></tr>
             </tbody>
           </table>
         </div>
@@ -155,7 +157,7 @@ export default async function CustomTripDetail({ params }: { params: Promise<{ i
                 {t.payments.map((p) => (
                   <tr key={p.id}>
                     <td>{fmt(p.date)} <span className="badge gray">{p.mode}</span>{p.note ? <span className="small muted"> · {p.note}</span> : ""}</td>
-                    <td className="num">{formatINR(p.amount)}</td>
+                    <td className="num">{$.fmt(p.amount)}</td>
                     <td className="num"><form action={deletePayment}><input type="hidden" name="id" value={p.id} /><button className="sm" type="submit">✕</button></form></td>
                   </tr>
                 ))}
@@ -165,7 +167,7 @@ export default async function CustomTripDetail({ params }: { params: Promise<{ i
           <form action={addPayment} style={{ marginTop: 12 }}>
             <input type="hidden" name="customTripId" value={t.id} />
             <div className="row-3">
-              <label className="field"><span className="lbl">Amount</span><input name="amount" placeholder="₹" /></label>
+              <label className="field"><span className="lbl">Amount</span><input name="amount" placeholder={`${$.symbol}`} /></label>
               <label className="field"><span className="lbl">Mode</span><select name="mode" defaultValue="upi"><option>upi</option><option>card</option><option>bank</option><option>cash</option><option>other</option></select></label>
               <label className="field"><span className="lbl">Date</span><input name="date" type="date" /></label>
             </div>
@@ -193,7 +195,7 @@ export default async function CustomTripDetail({ params }: { params: Promise<{ i
             <div className="field" />
           </div>
           <div className="row-3">
-            <label className="field"><span className="lbl">Discount (₹)</span><input name="discount" defaultValue={t.discount || ""} placeholder="0" /></label>
+            <label className="field"><span className="lbl">Discount ({$.symbol})</span><input name="discount" defaultValue={t.discount || ""} placeholder="0" /></label>
             <label className="field"><span className="lbl">GST rate %</span><input name="gstRate" type="number" defaultValue={t.gstRate} /></label>
             <label className="field"><span className="lbl">TCS rate %</span><input name="tcsRate" type="number" defaultValue={t.tcsRate} /></label>
           </div>

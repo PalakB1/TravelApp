@@ -2,10 +2,11 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { pricePerRoom } from "@/lib/calc";
-import { formatINR } from "@/lib/money";
+
 import TableSearch from "@/components/TableSearch";
 import ActivityLog from "@/components/ActivityLog";
 import Stamp from "@/components/Stamp";
+import { orgMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ function stayRange(d: Date | null) {
 }
 
 export default async function HotelsPage() {
+  const $ = await orgMoney();
   const scope = await requireScope();
   const hotels = await prisma.hotelBooking.findMany({
     where: { night: scope.viaTrip },
@@ -38,7 +40,7 @@ export default async function HotelsPage() {
       <div className="page-head">
         <div>
           <h1>Hotels</h1>
-          <p className="sub">{hotels.length} bookings · {totalRooms} rooms · {formatINR(totalCost)} across all trips</p>
+          <p className="sub">{hotels.length} bookings · {totalRooms} rooms · {$.fmt(totalCost)} across all trips</p>
         </div>
       </div>
 
@@ -68,8 +70,8 @@ export default async function HotelsPage() {
                     <td className="muted">{h.night.trip.name}</td>
                     <td>{h.night.location}</td>
                     <td className="num">{h.rooms}</td>
-                    <td className="num">{formatINR(h.cost)}</td>
-                    <td className="num muted">{h.rooms > 0 ? formatINR(pricePerRoom(h)) : "—"}</td>
+                    <td className="num">{$.fmt(h.cost)}</td>
+                    <td className="num muted">{h.rooms > 0 ? $.fmt(pricePerRoom(h)) : "—"}</td>
                     <td><span className={`badge ${h.status === "paid" ? "emerald" : h.status === "final" ? "green" : h.status === "hold" ? "amber" : "red"}`}>{h.status}</span></td>
                     <td className="muted small">{fmtDate(h.holdUntil)}</td>
                     <td className="muted small">{h.source || "—"}</td>

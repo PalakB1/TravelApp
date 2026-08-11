@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { getOrgContext } from "@/lib/org";
-import { formatINR } from "@/lib/money";
+
 import TableSearch from "@/components/TableSearch";
 import ActivityLog from "@/components/ActivityLog";
 import SettlePersonal, { type PersonalRow } from "@/components/SettlePersonal";
@@ -10,6 +10,7 @@ import { addExpense, deleteExpense, undoSettlement } from "./actions";
 import ExpenseTargets from "@/components/ExpenseTargets";
 import SubmitButton from "@/components/SubmitButton";
 import DeleteExpense from "@/components/DeleteExpense";
+import { orgMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,7 @@ function fmtDate(d: Date) {
 }
 
 export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ trip?: string }> }) {
+  const $ = await orgMoney();
   const scope = await requireScope();
   const sp = await searchParams;
 
@@ -140,20 +142,20 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
         <div>
           <h1>Costing</h1>
           <p className="sub">
-            {formatINR(total)} spent across {expenses.length} {expenses.length === 1 ? "entry" : "entries"}
+            {$.fmt(total)} spent across {expenses.length} {expenses.length === 1 ? "entry" : "entries"}
             {filterLabel ? ` · ${filterLabel}` : ""}
-            {pending.length > 0 ? ` · ${formatINR(pendingTotal)} unpaid` : ""}
+            {pending.length > 0 ? ` · ${$.fmt(pendingTotal)} unpaid` : ""}
           </p>
         </div>
         <Link className="btn" href="/expenses/log">📋 Expense log</Link>
       </div>
 
       <div className="metrics">
-        <div className="metric c-amber"><div className="label">Total spend</div><div className="value">{formatINR(total)}</div><div className="foot">{expenses.length} {expenses.length === 1 ? "entry" : "entries"}</div></div>
-        <div className="metric c-violet"><div className="label">Trip-linked</div><div className="value">{formatINR(tripLinked)}</div><div className="foot">tagged to a trip</div></div>
-        <div className="metric c-sky"><div className="label">General / overhead</div><div className="value">{formatINR(general)}</div><div className="foot">no trip</div></div>
-        <div className={`metric ${pendingTotal > 0 ? "c-rose" : "c-emerald"}`}><div className="label">Unpaid</div><div className="value">{formatINR(pendingTotal)}</div><div className="foot">{pending.length} pending</div></div>
-        <div className={`metric ${owedTotal > 0 ? "c-amber" : "c-emerald"}`}><div className="label">Owed to staff</div><div className="value">{formatINR(owedTotal)}</div><div className="foot">{personalOwed.length} personal spend{personalOwed.length === 1 ? "" : "s"} to reimburse</div></div>
+        <div className="metric c-amber"><div className="label">Total spend</div><div className="value">{$.fmt(total)}</div><div className="foot">{expenses.length} {expenses.length === 1 ? "entry" : "entries"}</div></div>
+        <div className="metric c-violet"><div className="label">Trip-linked</div><div className="value">{$.fmt(tripLinked)}</div><div className="foot">tagged to a trip</div></div>
+        <div className="metric c-sky"><div className="label">General / overhead</div><div className="value">{$.fmt(general)}</div><div className="foot">no trip</div></div>
+        <div className={`metric ${pendingTotal > 0 ? "c-rose" : "c-emerald"}`}><div className="label">Unpaid</div><div className="value">{$.fmt(pendingTotal)}</div><div className="foot">{pending.length} pending</div></div>
+        <div className={`metric ${owedTotal > 0 ? "c-amber" : "c-emerald"}`}><div className="label">Owed to staff</div><div className="value">{$.fmt(owedTotal)}</div><div className="foot">{personalOwed.length} personal spend{personalOwed.length === 1 ? "" : "s"} to reimburse</div></div>
       </div>
 
       {/* 12 fields is a lot to face every visit — tucked behind a toggle like the
@@ -213,8 +215,8 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
       {/* PERSONAL SPENDS TO REIMBURSE — pick any/all, settle in one transfer. */}
       {personalOwed.length > 0 && (
         <div className="card">
-          <div className="card-title">Reimburse personal spends <span className="small muted">{formatINR(owedTotal)} owed · tick the ones you&apos;re settling and record the transfer</span></div>
-          <SettlePersonal groups={personalGroups} />
+          <div className="card-title">Reimburse personal spends <span className="small muted">{$.fmt(owedTotal)} owed · tick the ones you&apos;re settling and record the transfer</span></div>
+          <SettlePersonal groups={personalGroups} money={$.cfg} />
         </div>
       )}
 
@@ -223,7 +225,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
         <details className="section">
           <summary className="between" style={{ padding: "14px 18px", cursor: "pointer" }}>
             <span className="sec-title">Reimbursements paid</span>
-            <span className="small muted">{settlements.length} transfer{settlements.length === 1 ? "" : "s"} · {formatINR(settlements.reduce((s, x) => s + x.amount, 0))}</span>
+            <span className="small muted">{settlements.length} transfer{settlements.length === 1 ? "" : "s"} · {$.fmt(settlements.reduce((s, x) => s + x.amount, 0))}</span>
           </summary>
           <div style={{ padding: "0 18px 16px" }}>
             <table className="t">
@@ -236,7 +238,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                     <td className="muted small">{s.bankName || "—"}</td>
                     <td className="muted small">{s.reference || "—"}</td>
                     <td className="muted small">{s.expenses.length} spend{s.expenses.length === 1 ? "" : "s"}{s.notes ? ` · ${s.notes}` : ""}</td>
-                    <td className="num" style={{ fontWeight: 500 }}>{formatINR(s.amount)}</td>
+                    <td className="num" style={{ fontWeight: 500 }}>{$.fmt(s.amount)}</td>
                     <td className="num"><form action={undoSettlement}><input type="hidden" name="id" value={s.id} /><button className="sm" type="submit" title="Reverse this reimbursement — the spends become owed again">Undo</button></form></td>
                   </tr>
                 ))}
@@ -288,14 +290,14 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                       {e.hotel ? <span className="small muted"> › 🏨 {e.hotel.hotelName}</span> : e.car ? <span className="small muted"> › 🚗 {e.car.label}{e.car.carType ? ` (${e.car.carType})` : ""}</span> : null}
                     </td>
                     <td className="muted small">{e.notes || ""}</td>
-                    <td className="num" style={{ fontWeight: 500 }}>{formatINR(e.amount)}</td>
+                    <td className="num" style={{ fontWeight: 500 }}>{$.fmt(e.amount)}</td>
                     <td className="num">{e.fileData ? <a className="btn sm" href={`/expenses/file/${e.id}`} target="_blank" rel="noopener" title={e.fileName || "invoice"}>📎 View</a> : null}</td>
                     <td className="num">
                       <DeleteExpense
                         action={deleteExpense}
                         id={e.id}
                         payee={e.payee || "this supplier"}
-                        amountLabel={formatINR(e.amount)}
+                        amountLabel={$.fmt(e.amount)}
                         tripName={e.trip?.name}
                         personalFor={e.paidPersonally ? e.paidBy : null}
                         settled={!!e.settlementId}
