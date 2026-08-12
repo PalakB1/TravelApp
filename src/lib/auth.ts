@@ -14,21 +14,32 @@ export type Session = {
   isPlatformAdmin: boolean;
 };
 
-export async function createSession(user: Session) {
-  const token = await new SignJWT({ ...user })
+export const SESSION_COOKIE = COOKIE;
+
+export const SESSION_COOKIE_OPTS = {
+  httpOnly: true,
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+  path: "/",
+  maxAge: 60 * 60 * 24 * 30,
+};
+
+/** The signed token on its own — for callers that set the cookie themselves. */
+export async function signSession(user: Session): Promise<string> {
+  return new SignJWT({ ...user })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("30d")
     .sign(secret);
+}
 
+// Only valid inside a Server Action or a Route Handler — Next.js throws if a
+// page render tries to write a cookie. A route handler that builds its own
+// Response should use signSession + SESSION_COOKIE_OPTS instead.
+export async function createSession(user: Session) {
+  const token = await signSession(user);
   const store = await cookies();
-  store.set(COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
+  store.set(COOKIE, token, SESSION_COOKIE_OPTS);
 }
 
 export async function getSession(): Promise<Session | null> {

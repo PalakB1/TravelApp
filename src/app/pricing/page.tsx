@@ -60,7 +60,8 @@ export default function PricingPage() {
         </div>
 
         <p className="muted small" style={{ textAlign: "center", marginTop: 24 }}>
-          Questions? Email <a href="mailto:hello@tripzei.com" style={{ color: "var(--accent)" }}>hello@tripzei.com</a>.
+          Questions? <Link href="/#pricing" style={{ color: "var(--accent)" }}>Leave your email</Link> and we&apos;ll come back to you,
+          or <Link href="/demo" style={{ color: "var(--accent)" }}>open the demo</Link> and judge it for yourself.
         </p>
       </div>
     </div>

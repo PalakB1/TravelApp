@@ -452,7 +452,7 @@ export default function LandingClient() {
           </div>
           <div className={s.footCol}>
             <div className={s.footHd}>Talk to us</div>
-            <a href="mailto:hello@tripzei.com" className={s.footLink}>hello@tripzei.com</a>
+            <Link href="/#pricing" className={s.footLink}>Leave your email</Link>
             <Link href="/signup" className={s.footLink}>Create a workspace</Link>
             <Link href="/login" className={s.footLink}>Sign in</Link>
           </div>
