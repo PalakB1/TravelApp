@@ -96,6 +96,15 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
   const nightsHere = b.trip.itinerary.filter((n) => !n.extra && bookingCoversNight(b, n.date)).length;
   const coreNights = b.trip.itinerary.filter((n) => !n.extra).length;
   const shortDate = (d: Date | null | undefined) => (d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—");
+  // Rooming candidates: every traveller on this TRIP, not just this booking.
+  // Pairing two solo travellers from different bookings is the whole point.
+  const tripTravellers = await prisma.traveller.findMany({
+    where: { booking: { tripId: b.tripId, deletedAt: null, status: { not: "cancelled" } } },
+    orderBy: [{ booking: { customerName: "asc" } }, { createdAt: "asc" }],
+    select: { id: true, name: true, gender: true, booking: { select: { customerName: true } } },
+  });
+  const genderMark = (g: string | null) => (g === "male" ? "M" : g === "female" ? "F" : "—");
+
   const stayFrom = b.stayStart ?? b.trip.departureDate;
   const stayTo = b.stayEnd ?? b.trip.endDate;
   const stayLabel = `${shortDate(stayFrom)} – ${shortDate(stayTo)}${nightsHere !== coreNights ? ` · ${nightsHere}/${coreNights} nights` : ""}`;
@@ -235,7 +244,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           <div className="empty small">{b.pax === 1 ? `Single traveller — it's ${b.customerName} (filled in below, just add age if you like).` : "No people added yet. Add each family member below."}</div>
         ) : (
           <table className="t">
-            <thead><tr><th>#</th><th>Name</th><th>Age</th><th>Gender</th><th></th><th>Extra charge</th><th></th></tr></thead>
+            <thead><tr><th>#</th><th>Name</th><th>Age</th><th>Gender</th><th>Room</th><th></th><th>Extra charge</th><th></th></tr></thead>
             <tbody>
               {b.travellers.map((tr, i) => (
                 <tr key={tr.id}>
@@ -250,7 +259,27 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                     <input name="age" defaultValue={tr.age ?? ""} form={`tr-${tr.id}`} type="number" min="0" max="120" placeholder="—" style={{ width: 70 }} />
                   </td>
                   <td>
-                    <input name="gender" defaultValue={tr.gender ?? ""} form={`tr-${tr.id}`} list="gender-list" placeholder="—" style={{ width: 88 }} />
+                    <select name="gender" defaultValue={tr.gender ?? ""} form={`tr-${tr.id}`} style={{ width: 96 }}>
+                      <option value="">—</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                    </select>
+                  </td>
+                  <td>
+                    {/* Who they share with, or a room to themselves. Every other
+                        traveller on the trip is listed with their gender, so the
+                        pairing decision is made without leaving the row. */}
+                    <select name="room" defaultValue={tr.singleOccupancy ? "single" : (tr.roomWithId ?? "")} form={`tr-${tr.id}`} style={{ width: 190 }}>
+                      <option value="">Room not set</option>
+                      <option value="single">Single occupancy</option>
+                      {tripTravellers
+                        .filter((o) => o.id !== tr.id)
+                        .map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.name} ({genderMark(o.gender)}){o.booking.customerName !== b.customerName ? ` · ${o.booking.customerName}` : ""}
+                          </option>
+                        ))}
+                    </select>
                   </td>
                   <td>
                     {tr.age != null && tr.age < 12 ? <span className="badge amber">child</span> : null}
@@ -281,13 +310,18 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
               <div className="row-3">
                 <label className="field"><span className="lbl">Name</span><input id="tr-name" name="name" list="people-list" defaultValue={b.travellers.length === 0 ? b.customerName : ""} placeholder="Aarav Sharma" required /></label>
                 <label className="field"><span className="lbl">Age</span><input id="tr-age" name="age" type="number" min="0" max="120" placeholder="optional" /></label>
-                <label className="field"><span className="lbl">Gender <span className="small muted">for rooming</span></span><input name="gender" list="gender-list" placeholder="optional" /></label>
+                <label className="field"><span className="lbl">Gender <span className="small muted">for rooming</span></span>
+                  <select name="gender" defaultValue="">
+                    <option value="">Not recorded</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </label>
               </div>
               <div className="row">
                 <label className="field"><span className="lbl">Extra charge (optional)</span><input name="extraCharge" placeholder={`${$.symbol} for this person only`} /></label>
               </div>
               <label className="field"><span className="lbl">Extra charge reason</span><input name="extraNote" placeholder="e.g. single room supplement" /></label>
-              <datalist id="gender-list"><option value="Male" /><option value="Female" /><option value="Other" /></datalist>
               <datalist id="people-list">
                 {Object.keys(ageMap).length > 0 && knownPeople
                   .filter((p, idx, arr) => arr.findIndex((q) => q.name.trim().toLowerCase() === p.name.trim().toLowerCase()) === idx)

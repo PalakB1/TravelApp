@@ -629,9 +629,18 @@ model Traveller {
   booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   name        String
   age         Int?
-  // Free text rather than an enum: rooming needs it (twin-sharing usually pairs
-  // by gender) but nobody should be forced into a list that doesn't fit them.
-  gender      String?
+  gender      String? // "male" | "female" — drives twin-share pairing
+
+  // Rooming. Either this person shares with exactly one other traveller, or
+  // they need a room to themselves. Both sides of a pair are written, so
+  // whichever traveller you open shows the same answer.
+  //
+  // @unique on the FK is what makes it a pair rather than a crowd: one person
+  // can only be claimed as a roommate once.
+  roomWithId       String?    @unique
+  roomWith         Traveller? @relation("RoomPair", fields: [roomWithId], references: [id], onDelete: SetNull)
+  pairedBy         Traveller? @relation("RoomPair")
+  singleOccupancy  Boolean    @default(false)
   extraCharge Int      @default(0) // extra billed to this specific person (supplement, upgrade…)
   extraNote   String? // why (e.g. "single room")
   createdAt   DateTime @default(now())

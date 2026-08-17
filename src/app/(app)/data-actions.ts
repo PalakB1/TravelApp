@@ -931,7 +931,7 @@ export async function addTraveller(formData: FormData) {
     data: {
       bookingId, name,
       age: ageStr ? Number(ageStr) || null : null,
-      gender: String(formData.get("gender") || "").trim() || null,
+      gender: normaliseGender(formData.get("gender")),
       extraCharge: parseAmount(String(formData.get("extraCharge"))),
       extraNote: String(formData.get("extraNote") || "") || null,
     },
@@ -953,11 +953,13 @@ export async function updateTraveller(formData: FormData) {
     data: {
       name: String(formData.get("name") || "").trim() || undefined,
       age: ageStr ? Number(ageStr) || null : null,
-      gender: String(formData.get("gender") || "").trim() || null,
+      gender: normaliseGender(formData.get("gender")),
       extraCharge: parseAmount(String(formData.get("extraCharge"))),
       extraNote: String(formData.get("extraNote") || "") || null,
     },
   });
+  // "room" carries either a traveller id, "single", or "" for undecided.
+  if (formData.has("room")) await setRooming(orgId, id, String(formData.get("room") || ""));
   await recomputeTravellerExtra(tr.bookingId);
   await applyDefaultPlan(orgId, tr.bookingId);
   refresh();
@@ -1290,4 +1292,58 @@ export async function rejectPendingPayment(formData: FormData) {
   await prisma.pendingPayment.delete({ where: { id } });
   await logActivity(orgId, "payment", "deleted", `Rejected self-reported ${(await orgMoney()).fmt(p.amount)} — ${p.booking?.customerName ?? p.payerName ?? "unmatched"}`);
   refresh();
+}
+
+
+// Only two values are stored, because that's what twin-share pairing works off.
+// Anything else — including the old free text — becomes "not recorded".
+function normaliseGender(v: FormDataEntryValue | null): string | null {
+  const g = String(v || "").trim().toLowerCase();
+  return g === "male" || g === "female" ? g : null;
+}
+
+// Put one traveller in a room.
+//
+// `choice` is a traveller id, "single", or "" for undecided. Pairs are stored on
+// BOTH travellers so either row shows the same answer — which means every change
+// has to unpick whatever each side was previously in, or you end up with
+// half-pairs pointing at people who have since moved rooms.
+async function setRooming(orgId: string, travellerId: string, choice: string) {
+  const me = await prisma.traveller.findFirst({
+    where: { id: travellerId, booking: { trip: { orgId } } },
+    select: { id: true, roomWithId: true, booking: { select: { tripId: true } } },
+  });
+  if (!me) return;
+
+  // Free this person, and whoever they were paired with.
+  const release = async (id: string | null | undefined) => {
+    if (!id) return;
+    await prisma.traveller.updateMany({ where: { id }, data: { roomWithId: null } });
+    await prisma.traveller.updateMany({ where: { roomWithId: id }, data: { roomWithId: null } });
+  };
+  await release(me.id);
+  await release(me.roomWithId);
+
+  if (choice === "single") {
+    await prisma.traveller.update({ where: { id: me.id }, data: { singleOccupancy: true, roomWithId: null } });
+    return;
+  }
+  await prisma.traveller.update({ where: { id: me.id }, data: { singleOccupancy: false } });
+  if (!choice) return; // undecided
+
+  // The partner must be a real traveller on the SAME TRIP — rooming across
+  // trips is meaningless, and the id came from a form the user can edit.
+  const partner = await prisma.traveller.findFirst({
+    where: { id: choice, booking: { tripId: me.booking.tripId, trip: { orgId } } },
+    select: { id: true, roomWithId: true },
+  });
+  if (!partner || partner.id === me.id) return;
+
+  await release(partner.id);
+  await release(partner.roomWithId);
+
+  await prisma.$transaction([
+    prisma.traveller.update({ where: { id: me.id }, data: { roomWithId: partner.id, singleOccupancy: false } }),
+    prisma.traveller.update({ where: { id: partner.id }, data: { roomWithId: me.id, singleOccupancy: false } }),
+  ]);
 }
