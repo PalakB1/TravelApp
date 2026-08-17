@@ -3,7 +3,7 @@ import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
-import { tripFinancials, reconcileTrip, bookingTotal, bookingPaid, bookingBalance, isNightGap, holdExpiringSoon, carCost, pricePerRoom, nightCost, nightBookedRooms, carPassengerSeats, tripIsOver, roomsNeededOnNight, paxOnNight, isShortStay, tripEndLabel } from "@/lib/calc";
+import { tripFinancials, reconcileTrip, bookingTotal, bookingPaid, bookingBalance, isNightGap, holdExpiringSoon, carCost, pricePerRoom, nightCost, nightBookedRooms, carPassengerSeats, tripIsOver, roomsNeededOnNight, paxOnNight, isShortStay, tripEndLabel, isActive } from "@/lib/calc";
 import BookingsTable from "@/components/BookingsTable";
 
 import {
@@ -75,6 +75,18 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
   if (!trip) notFound();
 
   const f = tripFinancials({ bookings: trip.bookings, nights: trip.itinerary, cars: trip.cars, vendorBookings: trip.vendorBookings, maxPerRoom: trip.maxPerRoom });
+
+  // Flight times, in landing order. Parties without one yet sort to the bottom
+  // rather than being hidden — the gap is the thing you need to chase.
+  const activeBookings = trip.bookings.filter((b) => isActive(b.status));
+  const flightRows = activeBookings
+    .filter((b) => b.arriveAt || b.departAt)
+    .sort((a, b) => (a.arriveAt?.getTime() ?? Infinity) - (b.arriveAt?.getTime() ?? Infinity));
+  // Wall-clock, same as the booking page: a flight time belongs to its airport.
+  const fmtFlight = (d: Date | null | undefined) =>
+    d ? new Date(d).toLocaleString("en-GB", {
+      day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC",
+    }) : null;
 
   // Actual costs logged in the Costing ledger for this trip (each optionally tied
   // to a specific hotel or car). Used to reconcile the hold/estimate with reality.
@@ -825,6 +837,33 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
             </div>
           </details>
         </div>
+
+        {/* ARRIVALS & DEPARTURES. The reason for capturing flight times: whoever
+            arranges pickups needs one list in time order, not twelve bookings
+            opened one at a time. Only shows once someone has a flight recorded. */}
+        {flightRows.length > 0 && (
+          <div className="card">
+            <div className="card-title">
+              <span>Arrivals &amp; departures</span>
+              <span className="small muted" style={{ fontWeight: 400 }}>
+                {flightRows.filter((r) => r.arriveAt).length} of {activeBookings.length} parties have flights recorded
+              </span>
+            </div>
+            <table className="t">
+              <thead><tr><th style={{ paddingLeft: 20 }}>Party</th><th className="num">Pax</th><th>Lands</th><th>Flies home</th></tr></thead>
+              <tbody>
+                {flightRows.map((r) => (
+                  <tr key={r.id}>
+                    <td style={{ paddingLeft: 20 }}><Link className="row-link" href={`/bookings/${r.id}`}>{r.customerName}</Link></td>
+                    <td className="num">{r.pax}</td>
+                    <td className={r.arriveAt ? "" : "muted small"}>{r.arriveAt ? fmtFlight(r.arriveAt) : "not recorded"}</td>
+                    <td className={r.departAt ? "" : "muted small"}>{r.departAt ? fmtFlight(r.departAt) : "not recorded"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <div className="card">
           <div className="card-title">

@@ -573,6 +573,14 @@ model Booking {
   visaHandledBy  String? // us (agency assists) | self (customer arranges it)
   visaValidUntil DateTime? // for held/approved visas — valid until this date
 
+  // When this party's flight lands at the trip's starting point, and when they
+  // fly home. Stored as wall-clock times in UTC and always displayed in UTC:
+  // a flight time belongs to the airport it happens at, so it must never be
+  // shifted by the reader's timezone. Separate from stayStart/stayEnd, which
+  // are about which NIGHTS a room is needed.
+  arriveAt       DateTime?
+  departAt       DateTime?
+
   // Some travellers join late or leave early. Null = the whole trip. A booking
   // occupies a night when stayStart <= night.date < stayEnd, so the departure
   // date itself is never a night slept.
@@ -621,6 +629,9 @@ model Traveller {
   booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   name        String
   age         Int?
+  // Free text rather than an enum: rooming needs it (twin-sharing usually pairs
+  // by gender) but nobody should be forced into a list that doesn't fit them.
+  gender      String?
   extraCharge Int      @default(0) // extra billed to this specific person (supplement, upgrade…)
   extraNote   String? // why (e.g. "single room")
   createdAt   DateTime @default(now())

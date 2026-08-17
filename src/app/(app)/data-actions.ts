@@ -539,6 +539,9 @@ export async function updateBookingInvoice(formData: FormData) {
       // so they stop counting toward rooms on nights they aren't there.
       stayStart: toDate(formData.get("stayStart")),
       stayEnd: toDate(formData.get("stayEnd")),
+      // Flight in and out — used for airport pickups and to see who lands when.
+      arriveAt: toWallClock(formData.get("arriveAt")),
+      departAt: toWallClock(formData.get("departAt")),
     },
   });
   // A booking added before its price was set gets no plan (a plan of zeros is
@@ -592,6 +595,20 @@ export async function deleteBooking(formData: FormData) {
 function toDate(v: FormDataEntryValue | null): Date | null {
   const s = String(v || "");
   return s ? new Date(s) : null;
+}
+
+// A date+time from a datetime-local input, held as wall-clock time.
+//
+// "2026-09-18T14:30" carries no timezone, so `new Date(...)` would read it in
+// whatever zone the server happens to run in — UTC on Vercel. A flight lands at
+// 14:30 at its airport regardless of where the operator sits, so we pin it to
+// UTC on the way in and format it in UTC on the way out. What was typed is what
+// is shown, everywhere.
+function toWallClock(v: FormDataEntryValue | null): Date | null {
+  const s = String(v || "").trim();
+  if (!s) return null;
+  const d = new Date(`${s.length === 16 ? s : s.slice(0, 16)}:00.000Z`);
+  return isNaN(d.getTime()) ? null : d;
 }
 
 // Renumber a trip's nights so `order` follows the dates. This keeps the derived
@@ -914,6 +931,7 @@ export async function addTraveller(formData: FormData) {
     data: {
       bookingId, name,
       age: ageStr ? Number(ageStr) || null : null,
+      gender: String(formData.get("gender") || "").trim() || null,
       extraCharge: parseAmount(String(formData.get("extraCharge"))),
       extraNote: String(formData.get("extraNote") || "") || null,
     },
@@ -935,6 +953,7 @@ export async function updateTraveller(formData: FormData) {
     data: {
       name: String(formData.get("name") || "").trim() || undefined,
       age: ageStr ? Number(ageStr) || null : null,
+      gender: String(formData.get("gender") || "").trim() || null,
       extraCharge: parseAmount(String(formData.get("extraCharge"))),
       extraNote: String(formData.get("extraNote") || "") || null,
     },

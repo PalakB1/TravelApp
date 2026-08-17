@@ -102,6 +102,13 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
   const policyValue = b.refundPolicy ?? org?.defaultRefundPolicy ?? STANDARD_REFUND_POLICY;
   const usesCustomPolicy = !!b.refundPolicy && b.refundPolicy !== (org?.defaultRefundPolicy ?? STANDARD_REFUND_POLICY);
   const toInput = (d: Date | null | undefined) => (d ? new Date(d).toISOString().slice(0, 10) : "");
+  // Flight times are wall-clock: stored in UTC, shown in UTC, so the time on
+  // screen is the time the operator typed wherever either of them happens to be.
+  const toDtInput = (d: Date | null | undefined) => (d ? new Date(d).toISOString().slice(0, 16) : "");
+  const fmtFlight = (d: Date | null | undefined) =>
+    d ? new Date(d).toLocaleString("en-GB", {
+      day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC",
+    }) : null;
 
   return (
     <>
@@ -123,6 +130,15 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
             />{b.customerPhone ? ` · ${b.customerPhone}` : ""}
             {b.customerId ? <> · <Link href={`/customers/${b.customerId}`} style={{ color: "var(--accent)" }}>View customer</Link></> : null}
           </p>
+          {/* Surfaced right under the name: whoever is arranging the airport
+              pickup shouldn't have to open an edit form to find the time. */}
+          {(b.arriveAt || b.departAt) && (
+            <p className="sub" style={{ marginTop: 2 }}>
+              {b.arriveAt && <>✈ Lands <b>{fmtFlight(b.arriveAt)}</b></>}
+              {b.arriveAt && b.departAt && " · "}
+              {b.departAt && <>Flies home <b>{fmtFlight(b.departAt)}</b></>}
+            </p>
+          )}
         </div>
         <div className="flex" style={{ gap: 8, flexWrap: "wrap" }}>
           <a className="btn sm primary" href="#payments" title="Jump to payments & history">💳 Payments</a>
@@ -219,7 +235,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           <div className="empty small">{b.pax === 1 ? `Single traveller — it's ${b.customerName} (filled in below, just add age if you like).` : "No people added yet. Add each family member below."}</div>
         ) : (
           <table className="t">
-            <thead><tr><th>#</th><th>Name</th><th>Age</th><th></th><th>Extra charge</th><th></th></tr></thead>
+            <thead><tr><th>#</th><th>Name</th><th>Age</th><th>Gender</th><th></th><th>Extra charge</th><th></th></tr></thead>
             <tbody>
               {b.travellers.map((tr, i) => (
                 <tr key={tr.id}>
@@ -232,6 +248,9 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                   </td>
                   <td>
                     <input name="age" defaultValue={tr.age ?? ""} form={`tr-${tr.id}`} type="number" min="0" max="120" placeholder="—" style={{ width: 70 }} />
+                  </td>
+                  <td>
+                    <input name="gender" defaultValue={tr.gender ?? ""} form={`tr-${tr.id}`} list="gender-list" placeholder="—" style={{ width: 88 }} />
                   </td>
                   <td>
                     {tr.age != null && tr.age < 12 ? <span className="badge amber">child</span> : null}
@@ -262,9 +281,13 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
               <div className="row-3">
                 <label className="field"><span className="lbl">Name</span><input id="tr-name" name="name" list="people-list" defaultValue={b.travellers.length === 0 ? b.customerName : ""} placeholder="Aarav Sharma" required /></label>
                 <label className="field"><span className="lbl">Age</span><input id="tr-age" name="age" type="number" min="0" max="120" placeholder="optional" /></label>
+                <label className="field"><span className="lbl">Gender <span className="small muted">for rooming</span></span><input name="gender" list="gender-list" placeholder="optional" /></label>
+              </div>
+              <div className="row">
                 <label className="field"><span className="lbl">Extra charge (optional)</span><input name="extraCharge" placeholder={`${$.symbol} for this person only`} /></label>
               </div>
               <label className="field"><span className="lbl">Extra charge reason</span><input name="extraNote" placeholder="e.g. single room supplement" /></label>
+              <datalist id="gender-list"><option value="Male" /><option value="Female" /><option value="Other" /></datalist>
               <datalist id="people-list">
                 {Object.keys(ageMap).length > 0 && knownPeople
                   .filter((p, idx, arr) => arr.findIndex((q) => q.name.trim().toLowerCase() === p.name.trim().toLowerCase()) === idx)
@@ -366,6 +389,19 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                     <label className="field"><span className="lbl">Land cost</span><input name="landAmount" defaultValue={b.landAmount || ""} /></label>
                     <label className="field"><span className="lbl">Visa assistance</span><input name="visaAmount" defaultValue={b.visaAmount || ""} /></label>
                     <label className="field"><span className="lbl">Flights</span><input name="flightAmount" defaultValue={b.flightAmount || ""} /></label>
+                  </div>
+                  {/* Flights in and out. Nothing to do with stayStart/stayEnd —
+                      those decide which nights need a room; these are when the
+                      party lands and leaves, for transfers and check-in timing. */}
+                  <div className="row">
+                    <label className="field">
+                      <span className="lbl">Arrives <span className="small muted">flight lands at the start point</span></span>
+                      <input name="arriveAt" type="datetime-local" defaultValue={toDtInput(b.arriveAt)} />
+                    </label>
+                    <label className="field">
+                      <span className="lbl">Departs <span className="small muted">flight home</span></span>
+                      <input name="departAt" type="datetime-local" defaultValue={toDtInput(b.departAt)} />
+                    </label>
                   </div>
                   <div className="row-3">
                     <label className="field"><span className="lbl">Travellers (pax)</span><input name="pax" type="number" min="1" defaultValue={b.pax} /></label>
