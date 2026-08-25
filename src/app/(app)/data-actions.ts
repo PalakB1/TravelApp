@@ -407,6 +407,28 @@ export async function toggleBookingInclusion(formData: FormData) {
   refresh();
 }
 
+// Remove one selected inclusion by its own id.
+//
+// toggleBookingInclusion works off the TRIP's inclusion id, which is fine while
+// the inclusion still exists. Delete it from the trip and the booking keeps its
+// price snapshot — deliberately, so old invoices don't move — but its
+// inclusionId becomes null, and from then on there was no way to take the
+// charge off the bill. This is that way.
+export async function removeBookingInclusion(formData: FormData) {
+  const orgId = await guard();
+  const id = String(formData.get("id"));
+  const sel = await prisma.bookingInclusion.findFirst({
+    where: { id, booking: { trip: { orgId } } },
+    select: { id: true, bookingId: true, name: true },
+  });
+  if (!sel) return;
+
+  await prisma.bookingInclusion.delete({ where: { id: sel.id } });
+  await recomputeBookingInclusions(sel.bookingId);
+  await logActivity(orgId, "booking", "updated", `Removed inclusion "${sel.name}" from a booking`, `/bookings/${sel.bookingId}`);
+  refresh();
+}
+
 // ---- Vendor bookings (hotels, cars...) ----
 export async function addVendorBooking(formData: FormData) {
   const orgId = await guard();

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookingTotal, bookingPaid, bookingBalance, bookingInclTaxCharge, bookingInclNonTaxCharge } from "@/lib/calc";
 
-import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, generateInvoice, renameBooking, updateBookingVisa, addScheduleItem, deleteScheduleItem, updateBookingPolicy, applyPlanToBooking, tidyOverdueDates, updateBookingStay } from "../../data-actions";
+import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, removeBookingInclusion, generateInvoice, renameBooking, updateBookingVisa, addScheduleItem, deleteScheduleItem, updateBookingPolicy, applyPlanToBooking, tidyOverdueDates, updateBookingStay } from "../../data-actions";
 import { scheduleStatus, scheduleTotal } from "@/lib/schedule";
 import { bookingCoversNight } from "@/lib/calc";
 import { STANDARD_REFUND_POLICY } from "@/lib/policy";
@@ -104,6 +104,11 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
     select: { id: true, name: true, gender: true, booking: { select: { customerName: true } } },
   });
   const genderMark = (g: string | null) => (g === "male" ? "M" : g === "female" ? "F" : "—");
+
+  // Selections whose trip-level inclusion has since been deleted. They still
+  // bill, so they must still be visible and removable.
+  const tripInclusionIds = new Set(b.trip.inclusions.map((i) => i.id));
+  const orphanInclusions = b.inclusions.filter((sel) => !sel.inclusionId || !tripInclusionIds.has(sel.inclusionId));
 
   const stayFrom = b.stayStart ?? b.trip.departureDate;
   const stayTo = b.stayEnd ?? b.trip.endDate;
@@ -376,6 +381,37 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                 </div>
               );
             })}
+            {/* Inclusions this booking still carries that the trip no longer
+                offers. Deleting one from the trip leaves the booking's price
+                snapshot alone on purpose, so past invoices don't move — but the
+                list above is built from the trip, so these were invisible while
+                still being billed. Shown here, with a way off the invoice. */}
+            {orphanInclusions.map((sel) => (
+              <div key={sel.id} className="between" style={{ padding: "9px 0", borderBottom: "1px solid var(--border)", background: "var(--warning-bg)" }}>
+                <div className="flex" style={{ gap: 12, alignItems: "flex-start" }}>
+                  <form action={removeBookingInclusion} style={{ marginTop: 1 }}>
+                    <input type="hidden" name="id" value={sel.id} />
+                    <button type="submit" className="incl-toggle on" aria-label={`Remove ${sel.name}`} title="Remove from this booking">✓</button>
+                  </form>
+                  <div>
+                    <div style={{ fontWeight: 500 }}>
+                      {sel.name}{" "}
+                      <span className="badge amber">no longer on this trip</span>{" "}
+                      {!sel.taxable && <span className="badge gray">no tax</span>}
+                    </div>
+                    <div className="small muted">
+                      Booked {fmtDate(sel.bookedAt)} @ {$.fmt(sel.isDefault ? sel.cost : sel.charge)}/pp · still on the invoice. Untick to take it off.
+                    </div>
+                  </div>
+                </div>
+                <div className="right" style={{ whiteSpace: "nowrap" }}>
+                  <div style={{ fontWeight: 600 }}>
+                    {sel.isDefault ? <span className="muted">cost {$.fmt(sel.cost * b.pax)}</span> : `+ ${$.fmt(sel.charge * b.pax)}`}
+                  </div>
+                  <div className="small muted">{$.fmt(sel.isDefault ? sel.cost : sel.charge)} × {b.pax}</div>
+                </div>
+              </div>
+            ))}
           </div>
           <p className="small muted" style={{ marginTop: 10 }}>Defaults add to your cost only. Optional ones add to the customer’s bill (and your cost). Each tick locks in today’s price.</p>
         </div>
