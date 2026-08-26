@@ -10,7 +10,7 @@ import CopyLink from "@/components/CopyLink";
 import ShareReceipt from "@/components/ShareReceipt";
 import RemindPayment from "@/components/RemindPayment";
 import RemindCancelWindow from "@/components/RemindCancelWindow";
-import { scheduleStatus } from "@/lib/schedule";
+import { scheduleStatus, isDueWithin } from "@/lib/schedule";
 import { addPayment, approvePendingPayment, rejectPendingPayment } from "../data-actions";
 import SubmitButton from "@/components/SubmitButton";
 import { visaMeta } from "@/lib/visaStatus";
@@ -55,10 +55,12 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
   const totalDue = owing.reduce((s, b) => s + bookingBalance(b), 0);
   const totalCollected = bookings.reduce((s, b) => s + bookingPaid(b), 0);
 
-  // Money due from payment plans. Per customer we total EVERYTHING that should
-  // already be in — every unpaid installment dated today or earlier — so a reminder
-  // asks for the full amount owed, not just the next single step. If nothing is due
-  // yet, we surface the next upcoming installment so it's still on the radar.
+  // Money to chase from payment plans. Per customer we total every unpaid
+  // installment that is already late OR falls due in the next DUE_SOON_DAYS, so
+  // one reminder covers the whole ask rather than the next single step — and
+  // goes out as a nudge before the date rather than a complaint after it.
+  // If nothing is in that window, the next upcoming installment is still shown
+  // so it stays on the radar.
   const now = new Date();
   const dayStart = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
   const today0 = dayStart(now);
@@ -67,7 +69,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     .map((b) => {
       const lines = scheduleStatus(b.schedule.map((s) => ({ id: s.id, label: s.label, amount: s.amount, dueDate: s.dueDate, order: s.order })), bookingPaid(b), { invoiceTotal: bookingTotal(b), now });
       const uncovered = lines.filter((l) => !l.covered);
-      const dueNow = uncovered.filter((l) => l.item.dueDate && dayStart(new Date(l.item.dueDate)) <= today0);
+      const dueNow = uncovered.filter((l) => isDueWithin(l.item.dueDate, now));
       if (dueNow.length > 0) {
         const amount = dueNow.reduce((s, l) => s + l.remaining, 0);
         const earliest = Math.min(...dueNow.map((l) => new Date(l.item.dueDate!).getTime()));
@@ -176,7 +178,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
           </div>
           <TableSearch placeholder="Search customer or trip…">
           <table className="t">
-            <thead><tr><th>Due date</th><th>Customer</th><th>Trip</th><th>For</th><th className="num">Due now</th><th className="num">Total left</th><th></th></tr></thead>
+            <thead><tr><th>Due date</th><th>Customer</th><th>Trip</th><th>For</th><th className="num">To collect</th><th className="num">Total left</th><th></th></tr></thead>
             <tbody>
               {moneyRows.map((r) => (
                 <tr key={r.b.id}>

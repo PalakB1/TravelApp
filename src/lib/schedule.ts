@@ -98,3 +98,25 @@ export function apportion(amount: number, weights: number[]): number[] {
   shares[n - 1] += drift;
   return shares;
 }
+
+// How far ahead a payment counts as worth chasing.
+//
+// Reminders used to fire only once money was already late, which is the worst
+// moment to ask: the customer is embarrassed and you're chasing rather than
+// prompting. Looking a little way forward turns it into a nudge before the date
+// instead of a complaint after it.
+export const DUE_SOON_DAYS = 10;
+
+/**
+ * True when `dueDate` is already past OR falls within the next `days`.
+ * Compared on whole days, so an installment due today always counts.
+ */
+export function isDueWithin(dueDate: Date | null | undefined, now: Date, days: number = DUE_SOON_DAYS): boolean {
+  if (!dueDate) return false;
+  const dayStart = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+  // Stepping the date rather than adding milliseconds keeps this right across a
+  // daylight-saving change, where a "day" isn't 24 hours.
+  const limit = dayStart(now);
+  limit.setDate(limit.getDate() + days);
+  return dayStart(new Date(dueDate)).getTime() <= limit.getTime();
+}

@@ -42,7 +42,10 @@ export default function RemindPayment({
       // No scheduled date — just an outstanding balance.
       ? `Hi ${customerName}, a gentle reminder — there's a balance of ${amount} on your ${tripName} trip. ${confirmLine}`
       : overdue
-        ? `Hi ${customerName}, a gentle reminder — a total of ${amount}${many} for your ${tripName} trip is now due (from ${dueLabel}). ${confirmLine}`
+        // "starting {date}" rather than "all of this is now due": the total can
+        // mix instalments that are already late with ones falling due shortly,
+        // and claiming the lot is overdue would be untrue.
+        ? `Hi ${customerName}, a gentle reminder — a total of ${amount}${many} for your ${tripName} trip is due, starting ${dueLabel}. ${confirmLine}`
         : `Hi ${customerName}, a friendly reminder — ${amount} for your ${tripName} trip is due on ${dueLabel}. ${confirmLine}`;
     const wa = waNumber();
     const link = wa

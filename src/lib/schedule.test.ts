@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scheduleStatus, apportion } from "./schedule";
+import { scheduleStatus, apportion, isDueWithin } from "./schedule";
 
 // Regression: a plan left over from a bigger price must not invent a debt.
 // Reported from a live booking — invoice 99,000, plan still summing to 208,950,
@@ -67,5 +67,34 @@ describe("apportion", () => {
   it("handles a single item and an empty list", () => {
     expect(apportion(4200, [0])).toEqual([4200]);
     expect(apportion(500, [])).toEqual([]);
+  });
+});
+
+describe("isDueWithin — the reminder window", () => {
+  const now = new Date("2026-08-12T09:00:00Z");
+  const on = (iso: string) => new Date(iso);
+
+  it("includes anything already overdue", () => {
+    expect(isDueWithin(on("2026-06-01"), now)).toBe(true);
+    expect(isDueWithin(on("2026-08-11"), now)).toBe(true);
+  });
+
+  it("includes today", () => {
+    expect(isDueWithin(on("2026-08-12T23:00:00Z"), now)).toBe(true);
+  });
+
+  it("includes the next ten days, and stops there", () => {
+    expect(isDueWithin(on("2026-08-20"), now)).toBe(true);  // 8 days out
+    expect(isDueWithin(on("2026-08-22"), now)).toBe(true);  // exactly 10
+    expect(isDueWithin(on("2026-08-23"), now)).toBe(false); // 11 — too early to chase
+  });
+
+  it("respects a custom window", () => {
+    expect(isDueWithin(on("2026-08-15"), now, 2)).toBe(false);
+    expect(isDueWithin(on("2026-08-14"), now, 2)).toBe(true);
+  });
+
+  it("ignores installments with no due date", () => {
+    expect(isDueWithin(null, now)).toBe(false);
   });
 });
