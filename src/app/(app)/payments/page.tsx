@@ -36,12 +36,21 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     where: scope.viaTrip,
     include: { trip: true, variant: true, payments: true, schedule: true },
   });
-  const recent = await prisma.payment.findMany({
-    where: { booking: { ...scope.viaTrip, deletedAt: null } },
-    take: 25,
-    orderBy: { date: "desc" },
-    include: { booking: { include: { trip: true } } },
-  });
+  // The receipts tab has a search box over these rows, so the fetch has to cover
+  // everything the box could plausibly be asked about. It used to take 25, which
+  // meant searching for anyone whose last payment wasn't in the newest 25 found
+  // nothing at all — the search looked broken when it was simply looking at a
+  // third of the data.
+  const RECEIPTS_CAP = 500;
+  const [recent, recentTotal] = await Promise.all([
+    prisma.payment.findMany({
+      where: { booking: { ...scope.viaTrip, deletedAt: null } },
+      take: RECEIPTS_CAP,
+      orderBy: { date: "desc" },
+      include: { booking: { include: { trip: true } } },
+    }),
+    prisma.payment.count({ where: { booking: { ...scope.viaTrip, deletedAt: null } } }),
+  ]);
   const pending = await prisma.pendingPayment.findMany({
     where: { OR: [{ booking: { ...scope.viaTrip, deletedAt: null } }, { trip: scope.tripWhere }] },
     orderBy: { createdAt: "desc" },
@@ -351,7 +360,14 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
       {view === "history" && (<>
       <div className="card">
-        <div className="card-title">Payment receipts <span className="small muted">every payment recorded · share a receipt with the customer</span></div>
+        <div className="card-title">
+          Payment receipts{" "}
+          <span className="small muted">
+            {recentTotal > RECEIPTS_CAP
+              ? `most recent ${RECEIPTS_CAP} of ${recentTotal} payments`
+              : `all ${recentTotal} payment${recentTotal === 1 ? "" : "s"}`} · search by name, then share the receipt
+          </span>
+        </div>
         {recent.length === 0 ? (
           <div className="empty">No payments recorded yet.</div>
         ) : (
