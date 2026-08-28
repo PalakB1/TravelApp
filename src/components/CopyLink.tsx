@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toWaNumber } from "@/lib/phone";
 
 // A shareable absolute URL with a tap-to-copy field, a native Share button
 // (opens the phone's share sheet — WhatsApp, SMS, etc.), a Copy button with a
@@ -11,12 +12,15 @@ export default function CopyLink({
   waPhone,
   waText,
   title = "Payment link",
+  defaultCc = "91",
 }: {
   path: string;
   label?: string;
   waPhone?: string | null;
   waText?: string;
   title?: string;
+  /** The agency's own dialling code, used only for bare local numbers. */
+  defaultCc?: string;
 }) {
   const [url, setUrl] = useState(path);
   const [copied, setCopied] = useState(false);
@@ -53,8 +57,7 @@ export default function CopyLink({
 
   function shareWhatsApp() {
     const text = encodeURIComponent(`${waText ? waText + " " : ""}${url}`);
-    let digits = (waPhone || "").replace(/\D/g, "");
-    if (digits.length === 10) digits = "91" + digits; // assume India for a bare 10-digit number
+    const digits = toWaNumber(waPhone, defaultCc);
     const link = digits ? `https://wa.me/${digits}?text=${text}` : `https://wa.me/?text=${text}`;
     window.open(link, "_blank", "noopener");
   }

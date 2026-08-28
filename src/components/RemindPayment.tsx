@@ -1,5 +1,7 @@
 "use client";
 
+import { toWaNumber } from "@/lib/phone";
+
 // Tap-to-send a payment reminder on WhatsApp. Opens WhatsApp on the user's phone
 // with the message ready — they just press send, so it goes from their own number.
 export default function RemindPayment({
@@ -11,6 +13,7 @@ export default function RemindPayment({
   payPath,
   overdue = false,
   count = 1,
+  defaultCc = "91",
 }: {
   phone?: string | null;
   customerName: string;
@@ -20,16 +23,11 @@ export default function RemindPayment({
   payPath: string; // e.g. "/pay/abc123"
   overdue?: boolean;
   count?: number; // how many installments this total covers
+  /** The agency's own dialling code, used only for bare local numbers. */
+  defaultCc?: string;
 }) {
-  // Digits only, with a country code so wa.me works. Assume India (91) when absent.
-  function waNumber(): string | null {
-    if (!phone) return null;
-    let d = phone.replace(/\D/g, "");
-    if (!d) return null;
-    if (d.length === 10) d = "91" + d;
-    else if (d.length === 11 && d.startsWith("0")) d = "91" + d.slice(1);
-    return d;
-  }
+  // Country code handling lives in one place — see lib/phone.
+  const waNumber = () => toWaNumber(phone, defaultCc);
 
   function send() {
     const url = `${window.location.origin}${payPath}`;

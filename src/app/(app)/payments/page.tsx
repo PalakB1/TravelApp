@@ -220,6 +220,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                   <td className="num">{r.balance > 0 ? <span className="badge amber">{$.fmt(r.balance)}</span> : <span className="badge green">paid</span>}</td>
                   <td className="num">
                     <RemindPayment
+                      defaultCc={$.dial}
                       phone={r.b.customerPhone}
                       customerName={r.b.customerName}
                       amount={$.fmt(r.dueNow > 0 ? r.dueNow : r.balance)}
@@ -253,7 +254,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                     <td><Link className="row-link" href={`/bookings/${b.id}`}>{b.customerName}</Link></td>
                     <td className="muted small">{b.trip.name}</td>
                     <td><span className={`badge ${d <= 2 ? "rose" : "amber"}`}>{d === 0 ? "today" : d === 1 ? "1 day" : `${d} days`}</span></td>
-                    <td className="num"><RemindCancelWindow phone={b.customerPhone} customerName={b.customerName} tripName={b.trip.name} dateLabel={fmtDate(until)} /></td>
+                    <td className="num"><RemindCancelWindow phone={b.customerPhone} customerName={b.customerName} tripName={b.trip.name} dateLabel={fmtDate(until)} defaultCc={$.dial} /></td>
                   </tr>
                 );
               })}
@@ -352,7 +353,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
       <div className="card" style={{ background: "var(--accent-bg)", borderColor: "transparent" }}>
         <div className="card-title">🔗 Universal payment link <span className="small muted">one link for everyone — they pick their trip &amp; name</span></div>
-        <CopyLink path={`/pay/o/${orgId}`} label="Copy link" waText="Please confirm your payment here:" />
+        <CopyLink path={`/pay/o/${orgId}`} label="Copy link" waText="Please confirm your payment here:" defaultCc={$.dial} />
         <p className="small muted" style={{ margin: "8px 0 0" }}>Share this once (WhatsApp group, email signature, anywhere). Each person selects their trip and name, then reports what they paid — it lands below for your approval.</p>
       </div>
 
@@ -382,7 +383,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                   <td className="muted">{p.booking.trip.name}</td>
                   <td><span className="badge gray">{p.mode}</span></td>
                   <td className="num" style={{ fontWeight: 500 }}>{$.fmt(p.amount)}</td>
-                  <td className="num"><ShareReceipt paymentId={p.id} customerName={p.booking.customerName} amount={$.fmt(p.amount)} phone={p.booking.customerPhone} /></td>
+                  <td className="num"><ShareReceipt paymentId={p.id} customerName={p.booking.customerName} amount={$.fmt(p.amount)} phone={p.booking.customerPhone} defaultCc={$.dial} /></td>
                 </tr>
               ))}
             </tbody>

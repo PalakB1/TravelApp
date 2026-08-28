@@ -1,17 +1,13 @@
 "use client";
 
+import { toWaNumber } from "@/lib/phone";
+
 // Share a receipt with the customer — opens WhatsApp with the message + receipt
 // link ready to send, from the user's own number (same behaviour as the payment
 // Remind button). If there's no phone on file, WhatsApp opens to pick a chat.
-export default function ShareReceipt({ paymentId, customerName, amount, phone }: { paymentId: string; customerName: string; amount: string; phone?: string | null }) {
-  function waNumber(): string | null {
-    if (!phone) return null;
-    let d = phone.replace(/\D/g, "");
-    if (!d) return null;
-    if (d.length === 10) d = "91" + d; // bare 10-digit Indian mobile
-    else if (d.length === 11 && d.startsWith("0")) d = "91" + d.slice(1);
-    return d;
-  }
+export default function ShareReceipt({ paymentId, customerName, amount, phone, defaultCc = "91" }: { paymentId: string; customerName: string; amount: string; phone?: string | null; defaultCc?: string }) {
+  // Country code handling lives in one place — see lib/phone.
+  const waNumber = () => toWaNumber(phone, defaultCc);
 
   function share() {
     const url = `${window.location.origin}/receipt/${paymentId}`;

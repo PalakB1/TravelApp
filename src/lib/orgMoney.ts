@@ -2,6 +2,7 @@ import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { getOrgContext } from "@/lib/org";
 import { formatMoney, formatMoneyShort, currencySymbol, INR, type MoneyCfg } from "@/lib/money";
+import { countryPreset } from "@/lib/countries";
 
 // How the signed-in agency writes money and names its taxes.
 //
@@ -24,9 +25,12 @@ export type OrgMoney = {
   taxRate2: number;
   /** What the tax registration number is called — GSTIN, VAT number… */
   taxIdLabel: string;
+  /** Dialling code for the agency's country, for WhatsApp links. */
+  dial: string;
 };
 
 export function buildMoney(org: {
+  country?: string | null;
   currency?: string | null;
   locale?: string | null;
   taxLabel?: string | null;
@@ -49,6 +53,7 @@ export function buildMoney(org: {
     taxRate: org?.taxRate ?? 5,
     taxRate2: org?.taxRate2 ?? 2,
     taxIdLabel: org?.taxIdLabel || "GSTIN",
+    dial: countryPreset(org?.country).dial,
   };
 }
 
@@ -57,7 +62,7 @@ export const orgMoney = cache(async (): Promise<OrgMoney> => {
   if (!ctx?.orgId) return buildMoney(null);
   const org = await prisma.organization.findUnique({
     where: { id: ctx.orgId },
-    select: { currency: true, locale: true, taxLabel: true, taxLabel2: true, taxRate: true, taxRate2: true, taxIdLabel: true },
+    select: { country: true, currency: true, locale: true, taxLabel: true, taxLabel2: true, taxRate: true, taxRate2: true, taxIdLabel: true },
   });
   return buildMoney(org);
 });
