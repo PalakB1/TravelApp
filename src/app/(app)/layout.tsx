@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getOrgContext } from "@/lib/org";
+import { getOrgContext, getOrg } from "@/lib/org";
 import { prisma } from "@/lib/db";
 import { isTrialExpired, trialDaysLeft } from "@/lib/billing";
 import Sidebar from "@/components/Sidebar";
@@ -72,9 +72,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const ctx = await getOrgContext();
   if (!ctx) redirect("/login");
 
-  const org = ctx.orgId
-    ? await prisma.organization.findUnique({ where: { id: ctx.orgId }, select: { status: true, name: true, customTripsEnabled: true, plan: true, trialEndsAt: true } })
-    : null;
+  // Same cached row the money helper uses — one query for the org, not two.
+  const org = await getOrg();
 
   // A normal user only gets in if their org is approved. The platform admin
   // always gets in (they operate their own org and can enter others).

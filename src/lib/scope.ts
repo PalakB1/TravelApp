@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getOrgContext } from "@/lib/org";
@@ -12,7 +13,7 @@ export type Scope = {
   viaTrip: Record<string, unknown>; // use for booking / night / car / visa (through trip)
 };
 
-export async function getScope(): Promise<Scope | null> {
+export const getScope = cache(async function getScope(): Promise<Scope | null> {
   const ctx = await getOrgContext();
   if (!ctx?.orgId) return null;
   const orgId = ctx.orgId;
@@ -31,7 +32,7 @@ export async function getScope(): Promise<Scope | null> {
   // every child of a trip) automatically excludes soft-deleted trips.
   const tripWhere = tripIds ? { orgId, id: { in: tripIds }, deletedAt: null } : { orgId, deletedAt: null };
   return { orgId, userId: ctx.session.userId, tripIds, tripWhere, viaTrip: { trip: tripWhere } };
-}
+})
 
 export async function requireScope(): Promise<Scope> {
   const s = await getScope();

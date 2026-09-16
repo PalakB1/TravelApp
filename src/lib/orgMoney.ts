@@ -1,6 +1,5 @@
 import { cache } from "react";
-import { prisma } from "@/lib/db";
-import { getOrgContext } from "@/lib/org";
+import { getOrg } from "@/lib/org";
 import { formatMoney, formatMoneyShort, currencySymbol, INR, type MoneyCfg } from "@/lib/money";
 import { countryPreset } from "@/lib/countries";
 
@@ -57,12 +56,6 @@ export function buildMoney(org: {
   };
 }
 
-export const orgMoney = cache(async (): Promise<OrgMoney> => {
-  const ctx = await getOrgContext();
-  if (!ctx?.orgId) return buildMoney(null);
-  const org = await prisma.organization.findUnique({
-    where: { id: ctx.orgId },
-    select: { country: true, currency: true, locale: true, taxLabel: true, taxLabel2: true, taxRate: true, taxRate2: true, taxIdLabel: true },
-  });
-  return buildMoney(org);
-});
+// Shares getOrg's single cached row rather than fetching the same organisation
+// a second time on every page.
+export const orgMoney = cache(async (): Promise<OrgMoney> => buildMoney(await getOrg()));

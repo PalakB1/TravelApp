@@ -41,7 +41,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   const scope = await requireScope();
   const sp = await searchParams;
 
-  const trips = await prisma.trip.findMany({
+  const tripsP = prisma.trip.findMany({
     where: scope.tripWhere,
     orderBy: [{ departureDate: "desc" }, { createdAt: "desc" }],
     select: {
@@ -52,6 +52,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
       vendorBookings: { select: { id: true, vendorName: true, detail: true } },
     },
   });
+  const trips = await tripsP;
   const tripIdSet = new Set(trips.map((t) => t.id));
 
   // Flattened for the picker: every taggable thing in a trip, grouped by kind.
@@ -80,22 +81,33 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   // Optional filter chip: ?trip=general (untagged) or ?trip=<id>.
   const filter = sp.trip;
   const where: Record<string, unknown> = { ...base };
-  if (filter === "general") where.tripId = null;
-  else if (filter && tripIdSet.has(filter)) where.tripId = filter;
 
-  const expenses = await prisma.expense.findMany({
+  // Started together — none of these three depends on another's result,
+  // so paying for three round trips in series was pure waiting.
+  const expensesP = prisma.expense.findMany({
     where,
     orderBy: { date: "desc" },
     include: { trip: { select: { id: true, name: true } }, hotel: { select: { hotelName: true } }, car: { select: { label: true, carType: true } } },
   });
-
-  // Personal spends still owed back (ignores the trip filter — always show the
-  // full reimbursement backlog). Grouped by who paid.
-  const personalOwed = await prisma.expense.findMany({
+  const personalOwedP = prisma.expense.findMany({
     where: { ...base, paidPersonally: true, settlementId: null, deletedAt: null },
     orderBy: { date: "asc" },
     include: { trip: { select: { name: true } }, hotel: { select: { hotelName: true } }, car: { select: { label: true } } },
   });
+  const settlementsP = prisma.settlement.findMany({
+    where: { orgId: scope.orgId },
+    orderBy: { date: "desc" },
+    include: { expenses: { select: { id: true, payee: true, amount: true, category: true } } },
+  });
+
+  if (filter === "general") where.tripId = null;
+  else if (filter && tripIdSet.has(filter)) where.tripId = filter;
+
+  const expenses = await expensesP;
+
+  // Personal spends still owed back (ignores the trip filter — always show the
+  // full reimbursement backlog). Grouped by who paid.
+  const personalOwed = await personalOwedP;
   const owedTotal = personalOwed.reduce((s, e) => s + e.amount, 0);
 
   const assignedLabel = (e: (typeof personalOwed)[number]) =>
@@ -110,11 +122,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   const personalGroups = [...groupsMap.entries()].map(([person, rows]) => ({ person, rows }));
 
   // Past reimbursements (settlement history).
-  const settlements = await prisma.settlement.findMany({
-    where: { orgId: scope.orgId },
-    orderBy: { date: "desc" },
-    include: { expenses: { select: { id: true, payee: true, amount: true, category: true } } },
-  });
+  const settlements = await settlementsP;
 
   // Bank names seen so far → autocomplete source for the spend + settle forms.
   const bankSet = new Set<string>();

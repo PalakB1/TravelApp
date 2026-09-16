@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
 
@@ -42,7 +43,10 @@ export async function createSession(user: Session) {
   store.set(COOKIE, token, SESSION_COOKIE_OPTS);
 }
 
-export async function getSession(): Promise<Session | null> {
+// Wrapped in cache(): the layout, the scope helper and the money helper all ask
+// for the session on the same request, and verifying the JWT three times is work
+// nobody asked for. cache() de-duplicates within a single request only.
+export const getSession = cache(async function getSession(): Promise<Session | null> {
   const store = await cookies();
   const token = store.get(COOKIE)?.value;
   if (!token) return null;
@@ -58,7 +62,7 @@ export async function getSession(): Promise<Session | null> {
   } catch {
     return null;
   }
-}
+})
 
 export async function destroySession() {
   const store = await cookies();

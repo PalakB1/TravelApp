@@ -34,7 +34,15 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   // Undated (unscheduled) trips always show; dated ones must fall in the window.
   const tripInRange = { OR: [{ departureDate: null }, { departureDate: { gte: rangeFrom, lte: rangeTo } }] };
 
-  const trips = await prisma.trip.findMany({
+  // Every query below is independent of the others, so they're started together
+  // and awaited where their results are used. Run one after another — which is
+  // what a plain `await` on each line does — the page waited for seven round
+  // trips in series before it could render anything.
+  const nowA = new Date();
+  const startTodayA = new Date(nowA.getFullYear(), nowA.getMonth(), nowA.getDate());
+  const in7d = new Date(startTodayA.getTime() + 7 * 864e5);
+
+  const tripsP = prisma.trip.findMany({
     where: { ...scope.tripWhere, ...tripInRange },
     include: {
       itinerary: { include: { hotels: true } },
@@ -44,6 +52,29 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     },
     orderBy: [{ departureDate: "asc" }, { createdAt: "desc" }],
   });
+  const customTripsP = prisma.customTrip.findMany({
+    where: { orgId: scope.orgId, status: { not: "cancelled" }, OR: [{ startDate: null }, { startDate: { gte: rangeFrom, lte: rangeTo } }] },
+    include: { items: true, payments: true },
+  });
+  const customersP = prisma.customer.findMany({
+    where: { orgId: scope.orgId },
+    // Only bookings on trips this member may see (else other trip names leak).
+    include: { bookings: { where: { deletedAt: null, ...(scope.tripIds ? { trip: { id: { in: scope.tripIds } } } : {}) }, include: { variant: true, payments: true, trip: true } } },
+  });
+  const recentPaymentsP = prisma.payment.findMany({
+    where: { booking: { ...scope.viaTrip, deletedAt: null } },
+    take: 6,
+    orderBy: { date: "desc" },
+    include: { booking: { include: { trip: true } } },
+  });
+  const actionBookingsP = prisma.booking.findMany({
+    where: { ...scope.viaTrip, deletedAt: null, status: { not: "cancelled" } },
+    include: { trip: { select: { departureDate: true, nights: true, days: true } }, payments: { select: { amount: true, date: true } }, schedule: true },
+  });
+  const departingSoonP = prisma.trip.count({ where: { ...scope.tripWhere, departureDate: { gte: startTodayA, lte: in7d } } });
+  const pendingApprovalsP = prisma.pendingPayment.count({ where: { OR: [{ booking: { ...scope.viaTrip, deletedAt: null } }, { trip: scope.tripWhere }] } });
+
+  const trips = await tripsP;
 
   let revenue = 0, cost = 0, outstanding = 0, unbookedNights = 0, expiringHolds = 0, shortRoomNights = 0, seatIssues = 0, paxTotal = 0, bookingCount = 0;
   let hotelCost = 0, carRental = 0, driverCost = 0, extrasCost = 0, inclusionsCost = 0, driversTotal = 0, carsTotal = 0, taxCollectedAll = 0;
@@ -79,10 +110,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     .sort((a, b) => a.f.margin - b.f.margin);
 
   // Custom trips (bespoke, per-client) in the same window — folded into the totals.
-  const customTrips = await prisma.customTrip.findMany({
-    where: { orgId: scope.orgId, status: { not: "cancelled" }, OR: [{ startDate: null }, { startDate: { gte: rangeFrom, lte: rangeTo } }] },
-    include: { items: true, payments: true },
-  });
+  const customTrips = await customTripsP;
   const custRevenue = customTrips.reduce((s, ct) => s + ctRevenue(ct), 0);
   const custCost = customTrips.reduce((s, ct) => s + ctCost(ct), 0);
   const custOut = customTrips.reduce((s, ct) => s + ctOutstanding(ct), 0);
@@ -135,11 +163,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const taxPending = taxCollected - taxRemitted;
 
   // top customers by outstanding, with their trips
-  const customers = await prisma.customer.findMany({
-    where: { orgId: scope.orgId },
-    // Only bookings on trips this member may see (else other trip names leak).
-    include: { bookings: { where: { deletedAt: null, ...(scope.tripIds ? { trip: { id: { in: scope.tripIds } } } : {}) }, include: { variant: true, payments: true, trip: true } } },
-  });
+  const customers = await customersP;
   const customerRows = customers
     .map((c) => {
       const act = c.bookings.filter((b) => isActive(b.status));
@@ -151,24 +175,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     .sort((a, b) => b.out - a.out);
 
   // recent payments for an activity feel
-  const recentPayments = await prisma.payment.findMany({
-    where: { booking: { ...scope.viaTrip, deletedAt: null } },
-    take: 6,
-    orderBy: { date: "desc" },
-    include: { booking: { include: { trip: true } } },
-  });
+  const recentPayments = await recentPaymentsP;
 
   // ---- "Needs you today" — actionable items across the WHOLE org (ignores the
   // date-range filter above, so nothing that needs chasing slips off-screen). ----
-  const nowA = new Date();
-  const startTodayA = new Date(nowA.getFullYear(), nowA.getMonth(), nowA.getDate());
-  const in7d = new Date(startTodayA.getTime() + 7 * 864e5);
   const dayStartA = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
 
-  const actionBookings = await prisma.booking.findMany({
-    where: { ...scope.viaTrip, deletedAt: null, status: { not: "cancelled" } },
-    include: { trip: { select: { departureDate: true, nights: true, days: true } }, payments: { select: { amount: true, date: true } }, schedule: true },
-  });
+  const actionBookings = await actionBookingsP;
   const VISA_ACTION = new Set(["required", "initiated", "submitted", "rejected"]);
   let overdueAmt = 0, overdueCustomers = 0, invoicesReady = 0, visasStuck = 0;
   for (const b of actionBookings) {
@@ -180,8 +193,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     if (!b.invoiceNo && tripIsOver(b.trip, nowA)) invoicesReady++;
     if (VISA_ACTION.has(b.visaStatus)) visasStuck++;
   }
-  const departingSoon = await prisma.trip.count({ where: { ...scope.tripWhere, departureDate: { gte: startTodayA, lte: in7d } } });
-  const pendingApprovals = await prisma.pendingPayment.count({ where: { OR: [{ booking: { ...scope.viaTrip, deletedAt: null } }, { trip: scope.tripWhere }] } });
+  const departingSoon = await departingSoonP;
+  const pendingApprovals = await pendingApprovalsP;
 
   type ActionTile = { emoji: string; n: string; label: string; href: string; tone: string };
   const actionTiles: ActionTile[] = [];
