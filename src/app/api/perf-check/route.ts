@@ -4,7 +4,9 @@ import { getSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-// TEMPORARY. Reports where a request's time actually goes, measured inside the
+// TEMPORARY (and note: an underscore-prefixed folder is private in the App
+// Router, so this cannot be called _perf or it simply never becomes a route).
+// Reports where a request's time actually goes, measured inside the
 // running function rather than inferred from outside. Delete once the slowness
 // is understood — it is signed-in only, but it is still a diagnostic and has no
 // business living in the app.
