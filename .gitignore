@@ -45,3 +45,7 @@ prisma/dev.db
 prisma/*.db
 /backups/
 _*.ts
+
+# scratch diagnostics
+/diag.ts
+/v*.ts
