@@ -14,7 +14,7 @@ import { orgMoney } from "@/lib/orgMoney";
 export const dynamic = "force-dynamic";
 
 function d(v: Date | null) { return v ? new Date(v).toISOString().slice(0, 10) : ""; }
-function fmt(v: Date | null) { return v ? new Date(v).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"; }
+function fmt(v: Date | null) { return v ? new Date(v).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "—"; }
 
 export default async function CustomTripDetail({ params }: { params: Promise<{ id: string }> }) {
   const $ = await orgMoney();

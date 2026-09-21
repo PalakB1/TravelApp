@@ -52,7 +52,7 @@ export async function GET() {
       ...t.itinerary.flatMap((n) =>
         n.hotels.map((h) => ({
           ref: `hotel:${h.id}`,
-          label: `${h.hotelName}${n.location ? ` · ${n.location}` : ""}${n.date ? ` · ${n.date.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : ""}`,
+          label: `${h.hotelName}${n.location ? ` · ${n.location}` : ""}${n.date ? ` · ${n.date.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" })}` : ""}`,
           group: "Hotels",
         })),
       ),

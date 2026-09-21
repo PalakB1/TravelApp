@@ -8,7 +8,7 @@ import TableSearch from "@/components/TableSearch";
 export const dynamic = "force-dynamic";
 
 function fmt(d: Date) {
-  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 export default async function TeamPage() {

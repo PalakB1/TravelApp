@@ -5,7 +5,7 @@ import UniversalPayForm from "./UniversalPayForm";
 export const dynamic = "force-dynamic";
 
 function fmtDate(d: Date | null) {
-  return d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
+  return d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "";
 }
 
 // PUBLIC universal payment link for one agency. The payer picks their trip and

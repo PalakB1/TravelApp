@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 const PACKAGE: Record<string, string> = { land: "Land", lva: "LVA", full: "Full" };
 function fmtDate(d: Date | null) {
-  return d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
+  return d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "—";
 }
 function statusBadge(s: string) {
   const map: Record<string, string> = { confirmed: "green", travelled: "accent", enquiry: "amber", cancelled: "red" };

@@ -22,7 +22,7 @@ import { orgMoney } from "@/lib/orgMoney";
 export const dynamic = "force-dynamic";
 
 function fmtDate(d: Date) {
-  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
 const PACKAGE: Record<string, string> = { land: "Land only", lva: "Land + visa (LVA)", full: "Full package" };
 
@@ -96,7 +96,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
   // How many itinerary nights this party actually sleeps, given their stay window.
   const nightsHere = b.trip.itinerary.filter((n) => !n.extra && bookingCoversNight(b, n.date)).length;
   const coreNights = b.trip.itinerary.filter((n) => !n.extra).length;
-  const shortDate = (d: Date | null | undefined) => (d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—");
+  const shortDate = (d: Date | null | undefined) => (d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" }) : "—");
   // Rooming candidates: every traveller on this TRIP, not just this booking.
   // Pairing two solo travellers from different bookings is the whole point.
   const tripTravellers = await prisma.traveller.findMany({
@@ -242,7 +242,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           </div>
           <button className="primary" type="submit">Save visa status</button>
           {b.visaValidUntil && b.trip?.endDate && b.visaValidUntil < b.trip.endDate ? (
-            <p className="small" style={{ color: "var(--danger)", margin: "10px 0 0" }}>⚠ Visa expires before this trip ends ({b.visaValidUntil.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}).</p>
+            <p className="small" style={{ color: "var(--danger)", margin: "10px 0 0" }}>⚠ Visa expires before this trip ends ({b.visaValidUntil.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}).</p>
           ) : null}
         </form>
       </div>

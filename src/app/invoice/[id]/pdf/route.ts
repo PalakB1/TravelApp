@@ -41,7 +41,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     sacCode: org?.sacCode || "998555",
     note: ascii(org?.invoiceNote),
     invoiceNo: b.invoiceNo,
-    date: (b.invoiceDate || b.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
+    date: (b.invoiceDate || b.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }),
     customerName: ascii(b.customerName),
     customerContact: ascii([b.customer?.phone, b.customer?.email].filter(Boolean).join(" - ")),
     tripName: ascii(b.trip.name),

@@ -19,7 +19,7 @@ import { orgMoney } from "@/lib/orgMoney";
 export const dynamic = "force-dynamic";
 
 function fmtDate(d: Date) {
-  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 const VIEWS = ["due", "record", "history", "approve"] as const;

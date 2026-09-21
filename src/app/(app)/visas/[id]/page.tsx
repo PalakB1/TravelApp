@@ -9,12 +9,12 @@ import PrintButton from "@/components/PrintButton";
 export const dynamic = "force-dynamic";
 
 function fmt(d: Date | null) {
-  return d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) : "—";
+  return d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }) : "—";
 }
 function dateInput(d: Date | null) {
   return d ? new Date(d).toISOString().slice(0, 16) : "";
 }
-const today = () => new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+const today = () => new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
 function Field({ label, value }: { label: string; value?: string | null }) {
   return (

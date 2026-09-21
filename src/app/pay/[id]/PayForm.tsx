@@ -2,10 +2,14 @@
 
 import { useActionState } from "react";
 import { submitPendingPayment, type PayResult } from "../actions";
+import { todayInput } from "@/lib/dates";
 
 export default function PayForm({ bookingId, customerName, suggested, symbol = "₹" }: { bookingId: string; customerName: string; suggested?: number; symbol?: string }) {
   const [state, action, pending] = useActionState<PayResult | undefined, FormData>(submitPendingPayment, undefined);
-  const today = new Date().toISOString().slice(0, 10);
+  // The browser's own date. toISOString() would give the UTC day, which is
+  // yesterday for anyone east of Greenwich in the early hours — so a payment
+  // taken at 2am would default to the wrong date.
+  const today = todayInput();
 
   if (state?.ok) {
     return (

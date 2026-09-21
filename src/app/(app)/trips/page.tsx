@@ -11,7 +11,7 @@ import { orgMoney } from "@/lib/orgMoney";
 export const dynamic = "force-dynamic";
 
 function fmtDate(d: Date | null) {
-  return d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
+  return d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "—";
 }
 
 export default async function TripsPage() {

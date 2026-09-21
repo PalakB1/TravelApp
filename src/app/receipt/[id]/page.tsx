@@ -11,7 +11,7 @@ import { buildMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
-const fmt = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+const fmt = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 export const receiptNo = (id: string) => `RCPT-${id.slice(-6).toUpperCase()}`;
 
 // One label/value line on the receipt. Module scope, same reason as above.

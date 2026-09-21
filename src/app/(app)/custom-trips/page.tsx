@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 const STATUS: Record<string, string> = { enquiry: "gray", confirmed: "sky", travelled: "green", cancelled: "rose" };
 function fmt(d: Date | null) {
-  return d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—";
+  return d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" }) : "—";
 }
 
 export default async function CustomTripsPage() {

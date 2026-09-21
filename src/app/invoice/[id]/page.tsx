@@ -11,7 +11,7 @@ import Logo from "@/components/Logo";
 import { buildMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
-const fmt = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+const fmt = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
 // One invoice table cell. Module scope so it isn't recreated on every render.
 function Cell({ children, num, head, bold }: { children: React.ReactNode; num?: boolean; head?: boolean; bold?: boolean }) {

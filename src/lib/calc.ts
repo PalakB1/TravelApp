@@ -370,5 +370,5 @@ export function tripEndLabel(trip: { departureDate: Date | null; nights: number;
   const span = trip.nights > 0 ? trip.nights : Math.max(0, trip.days - 1);
   const last = new Date(trip.departureDate);
   last.setDate(last.getDate() + span);
-  return last.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  return last.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }

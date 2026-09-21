@@ -10,6 +10,7 @@ import { financialYear } from "@/lib/invoice";
 import { bookingTotal, tripIsOver } from "@/lib/calc";
 import { orgMoney } from "@/lib/orgMoney";
 import { getSession } from "@/lib/auth";
+import { toDay, todayDay } from "@/lib/dates";
 
 // Every mutation runs through guard(), which returns the EFFECTIVE org id. All
 // reads/writes below are scoped to it so one org can never touch another's data.
@@ -208,7 +209,7 @@ export async function createTrip(formData: FormData) {
       days: Number(formData.get("days")) || 0,
       capacity: Number(formData.get("capacity")) || 0,
       maxPerRoom: Math.max(1, Number(formData.get("maxPerRoom")) || 2),
-      departureDate: dateStr ? new Date(dateStr) : null,
+      departureDate: toDay(dateStr),
       endDate: endStr ? new Date(endStr) : null,
       notes: String(formData.get("notes") || "") || null,
     },
@@ -448,7 +449,7 @@ export async function addVendorBooking(formData: FormData) {
       actualCost: actualStr ? parseAmount(actualStr) : null,
       status: String(formData.get("status") || "pending"),
       confirmationNo: String(formData.get("confirmationNo") || "") || null,
-      date: dateStr ? new Date(dateStr) : null,
+      date: toDay(dateStr),
     },
   });
   refresh();
@@ -615,9 +616,10 @@ export async function deleteBooking(formData: FormData) {
 }
 
 // ---- Itinerary nights (hotels per date) ----
+// A day from a date box. Delegates to lib/dates so the whole app agrees that
+// "2026-07-31" means the 31st, not "midnight on the 31st wherever this runs".
 function toDate(v: FormDataEntryValue | null): Date | null {
-  const s = String(v || "");
-  return s ? new Date(s) : null;
+  return toDay(String(v || ""));
 }
 
 // A date+time from a datetime-local input, held as wall-clock time.
@@ -930,7 +932,7 @@ export async function markTaxRemittedBulk(formData: FormData) {
     where: { id: { in: ids }, trip: { orgId } },
     data: {
       taxRemitted: true,
-      taxRemittedOn: dateStr ? new Date(dateStr) : new Date(),
+      taxRemittedOn: toDay(dateStr) ?? todayDay(),
       taxRemittedNote: String(formData.get("note") || "") || null,
     },
   });
@@ -1013,7 +1015,7 @@ export async function addPayment(formData: FormData) {
       amount,
       mode,
       note: String(formData.get("note") || "") || null,
-      date: dateStr ? new Date(dateStr) : new Date(),
+      date: toDay(dateStr) ?? todayDay(),
     },
   });
   await logActivity(orgId, "payment", "added", `${payment.booking.customerName} paid ${(await orgMoney()).fmt(amount)} (${mode})`, `/bookings/${payment.booking.id}`);
@@ -1043,7 +1045,7 @@ export async function addScheduleItem(formData: FormData) {
       bookingId,
       label: String(formData.get("label") || "").trim() || "Installment",
       amount,
-      dueDate: dateStr ? new Date(dateStr) : null,
+      dueDate: toDay(dateStr),
       order: (last?.order ?? -1) + 1,
     },
   });
@@ -1085,7 +1087,7 @@ export async function updateBookingPolicy(formData: FormData) {
   const policy = String(formData.get("refundPolicy") || "").trim() || null;
   await prisma.booking.updateMany({
     where: { id, trip: { orgId } },
-    data: { refundPolicy: policy, freeCancelUntil: dateStr ? new Date(dateStr) : null },
+    data: { refundPolicy: policy, freeCancelUntil: toDay(dateStr) },
   });
   // Optionally make these terms the org-wide default for future bookings.
   if (String(formData.get("saveDefault") || "") === "on" && policy) {

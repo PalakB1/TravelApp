@@ -6,12 +6,11 @@ import { prisma } from "@/lib/db";
 import { parseAmount, parseRate } from "@/lib/money";
 import { logActivity, findOrCreateCustomer } from "../data-actions";
 import { customOrgId } from "./lib";
+import { toDay } from "@/lib/dates";
 
+// Same rule as everywhere else: a day from a date box is that calendar day.
 function toDate(v: FormDataEntryValue | null): Date | null {
-  const s = String(v || "").trim();
-  if (!s) return null;
-  const d = new Date(s);
-  return isNaN(d.getTime()) ? null : d;
+  return toDay(String(v || ""));
 }
 function refresh() {
   revalidatePath("/custom-trips", "layout");

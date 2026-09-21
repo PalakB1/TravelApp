@@ -12,13 +12,16 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { DEMO_EMAIL, DEMO_PASSWORD, DEMO_ORG_NAME, DEMO_STAFF_EMAIL } from "../src/lib/demo";
+import { todayDay } from "../src/lib/dates";
 
 const prisma = new PrismaClient();
 
 // Dates are all relative to the run, so the demo never goes stale: trip one is
 // always "two months ago", trip two is always "next month".
-const TODAY = new Date();
-TODAY.setHours(0, 0, 0, 0);
+// Calendar days, pinned to UTC midnight — the same rule the app uses. Built
+// from LOCAL midnight this produced 18:30Z on an Indian machine, which then
+// displayed as the previous day on a UTC server.
+const TODAY = todayDay();
 const day = (offset: number) => new Date(TODAY.getTime() + offset * 86_400_000);
 
 // ---------------------------------------------------------------------------

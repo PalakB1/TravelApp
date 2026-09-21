@@ -11,10 +11,10 @@ import { orgMoney } from "@/lib/orgMoney";
 export const dynamic = "force-dynamic";
 
 function fmtDate(d: Date | null) {
-  return d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
+  return d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "—";
 }
 function fmtDay(d: Date) {
-  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
 }
 // The night booked → the morning the group checks out (one night later).
 function stayRange(d: Date | null) {

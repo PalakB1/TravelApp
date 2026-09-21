@@ -8,6 +8,7 @@ import { parseAmount } from "@/lib/money";
 import { apportion } from "@/lib/schedule";
 import { logActivity } from "../data-actions";
 import { orgMoney } from "@/lib/orgMoney";
+import { toDay, todayDay } from "@/lib/dates";
 
 const str = (v: FormDataEntryValue | null) => String(v || "").trim() || null;
 
@@ -100,7 +101,7 @@ export async function addExpense(formData: FormData) {
       tripId,
       hotelId,
       carId,
-      date: dateStr ? new Date(dateStr) : new Date(),
+      date: toDay(dateStr) ?? todayDay(),
       category: str(formData.get("category")) || "misc",
       payee: str(formData.get("payee")),
       amount,
@@ -186,7 +187,7 @@ export async function settleExpenses(formData: FormData) {
   const settlement = await prisma.settlement.create({
     data: {
       orgId: scope.orgId,
-      date: dateStr ? new Date(dateStr) : new Date(),
+      date: toDay(dateStr) ?? todayDay(),
       reference: str(formData.get("reference")),
       bankName: str(formData.get("bankName")),
       paidTo: str(formData.get("paidTo")),
@@ -301,7 +302,7 @@ export async function markItemPaid(formData: FormData) {
         // Kept for the older single-link readers; `items` is what's read now.
         hotelId: target.kind === "hotel" ? target.id : null,
         carId: target.kind === "car" ? target.id : null,
-        date: dateStr ? new Date(dateStr) : new Date(),
+        date: toDay(dateStr) ?? todayDay(),
         category: CATEGORY_FOR[target.kind],
         payee: str(formData.get("payee")) || target.payee,
         amount,

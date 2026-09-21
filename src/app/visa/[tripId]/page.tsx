@@ -6,7 +6,7 @@ import Logo from "@/components/Logo";
 export const dynamic = "force-dynamic";
 
 function fmt(d: Date | null) {
-  return d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
+  return d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "";
 }
 
 export default async function VisaFormPage({ params, searchParams }: { params: Promise<{ tripId: string }>; searchParams: Promise<{ type?: string; country?: string }> }) {

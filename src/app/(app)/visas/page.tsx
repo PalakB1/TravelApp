@@ -9,7 +9,7 @@ import TableSearch from "@/components/TableSearch";
 export const dynamic = "force-dynamic";
 
 function fmt(d: Date | null) {
-  return d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
+  return d ? d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "—";
 }
 function fmtDT(d: Date | null) {
   return d ? d.toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true }) : "—";

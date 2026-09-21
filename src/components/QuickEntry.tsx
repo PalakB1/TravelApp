@@ -7,6 +7,7 @@ import {
 } from "@/app/(app)/data-actions";
 import { addExpense } from "@/app/(app)/expenses/actions";
 import ExpenseTargets, { type TargetTrip } from "./ExpenseTargets";
+import { todayInput } from "@/lib/dates";
 
 type Props = {
   payable: ComboOption[];
@@ -38,7 +39,10 @@ const EXP_CATS: [string, string][] = [
 export default function QuickEntry({ payable, trips, customerNames, sources, targetTrips, banks, myName, symbol }: Props) {
   const [action, setAction] = useState<ActionKey>("payment");
   // Client runtime — fine to read the clock here (defaults the date to today).
-  const today = new Date().toISOString().slice(0, 10);
+  // The browser's own date. toISOString() would give the UTC day, which is
+  // yesterday for anyone east of Greenwich in the early hours — so a payment
+  // taken at 2am would default to the wrong date.
+  const today = todayInput();
 
   return (
     <div>

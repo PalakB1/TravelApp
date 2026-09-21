@@ -8,7 +8,7 @@ import { orgMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
 
-const fmt = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+const fmt = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
 // The full ledger, newest first — every rupee that left the business, whether
 // it was tagged to a trip or not.

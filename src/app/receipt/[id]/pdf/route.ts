@@ -36,7 +36,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       gstAddress: ascii(org?.gstAddress),
       gstin: org?.gstin ?? null,
       receiptNo,
-      date: p.date.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
+      date: p.date.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }),
       customerName: ascii(b.customerName),
       tripName: ascii(b.trip.name),
       mode: p.mode.toUpperCase(),
@@ -46,7 +46,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       total: inr(bookingTotal(b)),
       paidToDate: inr(receivedToDate),
       balance: inr(bookingTotal(b) - receivedToDate),
-      asOf: p.date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+      asOf: p.date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }),
   }) as unknown as Parameters<typeof renderToBuffer>[0];
 
   const buffer = await renderToBuffer(element);

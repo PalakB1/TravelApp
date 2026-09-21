@@ -33,7 +33,7 @@ const CATS: { value: string; label: string }[] = [
 const catLabel = (v: string) => CATS.find((c) => c.value === v)?.label ?? v;
 
 function fmtDate(d: Date) {
-  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ trip?: string }> }) {
@@ -64,7 +64,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
       ...t.itinerary.flatMap((n) =>
         n.hotels.map((h) => ({
           ref: `hotel:${h.id}`,
-          label: `${h.hotelName}${n.location ? ` · ${n.location}` : ""}${n.date ? ` · ${n.date.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : ""}`,
+          label: `${h.hotelName}${n.location ? ` · ${n.location}` : ""}${n.date ? ` · ${n.date.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" })}` : ""}`,
           group: "Hotels",
         })),
       ),

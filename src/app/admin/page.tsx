@@ -16,7 +16,7 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 function fmt(d: Date) {
-  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 export default async function AdminPage() {

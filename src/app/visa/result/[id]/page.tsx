@@ -6,7 +6,7 @@ import Logo from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
-const today = () => new Date("2026-06-30").toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+const today = () => new Date("2026-06-30").toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
 export default async function VisaResultPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

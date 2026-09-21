@@ -8,7 +8,7 @@ const cell = (v: unknown) => {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 const row = (cols: unknown[]) => cols.map(cell).join(",");
-const d = (x: Date | null | undefined) => (x ? new Date(x).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "");
+const d = (x: Date | null | undefined) => (x ? new Date(x).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }) : "");
 
 // Download every recorded payment as a spreadsheet.
 export async function GET() {

@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 function ago(d: Date | null) {
   if (!d) return "";
-  return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 function Row({ kind, id, title, sub, when }: { kind: string; id: string; title: string; sub?: string; when: Date | null }) {
