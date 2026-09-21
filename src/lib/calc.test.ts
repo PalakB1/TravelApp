@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { bookingCoversNight, paxOnNight, roomsNeededOnNight, bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTotal, bookingRevenue, bookingTax, bookingBalance, reconcileTrip, isBookedStatus, isNightGap, nightBookedRooms } from "./calc";
+import { bookingCoversNight, paxOnNight, roomsNeededOnNight, bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTotal, bookingRevenue, bookingTax, bookingBalance, reconcileTrip, isBookedStatus, isNightGap, nightBookedRooms, isChasing } from "./calc";
 
 const base = { pax: 1, discount: 0, status: "confirmed" as const };
 
@@ -155,5 +155,21 @@ describe("paid hotels count as booked", () => {
   it("counts rooms on a paid night", () => {
     expect(nightBookedRooms(night("paid") as never)).toBe(3);
     expect(nightBookedRooms(night("unbooked") as never)).toBe(0);
+  });
+});
+
+describe("closing a booking's payments", () => {
+  it("stops the booking being chased without hiding the balance", () => {
+    const open = { status: "confirmed", paymentsClosedAt: null };
+    const closed = { status: "confirmed", paymentsClosedAt: new Date("2026-09-21") };
+    expect(isChasing(open)).toBe(true);
+    expect(isChasing(closed)).toBe(false);
+    // The money owed is untouched — it is still a real debt on the record.
+    const b = { ...base, landAmount: 100000, gstRate: 0, tcsRate: 0, payments: [{ amount: 99500 }] };
+    expect(bookingBalance(b)).toBe(500);
+  });
+
+  it("a cancelled booking isn't chased either", () => {
+    expect(isChasing({ status: "cancelled", paymentsClosedAt: null })).toBe(false);
   });
 });

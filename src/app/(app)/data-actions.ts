@@ -9,6 +9,7 @@ import { parseAmount, parseRate } from "@/lib/money";
 import { financialYear } from "@/lib/invoice";
 import { bookingTotal, tripIsOver } from "@/lib/calc";
 import { orgMoney } from "@/lib/orgMoney";
+import { getSession } from "@/lib/auth";
 
 // Every mutation runs through guard(), which returns the EFFECTIVE org id. All
 // reads/writes below are scoped to it so one org can never touch another's data.
@@ -1368,4 +1369,55 @@ async function setRooming(orgId: string, travellerId: string, choice: string) {
     prisma.traveller.update({ where: { id: me.id }, data: { roomWithId: partner.id, singleOccupancy: false } }),
     prisma.traveller.update({ where: { id: partner.id }, data: { roomWithId: me.id, singleOccupancy: false } }),
   ]);
+}
+
+// --- Closing a booking's payments -------------------------------------------
+// A customer pays 2,54,500 of 2,55,000 and the last 500 is never coming. Until
+// now the only options were to chase it forever or to invent a fake payment,
+// which quietly corrupts what was actually received. Closing payments is the
+// honest third option: the shortfall stays visible on the booking, and the
+// booking drops out of the chase lists, the overdue count and the reminders.
+export async function closeBookingPayments(formData: FormData) {
+  const orgId = await guard();
+  const id = String(formData.get("id"));
+  if (!(await ownBooking(orgId, id))) return;
+
+  const b = await prisma.booking.findUnique({
+    where: { id },
+    include: { payments: true, variant: true },
+  });
+  if (!b) return;
+
+  const shortfall = bookingTotal(b) - b.payments.reduce((s, p) => s + p.amount, 0);
+  const who = (await getSession())?.name ?? null;
+
+  await prisma.booking.update({
+    where: { id },
+    data: {
+      paymentsClosedAt: new Date(),
+      paymentsClosedBy: who,
+      paymentsClosedNote: String(formData.get("note") || "").trim() || null,
+    },
+  });
+  await logActivity(
+    orgId, "payment", "status",
+    `Closed payments for ${b.customerName}${shortfall > 0 ? ` — accepted a shortfall of ${(await orgMoney()).fmt(shortfall)}` : " (paid in full)"}`,
+    `/bookings/${id}`,
+  );
+  refresh();
+}
+
+export async function reopenBookingPayments(formData: FormData) {
+  const orgId = await guard();
+  const id = String(formData.get("id"));
+  if (!(await ownBooking(orgId, id))) return;
+  const b = await prisma.booking.findUnique({ where: { id }, select: { customerName: true } });
+  if (!b) return;
+
+  await prisma.booking.update({
+    where: { id },
+    data: { paymentsClosedAt: null, paymentsClosedBy: null, paymentsClosedNote: null },
+  });
+  await logActivity(orgId, "payment", "status", `Reopened payments for ${b.customerName} — it's being chased again`, `/bookings/${id}`);
+  refresh();
 }

@@ -763,7 +763,7 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
             visaStatus: b.visaStatus, visaHandledBy: b.visaHandledBy,
             total: bookingTotal(b), paid: bookingPaid(b), balance: bookingBalance(b),
             discount: b.discount, discountReason: b.discountReason,
-            invoiceNo: b.invoiceNo, tripOver: tripIsOver(trip), tripEnds: tripEndLabel(trip),
+            invoiceNo: b.invoiceNo, tripOver: tripIsOver(trip), tripEnds: tripEndLabel(trip), paymentsClosed: !!b.paymentsClosedAt,
           }))} />
         )}
         <details className="add">

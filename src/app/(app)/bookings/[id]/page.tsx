@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
 import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookingTotal, bookingPaid, bookingBalance, bookingInclTaxCharge, bookingInclNonTaxCharge } from "@/lib/calc";
 
-import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, removeBookingInclusion, generateInvoice, renameBooking, updateBookingVisa, addScheduleItem, deleteScheduleItem, updateBookingPolicy, applyPlanToBooking, tidyOverdueDates, updateBookingStay } from "../../data-actions";
+import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, removeBookingInclusion, generateInvoice, renameBooking, updateBookingVisa, addScheduleItem, deleteScheduleItem, updateBookingPolicy, applyPlanToBooking, tidyOverdueDates, updateBookingStay, closeBookingPayments, reopenBookingPayments } from "../../data-actions";
 import { scheduleStatus, scheduleTotal } from "@/lib/schedule";
 import { bookingCoversNight } from "@/lib/calc";
 import { STANDARD_REFUND_POLICY } from "@/lib/policy";
@@ -16,6 +16,7 @@ import CopyLink from "@/components/CopyLink";
 import InlineStay from "@/components/InlineStay";
 import SubmitButton from "@/components/SubmitButton";
 import DeleteBooking from "@/components/DeleteBooking";
+import ClosePayments from "@/components/ClosePayments";
 import { orgMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
@@ -146,6 +147,12 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           </p>
           {/* Surfaced right under the name: whoever is arranging the airport
               pickup shouldn't have to open an edit form to find the time. */}
+          {b.paymentsClosedAt && (
+            <p className="sub" style={{ marginTop: 2 }}>
+              <span className="badge emerald">payments closed</span>{" "}
+              <span className="muted">{$.fmt(balance)} accepted as unpaid</span>
+            </p>
+          )}
           {(b.arriveAt || b.departAt) && (
             <p className="sub" style={{ marginTop: 2 }}>
               {b.arriveAt && <>✈ Lands <b>{fmtFlight(b.arriveAt)}</b></>}
@@ -493,6 +500,24 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
             <div className="card-title">Payments</div>
             <div className="bar" style={{ marginBottom: 6 }}><span className={balance > 0 ? "amber" : ""} style={{ width: `${pct}%` }} /></div>
             <div className="small muted" style={{ marginBottom: 12 }}>{pct}% collected · {$.fmt(balance)} remaining</div>
+
+            {/* Accepting a small shortfall, rather than chasing it forever or
+                faking a payment to make the row go green. */}
+            {(balance > 0 || b.paymentsClosedAt) && (
+              <div style={{ marginBottom: 12 }}>
+                <ClosePayments
+                  closeAction={closeBookingPayments}
+                  reopenAction={reopenBookingPayments}
+                  id={b.id}
+                  customerName={b.customerName}
+                  shortfallLabel={$.fmt(balance)}
+                  isClosed={!!b.paymentsClosedAt}
+                  closedBy={b.paymentsClosedBy}
+                  closedOn={b.paymentsClosedAt ? fmtDate(b.paymentsClosedAt) : null}
+                  closedNote={b.paymentsClosedNote}
+                />
+              </div>
+            )}
             <div className="form-box" style={{ marginBottom: 12 }}>
               <div className="small" style={{ fontWeight: 600, marginBottom: 6 }}>🔗 Payment link for the customer</div>
               <CopyLink path={`/pay/${b.id}`} label="Copy link" waPhone={b.customerPhone} waText={`Hi ${b.customerName}, please confirm your payment for ${b.trip.name} here:`} defaultCc={$.dial} />

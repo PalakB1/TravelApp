@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
-import { bookingPaid, bookingBalance, bookingTotal, isActive } from "@/lib/calc";
+import { bookingPaid, bookingBalance, bookingTotal, isActive, isChasing } from "@/lib/calc";
 
 import TableSearch from "@/components/TableSearch";
 import Combobox from "@/components/Combobox";
@@ -58,7 +58,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
   });
 
   const owing = bookings
-    .filter((b) => isActive(b.status) && bookingBalance(b) > 0)
+    .filter((b) => isChasing(b) && bookingBalance(b) > 0)
     .sort((a, c) => bookingBalance(c) - bookingBalance(a));
 
   const totalDue = owing.reduce((s, b) => s + bookingBalance(b), 0);
@@ -74,7 +74,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
   const dayStart = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
   const today0 = dayStart(now);
   const dueRows = bookings
-    .filter((b) => isActive(b.status) && !b.deletedAt && b.schedule.length > 0)
+    .filter((b) => isChasing(b) && !b.deletedAt && b.schedule.length > 0)
     .map((b) => {
       const lines = scheduleStatus(b.schedule.map((s) => ({ id: s.id, label: s.label, amount: s.amount, dueDate: s.dueDate, order: s.order })), bookingPaid(b), { invoiceTotal: bookingTotal(b), now });
       const uncovered = lines.filter((l) => !l.covered);
@@ -98,7 +98,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
   // payment plan still appear, they just have nothing "due now".
   const dueById = new Map(dueRows.map((r) => [r.b.id, r]));
   const moneyRows = bookings
-    .filter((b) => isActive(b.status) && !b.deletedAt)
+    // Closed bookings drop out of "who owes you" — the balance is accepted,
+    // so listing them here would be asking you to chase something you settled.
+    .filter((b) => isChasing(b) && !b.deletedAt)
     .map((b) => {
       const d = dueById.get(b.id);
       return {

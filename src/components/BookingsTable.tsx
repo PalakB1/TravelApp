@@ -21,6 +21,8 @@ export type BookingRow = {
   discount?: number;
   discountReason?: string | null;
   invoiceNo?: string | null;
+  /** Shortfall accepted — still owed, no longer chased. */
+  paymentsClosed?: boolean;
   tripOver?: boolean;
   /** Formatted trip end date — shown when invoicing ahead of it. */
   tripEnds?: string | null;
@@ -90,6 +92,14 @@ export default function BookingsTable({ rows, showTrip = false, initialVisa = ""
   const activeCap = isMobile ? CAP_MOBILE : CAP_DESKTOP;
   const capped = expanded ? view : view.slice(0, activeCap);
 
+  // An amber balance means "chase this". A closed booking still owes the money
+  // but nobody is chasing it, so it mustn't wear the same badge.
+  const balanceBadge = (b: BookingRow) =>
+    b.balance <= 0 ? <span className="badge green">paid</span>
+      : b.paymentsClosed
+        ? <span className="badge emerald" title={`${fmt(b.balance)} accepted as unpaid`}>closed</span>
+        : <span className="badge amber">{fmt(b.balance)}</span>;
+
   // Invoice action — shared by the desktop table and the mobile cards.
   const invoiceAction = (b: BookingRow) =>
     b.invoiceNo ? (
@@ -137,7 +147,7 @@ export default function BookingsTable({ rows, showTrip = false, initialVisa = ""
               <div className="between" style={{ marginTop: 10, alignItems: "center" }}>
                 <div>
                   <div className="small muted" style={{ marginBottom: 3 }}>Balance</div>
-                  {b.balance > 0 ? <span className="badge amber">{fmt(b.balance)}</span> : <span className="badge green">paid</span>}
+                  {balanceBadge(b)}
                 </div>
                 <div className="small muted" style={{ textAlign: "right" }}>
                   {b.pax} pax · {fmt(b.paid)} / {fmt(b.total)}
@@ -176,7 +186,7 @@ export default function BookingsTable({ rows, showTrip = false, initialVisa = ""
                 <td>{b.visaStatus === "not_required" ? <span className="small muted">—</span> : <span className={`badge ${visaMeta(b.visaStatus).badge}`}>{visaMeta(b.visaStatus).short}</span>}</td>
                 <td className="num">{fmt(b.total)}</td>
                 <td className="num">{fmt(b.paid)}</td>
-                <td className="num">{b.balance > 0 ? <span className="badge amber">{fmt(b.balance)}</span> : <span className="badge green">paid</span>}</td>
+                <td className="num">{balanceBadge(b)}</td>
                 <td className="num">{invoiceAction(b)}</td>
               </tr>
             ))}

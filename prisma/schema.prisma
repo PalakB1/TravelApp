@@ -592,6 +592,15 @@ model Booking {
   refundPolicy    String?
   freeCancelUntil DateTime?
 
+  // "We're not chasing the rest." A customer pays all but 500 and that 500 is
+  // never coming — closing payments accepts the shortfall. The balance is still
+  // shown, because the invoice really was that much and pretending otherwise
+  // would make the books lie; the booking just stops appearing in the chase
+  // lists, the overdue count and the reminders.
+  paymentsClosedAt   DateTime?
+  paymentsClosedBy   String? // who accepted it
+  paymentsClosedNote String? // why, if it's worth saying
+
   createdAt      DateTime  @default(now())
   updatedAt DateTime @updatedAt
   payments       Payment[]

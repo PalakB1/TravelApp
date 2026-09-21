@@ -26,7 +26,7 @@ export default async function BookingsPage({ searchParams }: { searchParams: Pro
     visaStatus: b.visaStatus, visaHandledBy: b.visaHandledBy,
     total: bookingTotal(b), paid: bookingPaid(b), balance: bookingBalance(b),
     discount: b.discount, discountReason: b.discountReason,
-    invoiceNo: b.invoiceNo, tripOver: tripIsOver(b.trip, now), tripEnds: tripEndLabel(b.trip),
+    invoiceNo: b.invoiceNo, tripOver: tripIsOver(b.trip, now), tripEnds: tripEndLabel(b.trip), paymentsClosed: !!b.paymentsClosedAt,
   }));
 
   return (

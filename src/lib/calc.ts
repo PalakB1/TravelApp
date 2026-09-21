@@ -41,6 +41,15 @@ export const vendorCost = (v: VendorLite) => (v.actualCost != null ? v.actualCos
 
 export const isActive = (status: string) => status !== "cancelled";
 
+// Is this booking still being chased for money?
+//
+// Closing payments accepts a shortfall: the balance stays on the books, but the
+// booking leaves the chase lists, the overdue count and the reminders. Every
+// screen that asks "who owes us" has to agree on this, so it lives here rather
+// than as a filter each page writes for itself.
+export const isChasing = (b: { paymentsClosedAt?: Date | null; status: string }) =>
+  isActive(b.status) && !b.paymentsClosedAt;
+
 // Package value before discount: itemised (land+visa+flight), else per-person variant.
 export function bookingBase(b: BookingLite): number {
   const items = (b.landAmount || 0) + (b.visaAmount || 0) + (b.flightAmount || 0);
