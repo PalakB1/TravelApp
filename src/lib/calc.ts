@@ -50,6 +50,25 @@ export const isActive = (status: string) => status !== "cancelled";
 export const isChasing = (b: { paymentsClosedAt?: Date | null; status: string }) =>
   isActive(b.status) && !b.paymentsClosedAt;
 
+// What a booking's status actually IS today.
+//
+// Once a trip's last day has passed, a booking that was "confirmed" has plainly
+// travelled — nobody wants to go through fifty bookings ticking that over by
+// hand, and a stale "confirmed" makes a finished trip look like it's still
+// coming. Derived rather than written to the database, so it can't go stale and
+// it corrects itself if a departure date is edited.
+//
+// Enquiries and cancellations are left alone: an enquiry that never converted
+// didn't travel, and a cancellation certainly didn't.
+export function effectiveStatus(
+  b: { status: string },
+  trip: { departureDate: Date | null; nights: number; days: number } | null | undefined,
+  now: Date = new Date(),
+): string {
+  if (b.status === "confirmed" && trip && tripIsOver(trip, now)) return "travelled";
+  return b.status;
+}
+
 // Package value before discount: itemised (land+visa+flight), else per-person variant.
 export function bookingBase(b: BookingLite): number {
   const items = (b.landAmount || 0) + (b.visaAmount || 0) + (b.flightAmount || 0);

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
-import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookingTotal, bookingPaid, bookingBalance, bookingInclTaxCharge, bookingInclNonTaxCharge } from "@/lib/calc";
+import { bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTax, bookingTotal, bookingPaid, bookingBalance, bookingInclTaxCharge, bookingInclNonTaxCharge, tripIsOver } from "@/lib/calc";
 
 import { addPayment, deletePayment, setBookingStatus, deleteBooking, updateBookingInvoice, addTraveller, updateTraveller, deleteTraveller, setTaxRemitted, toggleBookingInclusion, removeBookingInclusion, generateInvoice, renameBooking, updateBookingVisa, addScheduleItem, deleteScheduleItem, updateBookingPolicy, applyPlanToBooking, tidyOverdueDates, updateBookingStay, closeBookingPayments, reopenBookingPayments } from "../../data-actions";
 import { scheduleStatus, scheduleTotal } from "@/lib/schedule";
@@ -210,6 +210,13 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
             </select>
             <button className="sm" type="submit">Save</button>
           </form>
+          {/* The dropdown holds what's stored; lists show what's true today.
+              Without this note the two look like they disagree. */}
+          {b.status === "confirmed" && tripIsOver(b.trip) && (
+            <div className="small muted" style={{ marginTop: 5 }}>
+              This trip has finished, so it already shows as <b>travelled</b> in lists.
+            </div>
+          )}
         </div></div>
       </div>
 

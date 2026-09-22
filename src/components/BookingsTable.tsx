@@ -29,6 +29,12 @@ export type BookingRow = {
 };
 
 const STATUSES = ["confirmed", "enquiry", "travelled", "cancelled"];
+
+// Once a trip's last day has passed, a confirmed booking has travelled. Derived
+// here so the badge, the filter and the counts all agree without anyone having
+// to tick fifty bookings over by hand.
+const shownStatus = (b: { status: string; tripOver?: boolean }) =>
+  b.status === "confirmed" && b.tripOver ? "travelled" : b.status;
 const statusBadge = (s: string) => {
   const map: Record<string, string> = { confirmed: "green", travelled: "accent", enquiry: "amber", cancelled: "red" };
   return <span className={`badge ${map[s] || "gray"}`}>{s}</span>;
@@ -72,7 +78,9 @@ export default function BookingsTable({ rows, showTrip = false, initialVisa = ""
   const view = useMemo(() => {
     let r = rows;
     if (q) { const ql = q.toLowerCase(); r = r.filter((x) => `${x.name} ${x.trip || ""}`.toLowerCase().includes(ql)); }
-    if (status) r = r.filter((x) => x.status === status);
+    // Filter on what the row SHOWS, or picking "travelled" would miss every
+    // finished trip whose bookings still say confirmed underneath.
+    if (status) r = r.filter((x) => shownStatus(x) === status);
     if (visa) r = r.filter((x) => x.visaStatus === visa);
     if (sort) {
       r = [...r];
@@ -142,7 +150,7 @@ export default function BookingsTable({ rows, showTrip = false, initialVisa = ""
                   {showTrip && b.trip && <div className="small muted">{b.trip}</div>}
                   {b.discount ? <div className="small muted">−{fmt(b.discount)} {b.discountReason || "discount"}</div> : null}
                 </div>
-                {statusBadge(b.status)}
+                {statusBadge(shownStatus(b))}
               </div>
               <div className="between" style={{ marginTop: 10, alignItems: "center" }}>
                 <div>
@@ -182,7 +190,7 @@ export default function BookingsTable({ rows, showTrip = false, initialVisa = ""
                 </td>
                 {showTrip && <td className="muted">{b.trip}</td>}
                 <td className="muted">{b.pax}</td>
-                <td>{statusBadge(b.status)}</td>
+                <td>{statusBadge(shownStatus(b))}</td>
                 <td>{b.visaStatus === "not_required" ? <span className="small muted">—</span> : <span className={`badge ${visaMeta(b.visaStatus).badge}`}>{visaMeta(b.visaStatus).short}</span>}</td>
                 <td className="num">{fmt(b.total)}</td>
                 <td className="num">{fmt(b.paid)}</td>

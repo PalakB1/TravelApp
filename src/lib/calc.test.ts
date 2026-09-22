@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { bookingCoversNight, paxOnNight, roomsNeededOnNight, bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTotal, bookingRevenue, bookingTax, bookingBalance, reconcileTrip, isBookedStatus, isNightGap, nightBookedRooms, isChasing } from "./calc";
+import { bookingCoversNight, paxOnNight, roomsNeededOnNight, bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTotal, bookingRevenue, bookingTax, bookingBalance, reconcileTrip, isBookedStatus, isNightGap, nightBookedRooms, isChasing, effectiveStatus } from "./calc";
 
 const base = { pax: 1, discount: 0, status: "confirmed" as const };
 
@@ -171,5 +171,32 @@ describe("closing a booking's payments", () => {
 
   it("a cancelled booking isn't chased either", () => {
     expect(isChasing({ status: "cancelled", paymentsClosedAt: null })).toBe(false);
+  });
+});
+
+describe("a finished trip's bookings read as travelled", () => {
+  const past = { departureDate: new Date("2026-06-01"), nights: 5, days: 6 };   // ended 6 Jun
+  const future = { departureDate: new Date("2026-12-01"), nights: 5, days: 6 };
+  const now = new Date("2026-09-22");
+
+  it("turns a confirmed booking on a finished trip into travelled", () => {
+    expect(effectiveStatus({ status: "confirmed" }, past, now)).toBe("travelled");
+  });
+
+  it("leaves a confirmed booking on an upcoming trip alone", () => {
+    expect(effectiveStatus({ status: "confirmed" }, future, now)).toBe("confirmed");
+  });
+
+  it("never resurrects an enquiry or a cancellation", () => {
+    expect(effectiveStatus({ status: "enquiry" }, past, now)).toBe("enquiry");
+    expect(effectiveStatus({ status: "cancelled" }, past, now)).toBe("cancelled");
+  });
+
+  it("leaves an already-travelled booking as it is", () => {
+    expect(effectiveStatus({ status: "travelled" }, past, now)).toBe("travelled");
+  });
+
+  it("copes with a trip that has no departure date", () => {
+    expect(effectiveStatus({ status: "confirmed" }, { departureDate: null, nights: 0, days: 0 }, now)).toBe("confirmed");
   });
 });
