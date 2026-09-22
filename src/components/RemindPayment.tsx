@@ -36,15 +36,21 @@ export default function RemindPayment({
     // they've already made and uploads the proof. Say so, or they'll open it
     // expecting a checkout.
     const confirmLine = `Once you've made the payment, please confirm it here (you can upload the receipt): ${url}`;
+    // The date must read unmistakably as a PAYMENT date. An earlier version said
+    // "...for your Iceland trip is due, starting 26 Aug", and customers read that
+    // as the trip starting on the 26th. So the payment is the subject of its own
+    // sentence, the date never sits next to the trip name, and the word
+    // "booking" is used for the thing being paid for — a trip has travel dates,
+    // a booking has a bill.
     const msg = !dueLabel
       // No scheduled date — just an outstanding balance.
-      ? `Hi ${customerName}, a gentle reminder — there's a balance of ${amount} on your ${tripName} trip. ${confirmLine}`
+      ? `Hi ${customerName}, a gentle reminder about your booking for ${tripName}. There's a balance of ${amount} still to pay. ${confirmLine}`
       : overdue
-        // "starting {date}" rather than "all of this is now due": the total can
-        // mix instalments that are already late with ones falling due shortly,
-        // and claiming the lot is overdue would be untrue.
-        ? `Hi ${customerName}, a gentle reminder — a total of ${amount}${many} for your ${tripName} trip is due, starting ${dueLabel}. ${confirmLine}`
-        : `Hi ${customerName}, a friendly reminder — ${amount} for your ${tripName} trip is due on ${dueLabel}. ${confirmLine}`;
+        // The total can mix instalments already late with ones falling due
+        // shortly, so it says which one the date belongs to rather than
+        // claiming the whole amount is overdue.
+        ? `Hi ${customerName}, a gentle reminder about your booking for ${tripName}. A payment of ${amount}${many} is still pending — the earliest installment was due on ${dueLabel}. ${confirmLine}`
+        : `Hi ${customerName}, a gentle reminder about your booking for ${tripName}. Your next payment of ${amount} is due on ${dueLabel}. ${confirmLine}`;
     const wa = waNumber();
     const link = wa
       ? `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`
