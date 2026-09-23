@@ -6,6 +6,7 @@ import { logout, exitOrgAction } from "@/app/(app)/actions";
 import QuickAddButton from "./QuickAddButton";
 import ThemeToggle from "./ThemeToggle";
 import Logo from "@/components/Logo";
+import SearchButton from "./SearchButton";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: "grid" },
@@ -65,6 +66,7 @@ export default function Sidebar({ name, orgName, isPlatformAdmin = false, acting
         <QuickAddButton className="btn primary" style={{ width: "100%", justifyContent: "center", marginBottom: 14 }} ariaLabel="Quick add">
           <span style={{ fontSize: 17, lineHeight: 1 }}>＋</span> Quick add
         </QuickAddButton>
+        <SearchButton />
         <nav className="nav">
           {navLinks.map((l) => (
             <Link key={l.href} href={l.href} className={isActive(l.href) ? "active" : ""}>
@@ -113,6 +115,7 @@ export default function Sidebar({ name, orgName, isPlatformAdmin = false, acting
               <button className="sm" type="submit" style={{ background: "var(--accent-bg)", borderColor: "transparent" }} title="Return to the platform admin console">👁️ Exit</button>
             </form>
           )}
+          <SearchButton compact />
           <ThemeToggle compact />
         </div>
       </header>

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { bookingTaxable, bookingGst, bookingTcs, bookingTotal, bookingPaid, bookingBalance, bookingInclNonTaxCharge } from "@/lib/calc";
+import { bookingTaxable, bookingGst, bookingTcs, bookingTotal, bookingPaid, bookingBalance, bookingInclNonTaxCharge, DEFAULT_GST_RATE, DEFAULT_TCS_RATE } from "@/lib/calc";
 
 import { amountInWords } from "@/lib/invoice";
 import { STANDARD_REFUND_POLICY } from "@/lib/policy";
@@ -53,7 +53,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   const paid = bookingPaid(b);
   const balance = bookingBalance(b);
   const gstHalf = Math.round(gst / 2);
-  const rate = b.gstRate ?? 5;
+  const rate = b.gstRate ?? DEFAULT_GST_RATE;
   // This booking's own wording wins; else the org default; else the standard terms.
   const policy = b.refundPolicy ?? org?.defaultRefundPolicy ?? STANDARD_REFUND_POLICY;
 
@@ -123,7 +123,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                 ) : (
                   <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>{$.taxLabel} @ {rate}%</td><td style={{ textAlign: "right" }}>{$.fmt(gst)}</td></tr>
                 )}
-                {$.taxLabel2 ? <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>{$.taxLabel2} @ {b.tcsRate ?? 2}%</td><td style={{ textAlign: "right" }}>{$.fmt(tcs)}</td></tr> : null}
+                {$.taxLabel2 ? <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>{$.taxLabel2} @ {b.tcsRate ?? DEFAULT_TCS_RATE}%</td><td style={{ textAlign: "right" }}>{$.fmt(tcs)}</td></tr> : null}
                 {nonTax > 0 && <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>Non-taxable</td><td style={{ textAlign: "right" }}>{$.fmt(nonTax)}</td></tr>}
                 <tr className="doc-total" style={{ borderTop: "2px solid var(--border-strong)", fontWeight: 700, color: "var(--accent)" }}><td>Total</td><td style={{ textAlign: "right" }}>{$.fmt(total)}</td></tr>
                 <tr><td style={{ padding: "3px 0", color: "var(--text-2)" }}>Received</td><td style={{ textAlign: "right", color: "var(--success)" }}>−{$.fmt(paid)}</td></tr>

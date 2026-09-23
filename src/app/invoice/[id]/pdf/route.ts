@@ -1,7 +1,7 @@
 import React from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { prisma } from "@/lib/db";
-import { bookingTaxable, bookingGst, bookingTcs, bookingTotal, bookingPaid, bookingBalance, bookingInclNonTaxCharge } from "@/lib/calc";
+import { bookingTaxable, bookingGst, bookingTcs, bookingTotal, bookingPaid, bookingBalance, bookingInclNonTaxCharge, DEFAULT_GST_RATE, DEFAULT_TCS_RATE } from "@/lib/calc";
 
 import { amountInWords } from "@/lib/invoice";
 import { STANDARD_REFUND_POLICY } from "@/lib/policy";
@@ -28,7 +28,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const gstHalf = Math.round(gst / 2);
   const nonTax = (b.nonTaxable || 0) + bookingInclNonTaxCharge(b);
   const total = bookingTotal(b);
-  const rate = b.gstRate ?? 5;
+  const rate = b.gstRate ?? DEFAULT_GST_RATE;
 
   const element = React.createElement(InvoiceDoc, {
     agency: ascii(org?.legalName || org?.name || "TripZei"),
@@ -56,7 +56,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     paid: inr(bookingPaid(b)),
     balance: inr(bookingBalance(b)),
     gstHalfRate: rate / 2,
-    tcsRate: b.tcsRate ?? 2,
+    tcsRate: b.tcsRate ?? DEFAULT_TCS_RATE,
     amountWords: amountInWords(total).replace(/ Rupees Only$/, ""),
     policy: ascii((b.refundPolicy ?? org?.defaultRefundPolicy ?? STANDARD_REFUND_POLICY)
       .replace(/[•]/g, "-").replace(/[–—]/g, "-")),

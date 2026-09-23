@@ -1,5 +1,38 @@
 import { describe, it, expect } from "vitest";
 import { ctTaxable, ctGst, ctTcs, ctTotal, ctRevenue, ctCost, ctProfit, ctOutstanding, ctTax } from "./calc";
+import { bookingTaxable, bookingGst, bookingTcs, bookingTax } from "../../../lib/calc";
+
+// The GST/TCS chain is defined once in lib/calc and shared with package bookings.
+// These lock the two together: reintroduce a local copy here, or change one side's
+// rule, and they stop agreeing.
+describe("tax rule is shared with package bookings, not copied", () => {
+  const rates5x2 = { gstRate: 5, tcsRate: 2 };
+  const rates18x5 = { gstRate: 18, tcsRate: 5 }; // awkward rounding on both steps
+  const custom = (sell: number, rates: { gstRate: number; tcsRate: number }) => ({
+    items: [{ qty: 1, cost: 0, sell, taxable: true }],
+    ...rates,
+  });
+  const booking = (sell: number, rates: { gstRate: number; tcsRate: number }) => ({
+    pax: 1,
+    discount: 0,
+    status: "confirmed",
+    landAmount: sell,
+    ...rates,
+  });
+
+  it("gives a custom trip the same tax as a booking of the same value", () => {
+    expect(ctTaxable(custom(90000, rates5x2))).toBe(bookingTaxable(booking(90000, rates5x2)));
+    expect(ctGst(custom(90000, rates5x2))).toBe(bookingGst(booking(90000, rates5x2)));
+    expect(ctTcs(custom(90000, rates5x2))).toBe(bookingTcs(booking(90000, rates5x2)));
+    expect(ctTax(custom(90000, rates5x2))).toBe(bookingTax(booking(90000, rates5x2)));
+  });
+
+  it("still agrees on rates and amounts that round awkwardly", () => {
+    expect(ctGst(custom(33333, rates18x5))).toBe(bookingGst(booking(33333, rates18x5)));
+    expect(ctTcs(custom(33333, rates18x5))).toBe(bookingTcs(booking(33333, rates18x5)));
+    expect(ctTax(custom(33333, rates18x5))).toBe(bookingTax(booking(33333, rates18x5)));
+  });
+});
 
 describe("custom-trip money math (mirrors trip GST/TCS)", () => {
   it("single taxable item: revenue, cost, profit, GST, TCS", () => {

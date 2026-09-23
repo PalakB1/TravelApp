@@ -94,24 +94,55 @@ function bookingNonTaxTotal(b: BookingLite): number {
 export function bookingTaxable(b: BookingLite): number {
   return Math.max(0, bookingBase(b) - (b.discount || 0)) + bookingInclTaxCharge(b) + (b.travellerExtra || 0);
 }
-export function bookingGst(b: BookingLite): number {
-  return Math.round((bookingTaxable(b) * (b.gstRate ?? 5)) / 100);
+// --- The tax rule ------------------------------------------------------------
+// GST is charged on the taxable value; TCS on the taxable value PLUS that GST
+// (matches Indian tour-package billing).
+//
+// It lives here alone because more than one thing is billable: package bookings
+// and custom trips. Those were built weeks apart and each grew its own copy of
+// this chain — both correct, both under test, both green, and guaranteed to
+// disagree the first time the rule changed. One rule, one place, so it can't.
+//
+// The fallback rates are India's. They only apply when a caller passes an object
+// carrying no rate at all: every rate column in the database is NOT NULL with
+// these as its default, so a real booking or custom trip always brings its own.
+export const DEFAULT_GST_RATE = 5;
+export const DEFAULT_TCS_RATE = 2;
+
+export type TaxRates = { gstRate?: number; tcsRate?: number };
+
+export function taxOn(taxable: number, rates: TaxRates): { gst: number; tcs: number; tax: number } {
+  const gst = Math.round((taxable * (rates.gstRate ?? DEFAULT_GST_RATE)) / 100);
+  const tcs = Math.round(((taxable + gst) * (rates.tcsRate ?? DEFAULT_TCS_RATE)) / 100);
+  return { gst, tcs, tax: gst + tcs };
 }
-// TCS is charged on the taxable value PLUS GST (matches Indian tour-package billing).
+
+// A sale split into the part that attracts tax and the part that doesn't (an
+// embassy fee, say), turned into what the client pays and what counts as ours.
+// Revenue excludes GST/TCS — that money passes through to the government.
+export function billOn(taxable: number, nonTaxable: number, rates: TaxRates) {
+  const { gst, tcs, tax } = taxOn(taxable, rates);
+  return { gst, tcs, tax, total: taxable + gst + tcs + nonTaxable, revenue: taxable + nonTaxable };
+}
+
+// --- The rule applied to a package booking -----------------------------------
+export function bookingGst(b: BookingLite): number {
+  return taxOn(bookingTaxable(b), b).gst;
+}
 export function bookingTcs(b: BookingLite): number {
-  return Math.round(((bookingTaxable(b) + bookingGst(b)) * (b.tcsRate ?? 2)) / 100);
+  return taxOn(bookingTaxable(b), b).tcs;
 }
 // What the client actually pays: taxable + GST + TCS + any non-taxable amount.
 export function bookingTotal(b: BookingLite): number {
-  return bookingTaxable(b) + bookingGst(b) + bookingTcs(b) + bookingNonTaxTotal(b);
+  return billOn(bookingTaxable(b), bookingNonTaxTotal(b), b).total;
 }
 // Revenue counted toward profit = sale value (taxable) plus any non-taxable billed amount.
 export function bookingRevenue(b: BookingLite): number {
-  return bookingTaxable(b) + bookingNonTaxTotal(b);
+  return billOn(bookingTaxable(b), bookingNonTaxTotal(b), b).revenue;
 }
 // Total tax collected on a booking that must be remitted to the government.
 export function bookingTax(b: BookingLite): number {
-  return bookingGst(b) + bookingTcs(b);
+  return taxOn(bookingTaxable(b), b).tax;
 }
 export function bookingPaid(b: BookingLite): number {
   return (b.payments ?? []).reduce((s, p) => s + p.amount, 0);

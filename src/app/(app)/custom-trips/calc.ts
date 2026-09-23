@@ -1,5 +1,10 @@
 // Pure custom-trip constants + money math (no server imports, so it's unit-testable).
 // lib.ts re-exports everything here and adds the server-only customOrgId guard.
+//
+// The GST/TCS chain is NOT redefined here — it comes from lib/calc, the same one
+// package bookings use, so the two can't drift. Relative import rather than "@/"
+// because vitest resolves this file without the tsconfig path alias.
+import { taxOn, billOn } from "../../../lib/calc";
 
 export const ITEM_TYPES = [
   { value: "flight", label: "Flight", icon: "✈️" },
@@ -24,12 +29,11 @@ const line = (i: ItemLite) => i.sell * (i.qty || 1);
 export const ctItemsTaxable = (t: CTLite) => t.items.filter((i) => i.taxable).reduce((s, i) => s + line(i), 0);
 export const ctItemsNonTax = (t: CTLite) => t.items.filter((i) => !i.taxable).reduce((s, i) => s + line(i), 0);
 export const ctTaxable = (t: CTLite) => Math.max(0, ctItemsTaxable(t) - (t.discount || 0));
-export const ctGst = (t: CTLite) => Math.round((ctTaxable(t) * (t.gstRate ?? 5)) / 100);
-// TCS on taxable + GST, matching the trip billing rule.
-export const ctTcs = (t: CTLite) => Math.round(((ctTaxable(t) + ctGst(t)) * (t.tcsRate ?? 2)) / 100);
-export const ctTax = (t: CTLite) => ctGst(t) + ctTcs(t);
-export const ctTotal = (t: CTLite) => ctTaxable(t) + ctGst(t) + ctTcs(t) + ctItemsNonTax(t); // what the client pays
-export const ctRevenue = (t: CTLite) => ctTaxable(t) + ctItemsNonTax(t); // pre-tax sale value
+export const ctGst = (t: CTLite) => taxOn(ctTaxable(t), t).gst;
+export const ctTcs = (t: CTLite) => taxOn(ctTaxable(t), t).tcs;
+export const ctTax = (t: CTLite) => taxOn(ctTaxable(t), t).tax;
+export const ctTotal = (t: CTLite) => billOn(ctTaxable(t), ctItemsNonTax(t), t).total; // what the client pays
+export const ctRevenue = (t: CTLite) => billOn(ctTaxable(t), ctItemsNonTax(t), t).revenue; // pre-tax sale value
 export const ctCost = (t: CTLite) => t.items.reduce((s, i) => s + i.cost * (i.qty || 1), 0);
 export const ctProfit = (t: CTLite) => ctRevenue(t) - ctCost(t);
 export const ctPaid = (t: CTLite) => (t.payments || []).reduce((s, p) => s + p.amount, 0);
