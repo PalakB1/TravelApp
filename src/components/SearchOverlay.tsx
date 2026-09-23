@@ -31,11 +31,14 @@ export default function SearchOverlay({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     const term = q.trim();
-    if (term.length < MIN) { setHits([]); setBusy(false); return; }
-
     const ctrl = new AbortController();
-    setBusy(true);
+
+    // Every state change happens in the timer callback rather than here:
+    // setting state straight from an effect body forces a second render before
+    // the first has painted, which is exactly what a search box shouldn't do.
     const t = setTimeout(async () => {
+      if (term.length < MIN) { setHits([]); setBusy(false); return; }
+      setBusy(true);
       try {
         const r = await fetch(`/api/search?q=${encodeURIComponent(term)}`, { signal: ctrl.signal });
         const data = await r.json();
