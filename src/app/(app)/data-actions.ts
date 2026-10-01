@@ -1423,3 +1423,45 @@ export async function reopenBookingPayments(formData: FormData) {
   await logActivity(orgId, "payment", "status", `Reopened payments for ${b.customerName} — it's being chased again`, `/bookings/${id}`);
   refresh();
 }
+
+// --- The trip's WhatsApp group ----------------------------------------------
+// WhatsApp's business API has no group functions, and the unofficial libraries
+// that do get numbers banned — which for an agency is the whole business. On
+// top of that, since 2022 people choose who may add them to a group, so an
+// automated add silently fails for anyone who hasn't saved the agency's number.
+//
+// So the group is made by a human on a phone, and everything tedious around it
+// is handled here: knowing when, having the numbers to hand, and getting people
+// in by sending each of them the join link.
+
+export async function setTripGroupLink(formData: FormData) {
+  const orgId = await guard();
+  const id = String(formData.get("id"));
+  if (!(await ownTrip(orgId, id))) return;
+
+  const raw = String(formData.get("groupLink") || "").trim();
+  // Only a real WhatsApp invite looks like this; anything else is a typo or a
+  // paste of the wrong thing, and storing it would send customers nowhere.
+  const ok = /^https:\/\/chat\.whatsapp\.com\/[A-Za-z0-9]+$/.test(raw);
+  const link = raw === "" ? null : ok ? raw : null;
+
+  const trip = await prisma.trip.update({
+    where: { id },
+    data: { groupLink: link, groupLinkAt: link ? new Date() : null },
+    select: { name: true },
+  });
+  await logActivity(
+    orgId, "trip", "updated",
+    link ? `Saved the WhatsApp group link for ${trip.name}` : `Removed the WhatsApp group link for ${trip.name}`,
+    `/trips/${id}`,
+  );
+  refresh();
+}
+
+/** Stamp a booking once its join link has gone out. */
+export async function markGroupInviteSent(bookingId: string) {
+  const orgId = await guard();
+  if (!(await ownBooking(orgId, bookingId))) return;
+  await prisma.booking.update({ where: { id: bookingId }, data: { groupInviteSentAt: new Date() } });
+  refresh();
+}

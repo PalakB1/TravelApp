@@ -6,23 +6,14 @@ import { requireScope } from "@/lib/scope";
 import { tripFinancials, reconcileTrip, bookingTotal, bookingPaid, bookingBalance, isNightGap, holdExpiringSoon, carCost, pricePerRoom, nightCost, nightBookedRooms, carPassengerSeats, tripIsOver, roomsNeededOnNight, paxOnNight, isShortStay, tripEndLabel, isActive } from "@/lib/calc";
 import BookingsTable from "@/components/BookingsTable";
 
-import {
-  addVariant, deleteVariant,
-  addVendorBooking, updateVendorBooking, deleteVendorBooking,
-  addBooking, deleteTrip,
-  addNight, updateNight, deleteNight,
-  addHotelBooking, updateHotelBooking, deleteHotelBooking,
-  addCar, updateCar, deleteCar,
-  addInclusion, updateInclusion, deleteInclusion,
-  deleteVisaApplicant,
-  duplicateTrip, updateTripRooms, renameTrip,
-} from "../../data-actions";
+import { addVariant, deleteVariant, addVendorBooking, updateVendorBooking, deleteVendorBooking, addBooking, deleteTrip, addNight, updateNight, deleteNight, addHotelBooking, updateHotelBooking, deleteHotelBooking, addCar, updateCar, deleteCar, addInclusion, updateInclusion, deleteInclusion, deleteVisaApplicant, duplicateTrip, updateTripRooms, renameTrip, setTripGroupLink } from "../../data-actions";
 import InlineTitle from "@/components/InlineTitle";
 import ImportItinerary from "@/components/ImportItinerary";
 import CloseDetails from "@/components/CloseDetails";
 import AutoFill from "@/components/AutoFill";
 import VisaLinkBuilder from "@/components/VisaLinkBuilder";
 import MarkPaid from "@/components/MarkPaid";
+import TripGroup from "@/components/TripGroup";
 import { getOrgContext } from "@/lib/org";
 import { orgMoney } from "@/lib/orgMoney";
 
@@ -79,6 +70,21 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
   // Flight times, in landing order. Parties without one yet sort to the bottom
   // rather than being hidden — the gap is the thing you need to chase.
   const activeBookings = trip.bookings.filter((b) => isActive(b.status));
+  // Everyone who'd be in the trip's WhatsApp group, with the number to invite
+  // them on. One row per booking: a family books together and shares a chat.
+  const groupMembers = activeBookings
+    .map((b) => ({
+      bookingId: b.id,
+      name: b.customerName,
+      phone: b.customerPhone,
+      pax: b.pax,
+      sentAt: b.groupInviteSentAt ? fmtDate(b.groupInviteSentAt) : null,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const daysToGo = trip.departureDate
+    ? Math.ceil((new Date(trip.departureDate).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 864e5)
+    : null;
+
   const flightRows = activeBookings
     .filter((b) => b.arriveAt || b.departAt)
     .sort((a, b) => (a.arriveAt?.getTime() ?? Infinity) - (b.arriveAt?.getTime() ?? Infinity));
@@ -837,6 +843,16 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
             </div>
           </details>
         </div>
+
+        <TripGroup
+          tripId={trip.id}
+          suggestedName={trip.name}
+          members={groupMembers}
+          groupLink={trip.groupLink}
+          defaultCc={$.dial}
+          daysToGo={daysToGo}
+          saveAction={setTripGroupLink}
+        />
 
         {/* ARRIVALS & DEPARTURES. The reason for capturing flight times: whoever
             arranges pickups needs one list in time order, not twelve bookings

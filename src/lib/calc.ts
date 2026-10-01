@@ -422,3 +422,9 @@ export function tripEndLabel(trip: { departureDate: Date | null; nights: number;
   last.setDate(last.getDate() + span);
   return last.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
+
+// How many days before departure a trip's WhatsApp group should exist. Lives
+// here rather than beside the action, because a "use server" module may only
+// export async functions — a plain constant there makes the entire file export
+// nothing, and every import of it breaks.
+export const GROUP_LEAD_DAYS = 5;

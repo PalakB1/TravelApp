@@ -376,6 +376,15 @@ model Trip {
   capacity      Int             @default(0) // total seats
   maxPerRoom    Int             @default(2) // guests per room (double sharing), for the rooms-coverage check
   notes         String?
+
+  // The trip's WhatsApp group. The link is pasted in by hand after the group is
+  // made on a phone — WhatsApp's business API has no group functions at all, so
+  // there is nothing to automate about the creation itself. What IS worth
+  // automating is everything around it: knowing when to make it, having every
+  // traveller's number to hand, and getting people into it.
+  groupLink     String?
+  groupLinkAt   DateTime? // when the link was saved — "group is ready" marker
+
   createdAt     DateTime        @default(now())
   updatedAt DateTime @updatedAt
 
@@ -572,6 +581,10 @@ model Booking {
   visaStatus     String    @default("not_required") // not_required | required | initiated | submitted | approved | rejected | held (already holds a valid visa)
   visaHandledBy  String? // us (agency assists) | self (customer arranges it)
   visaValidUntil DateTime? // for held/approved visas — valid until this date
+
+  // When the group invite was last sent to this party. Not proof they joined —
+  // WhatsApp never tells us that — but it does answer "who haven't I sent it to".
+  groupInviteSentAt DateTime?
 
   // When this party's flight lands at the trip's starting point, and when they
   // fly home. Stored as wall-clock times in UTC and always displayed in UTC:

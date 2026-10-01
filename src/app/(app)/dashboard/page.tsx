@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
-import { tripFinancials, bookingBalance, bookingPaid, bookingTotal, bookingRevenue, bookingTax, isActive, tripIsOver, isChasing } from "@/lib/calc";
+import { tripFinancials, bookingBalance, bookingPaid, bookingTotal, bookingRevenue, bookingTax, isActive, tripIsOver, isChasing, GROUP_LEAD_DAYS } from "@/lib/calc";
 import { scheduleStatus } from "@/lib/schedule";
 
 import QuickAddButton from "@/components/QuickAddButton";
@@ -72,6 +72,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     include: { trip: { select: { departureDate: true, nights: true, days: true } }, payments: { select: { amount: true, date: true } }, schedule: true },
   });
   const departingSoonP = prisma.trip.count({ where: { ...scope.tripWhere, departureDate: { gte: startTodayA, lte: in7d } } });
+  const groupsToMakeP = prisma.trip.count({
+    where: {
+      ...scope.tripWhere,
+      groupLink: null,
+      departureDate: { gte: startTodayA, lte: new Date(startTodayA.getTime() + GROUP_LEAD_DAYS * 864e5) },
+    },
+  });
   const pendingApprovalsP = prisma.pendingPayment.count({ where: { OR: [{ booking: { ...scope.viaTrip, deletedAt: null } }, { trip: scope.tripWhere }] } });
 
   const trips = await tripsP;
@@ -196,6 +203,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   }
   const departingSoon = await departingSoonP;
   const pendingApprovals = await pendingApprovalsP;
+  const groupsToMake = await groupsToMakeP;
 
   type ActionTile = { emoji: string; n: string; label: string; href: string; tone: string };
   const actionTiles: ActionTile[] = [];
@@ -206,6 +214,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   if (visasStuck > 0) actionTiles.push({ emoji: "🛂", n: String(visasStuck), label: visasStuck === 1 ? "visa in progress" : "visas in progress", href: "/bookings?visa=initiated", tone: "c-amber" });
   if (invoicesReady > 0) actionTiles.push({ emoji: "🧾", n: String(invoicesReady), label: invoicesReady === 1 ? "invoice ready" : "invoices ready", href: "/bookings", tone: "c-violet" });
   if (pendingApprovals > 0) actionTiles.push({ emoji: "✅", n: String(pendingApprovals), label: "to approve", href: "/payments", tone: "c-emerald" });
+  if (groupsToMake > 0) actionTiles.push({ emoji: "💬", n: String(groupsToMake), label: groupsToMake === 1 ? "trip needs its WhatsApp group" : "trips need their WhatsApp group", href: "/trips", tone: "c-violet" });
 
   return (
     <>
