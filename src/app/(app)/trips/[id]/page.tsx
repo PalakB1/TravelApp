@@ -753,6 +753,18 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
         </div>
       </details>
 
+      {/* The trip's WhatsApp group — above the itinerary, because it matters
+          most in the last week and nobody scrolls that far to find it. */}
+        <TripGroup
+          tripId={trip.id}
+          suggestedName={trip.name}
+          members={groupMembers}
+          groupLink={trip.groupLink}
+          defaultCc={$.dial}
+          daysToGo={daysToGo}
+          saveAction={setTripGroupLink}
+        />
+
       {/* BOOKINGS */}
       <div className="card">
         <div className="card-title">Bookings</div>
@@ -844,15 +856,6 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
           </details>
         </div>
 
-        <TripGroup
-          tripId={trip.id}
-          suggestedName={trip.name}
-          members={groupMembers}
-          groupLink={trip.groupLink}
-          defaultCc={$.dial}
-          daysToGo={daysToGo}
-          saveAction={setTripGroupLink}
-        />
 
         {/* ARRIVALS & DEPARTURES. The reason for capturing flight times: whoever
             arranges pickups needs one list in time order, not twelve bookings

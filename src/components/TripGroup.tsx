@@ -90,6 +90,10 @@ export default function TripGroup({
             <li>Add whoever you like from your own contacts — the rest get the link below</li>
             <li>Open the group → <b>Invite via link</b> → copy it → paste it here</li>
           </ol>
+          <p className="small" style={{ margin: "0 0 10px", color: "var(--text-2)" }}>
+            Paste the link below and every <b>Send link</b> button in the table switches on — one tap each
+            and the traveller gets the invite on WhatsApp.
+          </p>
           <form action={saveAction} className="row" style={{ alignItems: "end" }}>
             <input type="hidden" name="id" value={tripId} />
             <label className="field">
@@ -119,7 +123,7 @@ export default function TripGroup({
       )}
 
       <table className="t">
-        <thead><tr><th style={{ paddingLeft: 0 }}>Traveller</th><th>Phone</th><th className="num">{groupLink ? "Invite" : ""}</th></tr></thead>
+        <thead><tr><th style={{ paddingLeft: 0 }}>Traveller</th><th>Phone</th><th className="num">Invite</th></tr></thead>
         <tbody>
           {members.map((m) => (
             <tr key={m.bookingId}>
@@ -137,6 +141,11 @@ export default function TripGroup({
                 )}
               </td>
               <td className="num">
+                {!groupLink && m.phone && (
+                  <button type="button" className="btn sm" disabled title="Save the group's invite link above and this turns on">
+                    💬 Send link
+                  </button>
+                )}
                 {groupLink && m.phone && (
                   m.sentAt ? (
                     <span className="flex" style={{ gap: 6, justifyContent: "flex-end", alignItems: "center" }}>
