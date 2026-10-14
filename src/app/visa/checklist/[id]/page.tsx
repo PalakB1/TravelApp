@@ -26,7 +26,7 @@ export default async function VisaChecklistPage({ params }: { params: Promise<{ 
         <div className="empty-cta no-print" style={{ borderColor: "var(--success)", marginBottom: 16 }}>
           <span className="emoji">✅</span>
           <div className="t">Thank you, {a.fullName.split(" ")[0]}!</div>
-          <div className="d">Your details are submitted to our team. Below is the list of documents you’ll need for your {a.trip.name} {visaLabel(a)} visa — please start gathering these. Print or save this page.</div>
+          <div className="d">Your details are submitted to our team. Below is the list of documents you’ll need for your {visaLabel(a)} visa{a.trip ? ` (${a.trip.name})` : ""} — please start gathering these. Print or save this page.</div>
         </div>
 
         <div className="card sheet">

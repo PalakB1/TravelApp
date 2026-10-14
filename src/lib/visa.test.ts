@@ -1,0 +1,250 @@
+import { describe, it, expect } from "vitest";
+import { schengenCountry, DEFAULT_SCHENGEN } from "./schengen";
+import { ageFromDob, travelWindow, visaChecklist, visaCoverLetter, visaFlags, visaLabel, visaRequirementRows } from "./visa";
+import { isSchengenDestination, visaTypeForDestination } from "./destinations";
+
+const trip = {
+  name: "Malta — Valletta & Gozo",
+  destination: "Malta",
+  departureDate: new Date("2027-03-01T00:00:00Z"),
+  endDate: new Date("2027-03-10T00:00:00Z"),
+  itinerary: [{ date: new Date("2027-03-01T00:00:00Z"), location: "Valletta", hotels: [{ hotelName: "Rosselli" }] }],
+};
+
+// A file with nothing wrong with it, used as the baseline the other tests bend.
+const clean = {
+  fullName: "Asha Nair",
+  givenName: "Asha",
+  surname: "Nair",
+  dob: new Date("1986-04-12T00:00:00Z"),
+  nationality: "Indian",
+  passportNo: "Z1234567",
+  passportIssue: new Date("2022-01-10T00:00:00Z"),
+  passportExpiry: new Date("2032-01-09T00:00:00Z"),
+  income: "₹2,10,000 / month",
+  employmentType: "employed",
+  funding: "self",
+  travelPurpose: "tourism",
+  visaType: "schengen",
+  visaCountry: "Malta",
+  mostNightsCountry: "Malta",
+  prevSchengen: "France 2023",
+  travelHistory: "UK 2019, Singapore 2022",
+};
+
+const NOW = new Date("2026-10-13T00:00:00Z");
+
+describe("schengenCountry", () => {
+  it("defaults to Malta when nothing is chosen", () => {
+    expect(schengenCountry(null).name).toBe("Malta");
+    expect(schengenCountry("").name).toBe("Malta");
+    expect(DEFAULT_SCHENGEN.name).toBe("Malta");
+  });
+
+  it("matches a name regardless of case or spacing", () => {
+    expect(schengenCountry(" iceland ").name).toBe("Iceland");
+    expect(schengenCountry("NETHERLANDS").name).toBe("Netherlands");
+  });
+
+  it("falls back to Malta for a country that isn't in Schengen", () => {
+    expect(schengenCountry("New Zealand").name).toBe("Malta");
+  });
+});
+
+describe("the letter and checklist follow the country, not Iceland", () => {
+  it("addresses a Malta file to Malta", () => {
+    const letter = visaCoverLetter(clean, trip);
+    expect(letter.salutation).toContain("Malta");
+    expect(letter.salutation).not.toContain("Iceland");
+  });
+
+  it("keeps Iceland's own figures when Iceland is the country", () => {
+    const letter = visaCoverLetter({ ...clean, visaCountry: "Iceland" }, trip);
+    expect(letter.salutation).toContain("Iceland");
+    const notes = visaRequirementRows({ ...clean, visaCountry: "Iceland" }).map((r) => r.note ?? "").join(" ");
+    expect(notes).toContain("8,000 ISK");
+    expect(notes).toContain("visa.government.is");
+  });
+
+  it("does not invent a daily figure for a country we have none for", () => {
+    const notes = visaRequirementRows(clean).map((r) => r.note ?? "").join(" ");
+    expect(notes).not.toContain("ISK");
+    expect(notes).toContain("confirm the current one");
+  });
+
+  it("names the country on the label so two files are never confused", () => {
+    expect(visaLabel(clean)).toBe("Schengen · Malta");
+    expect(visaLabel({ visaType: "generic", visaCountry: "New Zealand" })).toBe("New Zealand");
+  });
+});
+
+describe("the checklist adapts to the answers", () => {
+  const titles = (a: Parameters<typeof visaChecklist>[0]) => visaChecklist(a).map((g) => g.title);
+
+  it("asks a business traveller for the invitation, and a tourist for nothing extra", () => {
+    expect(titles({ ...clean, travelPurpose: "business", hostInvite: "Nexia Ltd" })).toContain("Because this is a business trip");
+    expect(titles(clean).some((t) => t.startsWith("Because this is"))).toBe(false);
+  });
+
+  it("names the host in the document note when one was given", () => {
+    const rows = visaRequirementRows({ ...clean, travelPurpose: "family", hostInvite: "Rohit Mehra, brother, Sliema" });
+    expect(rows.find((r) => r.label.includes("Invitation letter"))?.note).toContain("Rohit Mehra");
+  });
+
+  it("swaps pay slips for company papers when the applicant owns the business", () => {
+    expect(titles({ ...clean, employmentType: "employed" })).toContain("Employment");
+    expect(titles({ ...clean, employmentType: "business" })).toContain("Business (self-employed)");
+  });
+
+  it("asks for the sponsor's documents only when someone else is paying", () => {
+    expect(titles({ ...clean, funding: "sponsor", sponsorName: "Vikram Nair" })).toContain("Sponsorship");
+    expect(titles(clean)).not.toContain("Sponsorship");
+  });
+
+  it("adds parental consent for a minor and carries the parents' names through", () => {
+    const minor = { ...clean, dob: new Date("2012-05-01T00:00:00Z"), minorParents: "Anil Shah (Z1), Meera Shah (Z2)" };
+    const rows = visaRequirementRows(minor);
+    expect(rows.some((r) => r.label.includes("parental consent"))).toBe(true);
+    expect(rows.find((r) => r.label.includes("parents' passports"))?.note).toContain("Anil Shah");
+    expect(visaRequirementRows(clean).some((r) => r.label.includes("parental consent"))).toBe(false);
+  });
+
+  it("asks for a year's insurance only when a long-term visa is being requested", () => {
+    const note = (a: Parameters<typeof visaRequirementRows>[0]) =>
+      visaRequirementRows(a).find((r) => r.label === "Travel medical insurance")?.note ?? "";
+    expect(note({ ...clean, wantsLongTerm: true })).toContain("1 YEAR");
+    expect(note(clean)).not.toContain("1 YEAR");
+  });
+});
+
+describe("ageFromDob", () => {
+  it("uses the date it is given rather than a date frozen in the source", () => {
+    const dob = new Date("2009-01-01T00:00:00Z");
+    expect(ageFromDob(dob, new Date("2026-01-01T00:00:00Z"))).toBe(17);
+    expect(ageFromDob(dob, new Date("2027-06-01T00:00:00Z"))).toBe(18);
+  });
+
+  it("has not had its birthday yet this year", () => {
+    expect(ageFromDob(new Date("2000-12-31T00:00:00Z"), new Date("2026-06-30T00:00:00Z"))).toBe(25);
+  });
+});
+
+describe("visaFlags — the due diligence", () => {
+  const texts = (a: Parameters<typeof visaFlags>[0]) => visaFlags(a, trip, NOW).map((f) => f.text).join(" | ");
+
+  it("passes a consistent file", () => {
+    expect(visaFlags(clean, trip, NOW)).toEqual([]);
+  });
+
+  it("stops a passport that expires less than three months after the return", () => {
+    const f = visaFlags({ ...clean, passportExpiry: new Date("2027-04-15T00:00:00Z") }, trip, NOW);
+    expect(f.some((x) => x.level === "stop" && x.text.includes("Passport expires"))).toBe(true);
+    // one day the other side of the line is fine
+    expect(visaFlags({ ...clean, passportExpiry: new Date("2027-06-11T00:00:00Z") }, trip, NOW)).toEqual([]);
+  });
+
+  it("stops a passport older than ten years", () => {
+    const f = visaFlags({ ...clean, passportIssue: new Date("2014-01-01T00:00:00Z") }, trip, NOW);
+    expect(f.some((x) => x.level === "stop" && x.text.includes("10 years"))).toBe(true);
+  });
+
+  it("stops a file aimed at the wrong member state", () => {
+    const f = visaFlags({ ...clean, visaCountry: "Malta", mostNightsCountry: "Italy" }, trip, NOW);
+    const wrong = f.find((x) => x.text.includes("most nights"));
+    expect(wrong?.level).toBe("stop");
+    expect(wrong?.text).toContain("Italy");
+  });
+
+  it("asks where the nights are when it wasn't told", () => {
+    expect(texts({ ...clean, mostNightsCountry: null })).toContain("right consulate");
+  });
+
+  it("notices a sponsor who was never named, and a host who wasn't either", () => {
+    expect(texts({ ...clean, funding: "sponsor" })).toContain("hasn't named them");
+    expect(texts({ ...clean, travelPurpose: "business" })).toContain("no host named");
+  });
+
+  it("notices a minor with no parent details", () => {
+    expect(texts({ ...clean, dob: new Date("2012-05-01T00:00:00Z") })).toContain("minor");
+  });
+
+  it("warns that a long-term visa on a first application rarely lands", () => {
+    expect(texts({ ...clean, prevSchengen: null, wantsLongTerm: true })).toContain("rarely granted");
+  });
+
+  it("says so when the trip has no dates to apply against", () => {
+    expect(texts({ ...clean })).not.toContain("no fixed dates");
+    const undated = { ...trip, departureDate: null, endDate: null };
+    expect(visaFlags(clean, undated, NOW).some((f) => f.text.includes("no fixed dates"))).toBe(true);
+  });
+});
+
+describe("an enquiry with no trip", () => {
+  // Someone who filled the agency's permanent link: they named their own
+  // country and their own dates, and there is no trip behind them at all.
+  const enquiry = {
+    ...clean,
+    visaCountry: "Malta",
+    mostNightsCountry: "Malta",
+    travelFrom: new Date("2027-03-01T00:00:00Z"),
+    travelTo: new Date("2027-03-10T00:00:00Z"),
+    residenceCountry: "India",
+  };
+
+  it("builds the letter from the traveller's own dates", () => {
+    const letter = visaCoverLetter(enquiry, null);
+    const para = letter.paragraphs.join(" ");
+    expect(para).toContain("1 March 2027");
+    expect(para).toContain("10 March 2027");
+    expect(para).toContain("(9 days)");
+    expect(letter.itinerary).toEqual([]);
+  });
+
+  it("does not claim a tour it knows nothing about", () => {
+    const para = visaCoverLetter(enquiry, null).paragraphs.join(" ");
+    expect(para).not.toContain("as part of the tour");
+    expect(para).toContain("enclosed with this application");
+  });
+
+  it("still names the trip when there is one", () => {
+    expect(visaCoverLetter(enquiry, trip).paragraphs.join(" ")).toContain("as part of the tour");
+  });
+
+  it("checks the passport against the dates the traveller gave", () => {
+    const short = { ...enquiry, passportExpiry: new Date("2027-04-15T00:00:00Z") };
+    expect(visaFlags(short, null, NOW).some((f) => f.level === "stop" && f.text.includes("Passport expires"))).toBe(true);
+    expect(visaFlags(enquiry, null, NOW)).toEqual([]);
+  });
+
+  it("asks for dates when the traveller gave none", () => {
+    const undated = { ...enquiry, travelFrom: null, travelTo: null };
+    expect(visaFlags(undated, null, NOW).some((f) => f.text === "No travel dates given, and the application needs them.")).toBe(true);
+  });
+
+  it("prefers the trip's dates over the traveller's guess once there is a trip", () => {
+    const w = travelWindow({ ...enquiry, travelFrom: new Date("2030-01-01T00:00:00Z") }, trip);
+    expect(w.from?.toISOString().slice(0, 10)).toBe("2027-03-01");
+    expect(w.tripName).toBe(trip.name);
+  });
+});
+
+describe("the destination decides the template", () => {
+  it("treats a Schengen state as Schengen and anywhere else as a visitor visa", () => {
+    expect(visaTypeForDestination("Malta")).toBe("schengen");
+    expect(visaTypeForDestination("italy")).toBe("schengen");
+    expect(visaTypeForDestination("Japan")).toBe("generic");
+    expect(visaTypeForDestination("United Kingdom")).toBe("generic");
+    expect(visaTypeForDestination(null)).toBe("generic");
+  });
+
+  it("knows Ireland and Cyprus are in the EU but not in Schengen", () => {
+    expect(isSchengenDestination("Ireland")).toBe(false);
+    expect(isSchengenDestination("Cyprus")).toBe(false);
+  });
+
+  it("includes the states that joined most recently", () => {
+    for (const c of ["Bulgaria", "Romania", "Croatia", "Liechtenstein"]) {
+      expect(isSchengenDestination(c)).toBe(true);
+    }
+  });
+});

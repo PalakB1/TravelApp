@@ -57,6 +57,7 @@ model Organization {
   // Default cancellation / refund terms — auto-fills on new bookings, editable per booking.
   defaultRefundPolicy String?
   paymentPlanTemplates PaymentPlanTemplate[]
+  visaApplicants       VisaApplicant[]
   // Customer-facing documents carry a small "Powered by TripZei" line — free,
   // targeted distribution to travellers and the agencies they work with.
   // Turning it off is a paid-tier lever.
@@ -267,8 +268,14 @@ model ActivityLog {
 // generate a cover letter + document checklist (trip dates/hotels merged in).
 model VisaApplicant {
   id              String    @id @default(cuid())
-  tripId          String
-  trip            Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  // A visa application can arrive two ways: off a trip's own link, or through
+  // the agency's permanent enquiry link, where the traveller names their own
+  // destination and dates and there is no trip yet. Hence a nullable trip and an
+  // org of its own — the org is what decides whose desk it lands on.
+  tripId          String?
+  trip            Trip?     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  orgId           String?
+  org             Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
   fullName        String // auto-composed "given surname" — kept for display + documents
   surname         String? // family / last name, exactly as in the passport
   givenName       String? // given / first name(s), exactly as in the passport
@@ -302,7 +309,20 @@ model VisaApplicant {
   investments     String? // property, FDs, MFs — financial roots
   notes           String?
   visaType        String?   @default("schengen") // schengen | generic — chosen when the link is shared
-  visaCountry     String? // country name shown on the generic template (e.g. New Zealand)
+  visaCountry     String? // which country the file goes to — a Schengen member state, or the country on the generic template
+
+  // The adaptive questions: each one changes what the embassy asks for.
+  travelPurpose     String? @default("tourism") // tourism | business | family
+  hostInvite        String? // the company or host inviting, when it isn't plain tourism
+  mostNightsCountry String? // decides which consulate may take the file at all
+  entryCountry      String? // tie-breaker when the nights are equal
+  minorParents      String? // both parents' names & passports, when under 18
+
+  // Only filled on a direct enquiry, where there is no trip to read them from.
+  travelFrom        DateTime?
+  travelTo          DateTime?
+  residenceCountry  String?
+
   status          String    @default("collecting") // collecting | ready | appointment | submitted | approved | rejected
   appointmentAt   DateTime? // VFS appointment date/time
   createdAt       DateTime  @default(now())

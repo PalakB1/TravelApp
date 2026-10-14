@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
-import { visaCoverLetter, visaChecklist, visaLabel } from "@/lib/visa";
+import { visaCoverLetter, visaChecklist, visaLabel, visaFlags, visaRequirementRows, ageFromDob } from "@/lib/visa";
 import { updateVisaApplicant, deleteVisaApplicant } from "../../data-actions";
 import PrintButton from "@/components/PrintButton";
 
@@ -36,6 +36,11 @@ export default async function VisaDetailPage({ params }: { params: Promise<{ id:
 
   const letter = visaCoverLetter(a, a.trip);
   const checklist = visaChecklist(a);
+  const flags = visaFlags(a, a.trip);
+  const rows = visaRequirementRows(a);
+  const stops = flags.filter((f) => f.level === "stop");
+  const checks = flags.filter((f) => f.level === "check");
+  const age = ageFromDob(a.dob);
 
   return (
     <>
@@ -43,7 +48,7 @@ export default async function VisaDetailPage({ params }: { params: Promise<{ id:
         <div>
           <div className="small muted"><Link href="/visas" style={{ color: "var(--text-2)" }}>← Visa desk</Link></div>
           <h1 style={{ marginTop: 6 }}>{a.fullName} <span className="badge accent" style={{ verticalAlign: "middle" }}>{visaLabel(a)}</span></h1>
-          <p className="sub">Visa application · {a.trip.name}</p>
+          <p className="sub">Visa application · {a.trip ? a.trip.name : "direct enquiry — no trip yet"}</p>
         </div>
         <div className="flex" style={{ gap: 8 }}>
           <PrintButton />
@@ -55,6 +60,62 @@ export default async function VisaDetailPage({ params }: { params: Promise<{ id:
             </div>
           </details>
         </div>
+      </div>
+
+      {/* DUE DILIGENCE — what to look at before this file goes anywhere */}
+      <div className="card no-print" style={stops.length ? { borderColor: "var(--danger)" } : undefined}>
+        <div className="card-title">
+          Due diligence
+          <span className="small muted">
+            {flags.length === 0
+              ? "nothing to query — the answers are consistent"
+              : `${stops.length ? `${stops.length} would get this file returned` : ""}${stops.length && checks.length ? " · " : ""}${checks.length ? `${checks.length} to check` : ""}`}
+          </span>
+        </div>
+        {flags.length === 0 ? (
+          <p className="small muted" style={{ margin: 0 }}>
+            Passport dates, the country applied to, funding and the trip dates all hold up against each other.
+            Still worth your own eyes on the originals.
+          </p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {[...stops, ...checks].map((f, i) => (
+              <div key={i} className="flex" style={{ alignItems: "flex-start", gap: 10 }}>
+                <span className={`badge ${f.level === "stop" ? "red" : "amber"}`} style={{ flexShrink: 0 }}>
+                  {f.level === "stop" ? "fix first" : "check"}
+                </span>
+                <span style={{ fontSize: 14, lineHeight: 1.6 }}>{f.text}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* REQUIREMENTS — the checklist as a table, built from this applicant's answers */}
+      <div className="card no-print" style={{ padding: 0 }}>
+        <div className="card-title" style={{ padding: "16px 20px 0" }}>
+          Requirements
+          <span className="small muted">{rows.length} documents, decided by what {a.givenName || a.fullName} answered</span>
+        </div>
+        <table className="t">
+          <thead><tr><th style={{ paddingLeft: 20, width: "22%" }}>Because</th><th style={{ width: "32%" }}>Document</th><th>What exactly</th></tr></thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i}>
+                <td className="muted small" style={{ paddingLeft: 20 }}>
+                  {/* the group is only printed when it changes, so the eye follows the blocks */}
+                  {i === 0 || rows[i - 1].group !== r.group ? r.group : ""}
+                </td>
+                <td style={{ fontWeight: 500 }}>{r.label}</td>
+                <td className="muted small">{r.note || "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="small muted" style={{ margin: 0, padding: "12px 20px 16px" }}>
+          Consulates revise their lists without notice. Check this against the current VFS or consulate list for
+          {" "}{visaLabel(a).replace("Schengen · ", "")} before the appointment.
+        </p>
       </div>
 
       {/* STATUS + APPOINTMENT */}
@@ -95,6 +156,7 @@ export default async function VisaDetailPage({ params }: { params: Promise<{ id:
             <Field label="Place of birth" value={a.placeOfBirth} />
             <Field label="Nationality" value={a.nationality} />
             <Field label="Marital status" value={a.maritalStatus} />
+            {age != null && age < 18 ? <Field label="Parents (applicant is a minor)" value={a.minorParents} /> : null}
             <Field label="Passport number" value={a.passportNo} />
             <Field label="Passport issued" value={`${fmt(a.passportIssue)}${a.passportPlace ? ` at ${a.passportPlace}` : ""}`} />
             <Field label="Passport expiry" value={fmt(a.passportExpiry)} />
@@ -103,6 +165,13 @@ export default async function VisaDetailPage({ params }: { params: Promise<{ id:
             <Field label="Email" value={a.email} />
           </div>
           <div>
+            <Field label="Applying to" value={visaLabel(a)} />
+            {a.trip ? null : <Field label="Travel dates they gave" value={a.travelFrom || a.travelTo ? `${fmt(a.travelFrom)} – ${fmt(a.travelTo)}` : null} />}
+            {a.residenceCountry ? <Field label="Lives in" value={a.residenceCountry} /> : null}
+            <Field label="Purpose of travel" value={a.travelPurpose} />
+            <Field label="Host / company inviting" value={a.hostInvite} />
+            <Field label="Most nights in" value={a.mostNightsCountry} />
+            <Field label="First country of entry" value={a.entryCountry} />
             <Field label="I am" value={a.employmentType} />
             <Field label="Occupation" value={a.occupation} />
             <Field label="Employer / business" value={a.employer} />

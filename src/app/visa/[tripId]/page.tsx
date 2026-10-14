@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import VisaForm from "./VisaForm";
+import VisaForm from "@/components/VisaForm";
 import Logo from "@/components/Logo";
+import { schengenCountry } from "@/lib/schengen";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,9 @@ export default async function VisaFormPage({ params, searchParams }: { params: P
   const dates = trip.departureDate ? `${fmt(trip.departureDate)}${trip.endDate ? " – " + fmt(trip.endDate) : ""}` : "";
 
   const visaType = type === "generic" ? "generic" : "schengen";
-  const visaCountry = (country || "").trim();
+  // For Schengen the link may pre-set a member state (Malta unless the operator
+  // chose otherwise); the applicant can still change it on the form.
+  const visaCountry = visaType === "schengen" ? schengenCountry(country).name : (country || "").trim();
   const label = visaType === "schengen" ? "Schengen" : (visaCountry || "Visitor");
 
   return (
@@ -26,7 +29,7 @@ export default async function VisaFormPage({ params, searchParams }: { params: P
         <div className="brand" style={{ paddingLeft: 0, marginBottom: 4 }}><Logo /></div>
         <h1 style={{ fontSize: 20, marginTop: 6 }}>{label} visa details</h1>
         <p className="muted small" style={{ marginTop: 4 }}>
-          For <b>{trip.name}</b>{trip.destination ? ` · ${trip.destination}` : ""}{dates ? ` · ${dates}` : ""}. Fill this once and we’ll generate your cover letter + document checklist. Please match your passport exactly.
+          For <b>{trip.name}</b>{trip.destination ? ` · ${trip.destination}` : ""}{dates ? ` · ${dates}` : ""}. Fill this once and we’ll generate your cover letter and the exact list of documents <i>you</i> need — the questions change as you answer, so you’re only asked what applies to you. Please match your passport exactly.
         </p>
         <VisaForm tripId={trip.id} visaType={visaType} visaCountry={visaCountry} />
       </div>

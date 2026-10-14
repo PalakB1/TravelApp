@@ -1,8 +1,11 @@
 // Generates a visa cover letter + document checklist by merging what the applicant
-// filled with the trip data already in TripZei. Supports Schengen (accurate, from
-// the official Embassy of Iceland / VFS checklist) and a GENERIC visitor-visa
-// template for any other country (New Zealand, UK, USA, …). The visa type is chosen
-// when the operator shares the link and is stored on the applicant.
+// filled with the trip data already in TripZei. Supports Schengen — addressed to
+// whichever member state the applicant is applying to, Malta by default — and a
+// GENERIC visitor-visa template for any other country (New Zealand, UK, USA, …).
+// The visa type is chosen when the operator shares the link; the Schengen country
+// is chosen by the applicant on the form. Both are stored on the applicant.
+
+import { schengenCountry } from "./schengen";
 
 type ApplicantLite = {
   fullName: string;
@@ -35,7 +38,15 @@ type ApplicantLite = {
   dependents?: string | null;
   investments?: string | null;
   visaType?: string | null; // "schengen" | "generic"
-  visaCountry?: string | null; // country name for the generic template
+  visaCountry?: string | null; // which country the file goes to
+  travelPurpose?: string | null; // tourism | business | family
+  hostInvite?: string | null;
+  mostNightsCountry?: string | null;
+  entryCountry?: string | null;
+  minorParents?: string | null;
+  travelFrom?: Date | null;
+  travelTo?: Date | null;
+  residenceCountry?: string | null;
 };
 
 type TripLite = {
@@ -49,26 +60,49 @@ type TripLite = {
 const d = (x?: Date | null) => (x ? new Date(x).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }) : "____________");
 const dShort = (x?: Date | null) => (x ? new Date(x).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "—");
 const has = (s?: string | null) => !!(s && s.trim() && s.trim().toLowerCase() !== "no");
+// "a Indian national" in a letter to an embassy is the kind of detail that
+// makes the whole file look careless.
+const nat = (n?: string | null) => { const v = (n || "Indian").trim(); return `${/^[aeiou]/i.test(v) ? "an" : "a"} ${v} national`; };
 
-export function ageFromDob(dob?: Date | null): number | null {
+// `now` is a parameter rather than a constant because this decides whether the
+// minor-consent documents appear — a date frozen in the source would quietly
+// start getting it wrong the moment it went past.
+export function ageFromDob(dob?: Date | null, now = new Date()): number | null {
   if (!dob) return null;
-  const now = new Date("2026-06-30");
   let a = now.getFullYear() - new Date(dob).getFullYear();
   const m = now.getMonth() - new Date(dob).getMonth();
   if (m < 0 || (m === 0 && now.getDate() < new Date(dob).getDate())) a--;
   return a;
 }
 
-export function tripDuration(t: TripLite): number | null {
-  if (!t.departureDate || !t.endDate) return null;
+export function tripDuration(t: TripLite | null | undefined): number | null {
+  if (!t?.departureDate || !t?.endDate) return null;
   return Math.max(1, Math.round((new Date(t.endDate).getTime() - new Date(t.departureDate).getTime()) / 864e5));
+}
+
+// When the dates are, whoever supplied them.
+//
+// A traveller who came through the agency's own link has no trip: they typed
+// their own dates on the form. One booked onto a trip has the trip's. Everything
+// downstream — the letter, the passport-validity check — reads them from here so
+// neither case needs a special path.
+export type Window = { from: Date | null; to: Date | null; days: number | null; tripName: string | null };
+
+export function travelWindow(a: ApplicantLite, t?: TripLite | null): Window {
+  const from = t?.departureDate ?? a.travelFrom ?? null;
+  const to = t?.endDate ?? a.travelTo ?? null;
+  const days = from && to ? Math.max(1, Math.round((new Date(to).getTime() - new Date(from).getTime()) / 864e5)) : null;
+  return { from, to, days, tripName: t?.name ?? null };
 }
 
 export function isSchengen(a: Pick<ApplicantLite, "visaType">) {
   return (a.visaType || "schengen") === "schengen";
 }
 export function visaLabel(a: Pick<ApplicantLite, "visaType" | "visaCountry">) {
-  return isSchengen(a) ? "Schengen" : (a.visaCountry?.trim() || "Visitor");
+  if (!isSchengen(a)) return a.visaCountry?.trim() || "Visitor";
+  // Which member state the file goes to matters more than the word "Schengen":
+  // it decides the consulate, the appointment centre and half the checklist.
+  return `Schengen · ${schengenCountry(a.visaCountry).name}`;
 }
 
 // ---- shared building blocks (country-agnostic) ----
@@ -95,6 +129,16 @@ function tiesPara(a: ApplicantLite): string {
     ? `I have strong personal, financial and professional ties to India. ${ties.join(" ")} I will return well before my visa expires.`
     : `I have strong personal and professional ties to my home country and I fully intend to return before the expiry of my visa.`;
 }
+// The travel paragraph. With a trip it names the tour and points at the
+// itinerary below; without one the traveller's own dates carry it, and nothing
+// is claimed about accommodation that hasn't been booked.
+function tripPara(a: ApplicantLite, w: Window): string {
+  const span = `from ${d(w.from)} to ${d(w.to)}${w.days ? ` (${w.days} days)` : ""}`;
+  if (w.tripName)
+    return `I intend to travel ${span} as part of the tour “${w.tripName}”. ${companion(a)} My day-by-day itinerary and confirmed accommodation are listed below.`;
+  return `I intend to travel ${span}. ${companion(a)} My detailed itinerary and confirmed accommodation are enclosed with this application.`;
+}
+
 function companion(a: ApplicantLite): string {
   return !a.travellingWith || /alone|solo|single/i.test(a.travellingWith)
     ? "I am undertaking this trip as part of the group tour."
@@ -142,12 +186,39 @@ function tiesItems(a: ApplicantLite): ChecklistItem[] {
   return ties;
 }
 
+// Why the trip is being made. Tourism needs nothing extra; the other two both
+// turn on a second party whose own paperwork the consulate wants to see.
+function purposeSection(a: ApplicantLite): { title: string; items: ChecklistItem[] } | null {
+  const p = (a.travelPurpose || "tourism").toLowerCase();
+  if (p === "business")
+    return {
+      title: "Because this is a business trip",
+      items: [
+        { label: "Invitation letter from the host company", note: a.hostInvite ? `from ${a.hostInvite} — on letterhead, stating the purpose, the dates, and who bears the costs` : "on letterhead, stating the purpose, the dates, and who bears the costs" },
+        { label: "Letter from your own employer", note: "confirming your position, that the trip is on the company's behalf, and which costs it covers" },
+        { label: "Proof of the business relationship", note: "contract, purchase order, prior correspondence or trade-fair registration" },
+      ],
+    };
+  if (p === "family")
+    return {
+      title: "Because you are visiting family or friends",
+      items: [
+        { label: "Invitation letter from your host", note: a.hostInvite ? `from ${a.hostInvite} — with their address and the dates you will stay` : "with their address and the dates you will stay" },
+        { label: "Copy of the host's passport / residence permit", note: "showing they are legally resident there" },
+        { label: "Proof of your relationship to the host", note: "birth or marriage certificate, or photographs and correspondence for a friend" },
+        { label: "Proof of the accommodation they are providing", note: "their tenancy agreement or property document, if you are staying with them" },
+      ],
+    };
+  return null;
+}
+
 function conditionalItems(a: ApplicantLite): ChecklistItem[] {
   const conditional: ChecklistItem[] = [];
   const age = ageFromDob(a.dob);
   if (age != null && age < 18) {
     conditional.push({ label: "Notarised parental consent", note: "from the non-travelling parent if travelling with one parent; from BOTH parents if travelling alone (or court order if one parent has sole custody)" });
-    conditional.push({ label: "Photocopies of both parents' passports / photo IDs (or the minor's birth certificate)" });
+    conditional.push({ label: "Photocopies of both parents' passports / photo IDs (or the minor's birth certificate)", note: a.minorParents || undefined });
+    conditional.push({ label: "Birth certificate of the applicant", note: "showing both parents' names" });
   }
   const ms = (a.maritalStatus || "").toLowerCase();
   const withSpouse = /\b(spouse|husband|wife|partner)\b/i.test(a.travellingWith || "");
@@ -157,7 +228,7 @@ function conditionalItems(a: ApplicantLite): ChecklistItem[] {
 }
 
 // ======================= dispatch =======================
-export function visaCoverLetter(a: ApplicantLite, t: TripLite) {
+export function visaCoverLetter(a: ApplicantLite, t?: TripLite | null) {
   return isSchengen(a) ? schengenCoverLetter(a, t) : genericCoverLetter(a, t);
 }
 export function visaChecklist(a: ApplicantLite): { title: string; items: ChecklistItem[] }[] {
@@ -165,10 +236,11 @@ export function visaChecklist(a: ApplicantLite): { title: string; items: Checkli
 }
 
 // ======================= Schengen =======================
-function schengenCoverLetter(a: ApplicantLite, t: TripLite) {
-  const dest = t.destination || "Iceland";
-  const nights = (t.itinerary || []).filter((n) => !n.extra);
-  const days = tripDuration(t);
+function schengenCoverLetter(a: ApplicantLite, t?: TripLite | null) {
+  const country = schengenCountry(a.visaCountry);
+  const dest = country.name;
+  const nights = (t?.itinerary || []).filter((n) => !n.extra);
+  const w = travelWindow(a, t);
   const longTerm = !!a.wantsLongTerm && has(a.prevSchengen);
   const schengenPara = has(a.prevSchengen)
     ? `I have previously held a Schengen visa (${a.prevSchengen}), which I used and honoured fully.${longTerm ? " In view of my compliant travel record, I respectfully request a long-term multiple-entry visa, and I have obtained travel medical insurance valid for one year in support of this request." : ""}`
@@ -176,39 +248,66 @@ function schengenCoverLetter(a: ApplicantLite, t: TripLite) {
   const applyType = longTerm ? "a long-term multiple-entry Schengen tourist visa" : "a short-stay Schengen tourist visa";
 
   const paragraphs = [
-    `I, ${a.fullName}, holder of passport number ${a.passportNo || "____________"} (issued at ${a.passportPlace || "____________"} on ${d(a.passportIssue)}, valid until ${d(a.passportExpiry)}), a citizen of ${a.nationality || "India"}, born on ${d(a.dob)} at ${a.placeOfBirth || "____________"}, residing at ${[a.address, a.city, a.pin].filter(Boolean).join(", ") || "____________"}, respectfully apply for ${applyType} to visit ${dest}.`,
-    `I intend to travel from ${d(t.departureDate)} to ${d(t.endDate)}${days ? ` (${days} days)` : ""} as part of a self-drive group tour, “${t.name}”. ${companion(a)} My day-by-day itinerary and confirmed accommodation are listed below.`,
+    `I, ${a.fullName}, holder of passport number ${a.passportNo || "____________"} (issued at ${a.passportPlace || "____________"} on ${d(a.passportIssue)}, valid until ${d(a.passportExpiry)}), ${nat(a.nationality)}, born on ${d(a.dob)} at ${a.placeOfBirth || "____________"}, residing at ${[a.address, a.city, a.pin].filter(Boolean).join(", ") || "____________"}, respectfully apply for ${applyType} to visit ${dest}.`,
+    tripPara(a, w),
     `${workLine(a)} ${fundingLine(a)}`,
     `${tiesPara(a)} ${schengenPara}`,
     `All required supporting documents are enclosed with this application. I kindly request you to grant me the visa, and I thank you for your consideration.`,
   ];
   return {
     subject: `Application for Schengen (Tourist) Visa — ${a.fullName}`,
-    salutation: "To the Visa Officer, Embassy of Iceland / VFS Global",
+    salutation: `To the Visa Officer, ${country.consulate}`,
     paragraphs,
     itinerary: nights.map((n, i) => ({ day: i + 1, date: dShort(n.date), location: n.location, hotel: (n.hotels || []).map((h) => h.hotelName).join(", ") || "—" })),
     sign: { name: a.fullName, contact: [a.phone, a.email].filter(Boolean).join(" · ") },
   };
 }
 
-// Based on the official Embassy of Iceland / VFS Global checklist for India
-// (Tourism/Business, Feb 2025). Verify against the current VFS list each season.
+// The common Schengen requirements, which are set in the Visa Code and are the
+// same whichever member state you apply to, plus the handful of things that do
+// change by country — who the file is addressed to, which portal hosts the form,
+// and the daily funds the consulate wants to see. Those come from the country
+// profile in lib/schengen.ts.
+//
+// Consulates revise their lists without notice, so this is a working list to
+// collect against, not the authority. Check it off against the current VFS /
+// consulate checklist for the country and city before the appointment.
 function schengenChecklist(a: ApplicantLite): { title: string; items: ChecklistItem[] }[] {
+  const country = schengenCountry(a.visaCountry);
   const travelled = has(a.travelHistory) || has(a.prevSchengen);
+  const longTerm = !!a.wantsLongTerm && has(a.prevSchengen);
   const core: ChecklistItem[] = [
     { label: "Passport", note: "valid ≥ 3 months beyond departure from Schengen, issued within the last 10 years, min 2 blank pages" },
     { label: "Copies of previous Schengen visas & entry/exit stamps", note: travelled ? "you indicated prior travel — include copies of those visas/stamps from current & old passports" : "from current & old passports, if you have ever travelled to the Schengen area" },
-    { label: "Schengen visa application form — printed & signed", note: "plus the confirmation of the online form submitted at visa.government.is" },
-    { label: "Passport photograph", note: "3.5 × 4.5 cm, white background, taken within the last 6 months (official asks 1 — carry 2)" },
-    { label: "Travel medical insurance", note: (!!a.wantsLongTerm && has(a.prevSchengen)) ? "for the LONG-TERM multiple-entry visa, the policy must cover ≥ €30,000 and be VALID FOR 1 YEAR (all Schengen countries, all risks)" : "the POLICY (an insurance card is not enough) covering ≥ €30,000 for all risks, valid across all Schengen countries for the whole trip incl. arrival & departure dates" },
+    { label: "Schengen visa application form — printed & signed", note: country.portal ? `plus the confirmation of the online form submitted at ${country.portal}` : `the form for ${country.name}, downloaded from its consulate or the VFS page for your city` },
+    { label: "Passport photograph", note: "3.5 × 4.5 cm, white background, taken within the last 6 months (one is asked for — carry 2)" },
+    { label: "Travel medical insurance", note: longTerm ? "for the LONG-TERM multiple-entry visa, the policy must cover ≥ €30,000 and be VALID FOR 1 YEAR (all Schengen countries, all risks)" : "the POLICY (an insurance card is not enough) covering ≥ €30,000 for all risks, valid across all Schengen countries for the whole trip incl. arrival & departure dates" },
     { label: "Round-trip flight reservation", note: "with PNR and the traveller's name" },
     { label: "Proof of accommodation — hotel bookings / itinerary", note: "we provide this from your trip" },
     { label: "Cover letter", note: "purpose, duration, accompanying persons, transport & accommodation — we generate this" },
     { label: "Original personal bank statement", note: "last 3 months showing movements — ALL PAGES must be STAMPED & SIGNED by the bank (required of every applicant, even if sponsored)" },
     { label: "Indian Income Tax Return (ITR) acknowledgment", note: "last 2 assessment years, barcode-verifiable" },
-    { label: "Proof of sufficient funds", note: "statement must show ≥ 8,000 ISK/day (≈ €58) for the stay, or 4,000 ISK/day if a third party bears your expenses" },
+    {
+      label: "Proof of sufficient funds",
+      note: country.dailyFunds
+        ? `the statement must show ${country.dailyFunds} for the stay`
+        : `enough to cover the whole stay — ${country.name} publishes a figure per day; confirm the current one on its consulate or VFS page before the appointment`,
+    },
   ];
-  const groups = [{ title: "Core documents (every applicant)", items: core }, workSection(a)];
+  const groups = [
+    {
+      title: `Applying to ${country.name}`,
+      items: [
+        { label: `The file is addressed to the ${country.consulate}`, note: "we address the cover letter accordingly" },
+        { label: `${country.name} must be the right country to apply to`, note: `apply where you spend the most nights; if the nights are equal, apply where you first enter the Schengen area. Applying to the wrong member state gets the file returned.` },
+        { label: "Appointment at the visa centre, in person", note: "biometrics (fingerprints and photo) are taken there and can't be sent in" },
+      ] as ChecklistItem[],
+    },
+    { title: "Core documents (every applicant)", items: core },
+    workSection(a),
+  ];
+  const purpose = purposeSection(a);
+  if (purpose) groups.push(purpose);
   const ties = tiesItems(a);
   const conditional = conditionalItems(a);
   if (ties.length) groups.push({ title: "Ties to home (strengthens your case)", items: ties });
@@ -217,16 +316,16 @@ function schengenChecklist(a: ApplicantLite): { title: string; items: ChecklistI
 }
 
 // ======================= Generic (any country) =======================
-function genericCoverLetter(a: ApplicantLite, t: TripLite) {
-  const country = a.visaCountry?.trim() || t.destination || "the destination country";
-  const nights = (t.itinerary || []).filter((n) => !n.extra);
-  const days = tripDuration(t);
+function genericCoverLetter(a: ApplicantLite, t?: TripLite | null) {
+  const country = a.visaCountry?.trim() || t?.destination || "the destination country";
+  const nights = (t?.itinerary || []).filter((n) => !n.extra);
+  const w = travelWindow(a, t);
   const historyPara = has(a.travelHistory)
     ? `My previous international travel (${a.travelHistory}) reflects a consistent record of honouring visa conditions and returning home on time.`
     : "";
   const paragraphs = [
-    `I, ${a.fullName}, holder of passport number ${a.passportNo || "____________"} (issued at ${a.passportPlace || "____________"} on ${d(a.passportIssue)}, valid until ${d(a.passportExpiry)}), a citizen of ${a.nationality || "India"}, born on ${d(a.dob)} at ${a.placeOfBirth || "____________"}, residing at ${[a.address, a.city, a.pin].filter(Boolean).join(", ") || "____________"}, respectfully apply for a visitor (tourist) visa to ${country}.`,
-    `I intend to travel from ${d(t.departureDate)} to ${d(t.endDate)}${days ? ` (${days} days)` : ""} as part of the tour “${t.name}”. ${companion(a)} My day-by-day itinerary and confirmed accommodation are listed below.`,
+    `I, ${a.fullName}, holder of passport number ${a.passportNo || "____________"} (issued at ${a.passportPlace || "____________"} on ${d(a.passportIssue)}, valid until ${d(a.passportExpiry)}), ${nat(a.nationality)}, born on ${d(a.dob)} at ${a.placeOfBirth || "____________"}, residing at ${[a.address, a.city, a.pin].filter(Boolean).join(", ") || "____________"}, respectfully apply for a visitor (tourist) visa to ${country}.`,
+    tripPara(a, w),
     `${workLine(a)} ${fundingLine(a)}`,
     `${tiesPara(a)} ${historyPara}`.trim(),
     `This is a genuine leisure visit and I will return to India before my visa expires. All required supporting documents are enclosed. I kindly request you to grant me the visa, and I thank you for your consideration.`,
@@ -261,9 +360,92 @@ function genericChecklist(a: ApplicantLite): { title: string; items: ChecklistIt
   if (travelled) core.push({ label: "Copies of previous visas & entry/exit stamps", note: `from current & old passports (you indicated prior travel: ${a.travelHistory})` });
 
   const groups = [{ title: `Core documents for ${country} (every applicant)`, items: core }, workSection(a)];
+  const purpose = purposeSection(a);
+  if (purpose) groups.push(purpose);
   const ties = tiesItems(a);
   const conditional = conditionalItems(a);
   if (ties.length) groups.push({ title: "Ties to home (strengthens your case)", items: ties });
   if (conditional.length) groups.push({ title: "Because of your details", items: conditional });
   return groups;
+}
+
+// ======================= due diligence =======================
+// What the operator needs to look at before the file is sent anywhere. These
+// are the things that get an application returned or refused on paperwork
+// rather than on merit, and all of them are visible from the form answers.
+export type VisaFlag = { level: "stop" | "check"; text: string };
+
+const MIN_PASSPORT_MONTHS = 3; // Schengen wants validity 3 months past departure
+
+export function visaFlags(a: ApplicantLite, t?: TripLite | null, now = new Date()): VisaFlag[] {
+  const flags: VisaFlag[] = [];
+  const schengen = isSchengen(a);
+  const country = schengenCountry(a.visaCountry);
+  const w = travelWindow(a, t);
+  const end = w.to ? new Date(w.to) : null;
+
+  // --- the passport itself ---
+  if (!a.passportNo) flags.push({ level: "check", text: "No passport number on the form." });
+  if (!a.passportExpiry) {
+    flags.push({ level: "check", text: "No passport expiry date — can't confirm the passport is valid long enough." });
+  } else if (end) {
+    const need = new Date(end);
+    need.setMonth(need.getMonth() + MIN_PASSPORT_MONTHS);
+    if (new Date(a.passportExpiry) < need)
+      flags.push({ level: "stop", text: `Passport expires ${d(a.passportExpiry)} — it must stay valid until at least ${d(need)} (${MIN_PASSPORT_MONTHS} months past the return). Renew before applying.` });
+  }
+  if (a.passportIssue) {
+    const tenYears = new Date(a.passportIssue);
+    tenYears.setFullYear(tenYears.getFullYear() + 10);
+    if (tenYears < now) flags.push({ level: "stop", text: `Passport was issued ${d(a.passportIssue)}, more than 10 years ago — it won't be accepted.` });
+  }
+  if (a.passportExpiry && a.passportIssue && new Date(a.passportExpiry) < new Date(a.passportIssue))
+    flags.push({ level: "check", text: "Passport issue and expiry dates look swapped." });
+
+  // --- is this even the right consulate? ---
+  if (schengen && has(a.mostNightsCountry)) {
+    const most = schengenCountry(a.mostNightsCountry);
+    if (most.name.toLowerCase() !== country.name.toLowerCase())
+      flags.push({
+        level: "stop",
+        text: `Applying to ${country.name}, but the most nights are in ${a.mostNightsCountry}. The application belongs to ${most.name} — ${country.name} would return it.`,
+      });
+  } else if (schengen) {
+    flags.push({ level: "check", text: "Not told which country has the most nights, so we can't confirm the file is going to the right consulate." });
+  }
+
+  // --- who they are ---
+  const age = ageFromDob(a.dob, now);
+  if (age == null) flags.push({ level: "check", text: "No date of birth." });
+  if (age != null && age < 18 && !has(a.minorParents))
+    flags.push({ level: "check", text: "Applicant is a minor and no parent details were given — consent documents will be needed from both parents." });
+
+  // --- the money ---
+  if (a.funding === "sponsor" && !has(a.sponsorName))
+    flags.push({ level: "check", text: "Says a sponsor is paying but hasn't named them — the sponsorship letter and bank statement can't be collected yet." });
+  if (!has(a.income)) flags.push({ level: "check", text: "No income stated; funds will rest entirely on the bank statement." });
+
+  // --- the second party, when there is one ---
+  const purpose = (a.travelPurpose || "tourism").toLowerCase();
+  if (purpose !== "tourism" && !has(a.hostInvite))
+    flags.push({ level: "check", text: `Travelling for ${purpose === "business" ? "business" : "family or friends"} but no host named — the invitation letter is the document this file turns on.` });
+
+  // --- the record ---
+  if (schengen && !has(a.prevSchengen) && !has(a.travelHistory))
+    flags.push({ level: "check", text: "First international trip on record. Expect closer scrutiny of funds and ties — the ties section of the form is worth filling properly." });
+  if (!!a.wantsLongTerm && !has(a.prevSchengen))
+    flags.push({ level: "check", text: "Asking for a long-term multiple-entry visa without a previous Schengen visa; that is rarely granted on a first application." });
+
+  // --- and the obvious one ---
+  if (!w.from || !w.to)
+    flags.push({ level: "check", text: w.tripName ? "The trip has no fixed dates yet, and the application needs them." : "No travel dates given, and the application needs them." });
+
+  return flags;
+}
+
+// The checklist flattened into rows, for the table on the Visa desk.
+export type RequirementRow = { group: string; label: string; note?: string };
+
+export function visaRequirementRows(a: ApplicantLite): RequirementRow[] {
+  return visaChecklist(a).flatMap((g) => g.items.map((it) => ({ group: g.title, label: it.label, note: it.note })));
 }

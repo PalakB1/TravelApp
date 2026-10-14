@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SCHENGEN_COUNTRIES, DEFAULT_SCHENGEN } from "@/lib/schengen";
 
 // Build a per-trip visa form link for a chosen visa TYPE (Schengen or any other
 // country). The type + country ride along in the URL so the traveller's cover
@@ -9,13 +10,18 @@ export default function VisaLinkBuilder({ tripId, tripName }: { tripId: string; 
   const [origin, setOrigin] = useState("");
   const [type, setType] = useState("schengen");
   const [country, setCountry] = useState("");
+  // Which member state a Schengen file goes to. Pre-set here so the traveller
+  // sees the right one already chosen, though they can change it on the form.
+  const [schengenTo, setSchengenTo] = useState(DEFAULT_SCHENGEN.name);
   const [copied, setCopied] = useState(false);
   useEffect(() => setOrigin(window.location.origin), []);
 
   const isGeneric = type === "generic";
-  const qs = isGeneric ? `?type=generic${country.trim() ? `&country=${encodeURIComponent(country.trim())}` : ""}` : "?type=schengen";
+  const qs = isGeneric
+    ? `?type=generic${country.trim() ? `&country=${encodeURIComponent(country.trim())}` : ""}`
+    : `?type=schengen&country=${encodeURIComponent(schengenTo)}`;
   const url = `${origin}/visa/${tripId}${qs}`;
-  const label = isGeneric ? (country.trim() || "visitor") : "Schengen";
+  const label = isGeneric ? (country.trim() || "visitor") : `Schengen (${schengenTo})`;
 
   function copy() {
     navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }).catch(() => {});
@@ -34,9 +40,15 @@ export default function VisaLinkBuilder({ tripId, tripName }: { tripId: string; 
             <option value="generic">Other country…</option>
           </select>
         </label>
-        {isGeneric && (
+        {isGeneric ? (
           <label className="field" style={{ maxWidth: 240, marginBottom: 0 }}><span className="lbl">Which country?</span>
             <input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g. New Zealand" />
+          </label>
+        ) : (
+          <label className="field" style={{ maxWidth: 240, marginBottom: 0 }}><span className="lbl">Applying to</span>
+            <select value={schengenTo} onChange={(e) => setSchengenTo(e.target.value)}>
+              {SCHENGEN_COUNTRIES.map((c) => <option key={c.code} value={c.name}>{c.name}</option>)}
+            </select>
           </label>
         )}
       </div>

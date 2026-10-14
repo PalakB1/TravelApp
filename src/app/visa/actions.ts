@@ -3,28 +3,58 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
+import { DEFAULT_SCHENGEN, schengenCountry } from "@/lib/schengen";
+import { OTHER_OPTION, visaTypeForDestination } from "@/lib/destinations";
 
 export type VisaResult = { ok: boolean; message: string };
 const toDate = (v: FormDataEntryValue | null) => { const s = String(v || ""); return s ? new Date(s) : null; };
 const str = (v: FormDataEntryValue | null) => String(v || "").trim() || null;
 
-// PUBLIC — no auth. A traveller fills the trip's visa form; an entry is created
-// and they're sent to their generated cover letter + checklist.
+// PUBLIC — no auth. Two ways in, one handler:
+//
+//   • a TRIP's link, where the agency has already chosen the destination and the
+//     dates come from the trip; or
+//   • the agency's own permanent link, where there is no trip at all and the
+//     traveller names the country and the dates themselves.
+//
+// The second is what an agency hands to a corporate client: one URL, any number
+// of people, nothing to set up first. Either way the application is stamped with
+// the ORG, because that is what decides whose desk it lands on.
 export async function submitVisaApplicant(_prev: VisaResult | undefined, formData: FormData): Promise<VisaResult> {
-  const tripId = String(formData.get("tripId") || "");
+  const tripId = String(formData.get("tripId") || "") || null;
+  const formOrgId = String(formData.get("orgId") || "") || null;
   const givenName = str(formData.get("givenName"));
   const surname = str(formData.get("surname"));
   // Back-compat: older links may still post a single fullName field.
   const legacyFull = String(formData.get("fullName") || "").trim() || null;
   const fullName = [givenName, surname].filter(Boolean).join(" ") || legacyFull || "";
-  if (!tripId || !fullName) return { ok: false, message: "Please enter your name exactly as in your passport." };
+  if (!tripId && !formOrgId) return { ok: false, message: "This visa link is invalid." };
+  if (!fullName) return { ok: false, message: "Please enter your name exactly as in your passport." };
 
-  const trip = await prisma.trip.findUnique({ where: { id: tripId }, select: { id: true } });
-  if (!trip) return { ok: false, message: "This visa link is invalid." };
+  // On the agency link the traveller picks the destination, and the destination
+  // picks the template — Schengen rules for a Schengen state, the general
+  // visitor-visa template for anywhere else. On a trip link the agency chose.
+  const picked = str(formData.get("visaCountry"));
+  const typed = str(formData.get("visaCountryOther"));
+  const destination = picked === OTHER_OPTION ? typed : picked;
+  const visaType = tripId
+    ? (str(formData.get("visaType")) || "schengen")
+    : visaTypeForDestination(destination);
+
+  let orgId = formOrgId;
+  if (tripId) {
+    const trip = await prisma.trip.findUnique({ where: { id: tripId }, select: { orgId: true } });
+    if (!trip) return { ok: false, message: "This visa link is invalid." };
+    orgId = trip.orgId;
+  } else {
+    const org = await prisma.organization.findUnique({ where: { id: orgId! }, select: { id: true } });
+    if (!org) return { ok: false, message: "This visa link is invalid." };
+  }
 
   const a = await prisma.visaApplicant.create({
     data: {
       tripId,
+      orgId,
       fullName,
       surname,
       givenName,
@@ -57,8 +87,21 @@ export async function submitVisaApplicant(_prev: VisaResult | undefined, formDat
       dependents: str(formData.get("dependents")),
       investments: str(formData.get("investments")),
       notes: str(formData.get("notes")),
-      visaType: str(formData.get("visaType")) || "schengen",
-      visaCountry: str(formData.get("visaCountry")),
+      visaType,
+      // A Schengen file always belongs to one member state. The applicant picks
+      // it on the form; if an old link posted nothing, it falls back to Malta
+      // rather than being left blank for the operator to guess at.
+      visaCountry: visaType === "schengen"
+        ? schengenCountry(destination || DEFAULT_SCHENGEN.name).name
+        : destination,
+      travelFrom: toDate(formData.get("travelFrom")),
+      travelTo: toDate(formData.get("travelTo")),
+      residenceCountry: str(formData.get("residenceCountry")),
+      travelPurpose: str(formData.get("travelPurpose")) || "tourism",
+      hostInvite: str(formData.get("hostInvite")),
+      mostNightsCountry: str(formData.get("mostNightsCountry")),
+      entryCountry: str(formData.get("entryCountry")),
+      minorParents: str(formData.get("minorParents")),
     },
   });
   revalidatePath("/", "layout");

@@ -83,9 +83,21 @@ between them by estimate. Marking a hotel, car or supplier **paid** writes the
 expense for you. Money staff front from their own pocket is tracked as a **loan**
 until a settlement pays it back. Full ledger at `/expenses/log`.
 
-**Visa desk** — send one link, the traveller fills in their own details, you get
-a cover letter and document checklist back with the trip's dates and hotels
-already merged in.
+**Visa desk** — one permanent link per agency at `/apply/<org>`, which needs
+nothing set up first: hand it to a corporate client or a walk-in, and any number
+of travellers can fill it. They name the country they're going to and the form
+rearranges itself around the answer — a Schengen state brings up the Schengen
+questions, anywhere else uses the general visitor-visa template. There is also a
+per-trip link, where the trip's dates and hotels go into the cover letter.
+
+Either way the form adapts as it is answered: a business owner is asked
+for a GST number and a salaried traveller is not, a sponsor's details appear
+only once someone says a sponsor is paying, and a date of birth under 18 brings
+up the parental-consent questions. Schengen applications are addressed to the
+member state being applied to — Malta by default — and every file arrives with a
+requirements table and a due-diligence panel that calls out a passport expiring
+too soon, a passport older than ten years, or an application aimed at the wrong
+consulate because the nights are mostly somewhere else.
 
 **GST / Tax** — tax collected, tax remitted, what's still owed.
 
