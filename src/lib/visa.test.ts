@@ -97,8 +97,8 @@ describe("the checklist adapts to the answers", () => {
   });
 
   it("asks for the sponsor's documents only when someone else is paying", () => {
-    expect(titles({ ...clean, funding: "sponsor", sponsorName: "Vikram Nair" })).toContain("Sponsorship");
-    expect(titles(clean)).not.toContain("Sponsorship");
+    expect(titles({ ...clean, funding: "sponsor", sponsorName: "Vikram Nair" })).toContain("Your sponsor");
+    expect(titles(clean)).not.toContain("Your sponsor");
   });
 
   it("adds parental consent for a minor and carries the parents' names through", () => {
@@ -361,13 +361,94 @@ describe("a sponsored business owner", () => {
   const labels = visaChecklist(director).flatMap((g) => g.items.map((i) => i.label));
 
   it("is asked for both the sponsor's papers and the company's", () => {
-    expect(titles).toContain("Sponsorship");
+    expect(titles).toContain("Your sponsor");
     expect(titles).toContain("Your company");
     expect(labels).toContain("Certificate of incorporation");
-    expect(labels).toContain("Sponsor's bank statement");
+    expect(labels).toContain("Sponsor's personal bank statement — last 3 years");
   });
 
   it("is not also asked for pay slips", () => {
     expect(labels).not.toContain("Pay slips for the last 3 months");
+  });
+});
+
+describe("background: refusals, bans, convictions", () => {
+  const texts = (a: Parameters<typeof visaFlags>[0]) => visaFlags(a, trip, NOW).map((f) => `${f.level}:${f.text}`).join(" | ");
+  const labels = (a: Parameters<typeof visaChecklist>[0]) => visaChecklist(a).flatMap((g) => g.items.map((i) => i.label));
+
+  it("says nothing when nothing is declared", () => {
+    expect(texts(clean)).not.toMatch(/refusal|overstay|criminal/i);
+  });
+
+  it("treats a declared refusal as work to do, and asks for the letter", () => {
+    const a = { ...clean, visaRefusals: "UK, 2021 — insufficient funds" };
+    expect(texts(a)).toContain("check:Declared a previous visa refusal");
+    expect(labels(a)).toContain("Copy of the previous refusal letter");
+    expect(labels(a)).toContain("A written explanation of what has changed since the refusal");
+  });
+
+  it("stops the file on a declared overstay or ban", () => {
+    const a = { ...clean, entryIssues: "overstayed 11 days in Dubai, 2019" };
+    expect(texts(a)).toContain("stop:Declared an overstay");
+    expect(labels(a)).toContain("Papers showing how the earlier entry matter was closed");
+  });
+
+  it("flags a declared conviction without treating it as fatal", () => {
+    const a = { ...clean, criminalRecord: "traffic case, Pune, 2017 — closed" };
+    expect(texts(a)).toContain("check:Declared a criminal matter");
+    expect(labels(a)).toContain("Court order / case papers, and a police clearance certificate if asked");
+  });
+
+  it("no longer complains about passport details the form stopped asking for", () => {
+    const { passportNo, passportExpiry, dob, ...bare } = clean;
+    void passportNo; void passportExpiry; void dob;
+    const t = texts(bare);
+    expect(t).not.toMatch(/No passport number|No passport expiry|No date of birth/);
+  });
+
+  it("still catches a passport that is wrong once the details are in", () => {
+    const a = { ...clean, passportExpiry: new Date("2027-04-15T00:00:00Z") };
+    expect(texts(a)).toContain("stop:Passport expires");
+  });
+});
+
+describe("the sponsor's own file", () => {
+  const base = { ...clean, funding: "sponsor", sponsorName: "Vikram Nair", sponsorRelation: "father" };
+  const titles = (a: Parameters<typeof visaChecklist>[0]) => visaChecklist(a).map((g) => g.title);
+  const labels = (a: Parameters<typeof visaChecklist>[0]) => visaChecklist(a).flatMap((g) => g.items.map((i) => i.label));
+
+  it("asks the sponsor for three years of statements and returns, like the applicant", () => {
+    expect(labels(base)).toContain("Sponsor's personal bank statement — last 3 years");
+    expect(labels(base)).toContain("Sponsor's Income Tax Returns — last 3 years");
+  });
+
+  it("names the sponsor on the letter they have to sign", () => {
+    const rows = visaRequirementRows(base);
+    expect(rows.find((r) => r.label === "Signed sponsorship letter")?.note).toContain("Vikram Nair (your father)");
+  });
+
+  it("asks a sponsoring company for its own papers", () => {
+    const a = { ...base, sponsorWork: "business", sponsorEmployer: "Nair Textiles Pvt Ltd", sponsorGst: "27AAB1234C1ZQ" };
+    expect(titles(a)).toContain("Your sponsor's company");
+    const rows = visaRequirementRows(a);
+    expect(rows.find((r) => r.label === "Certificate of incorporation" && r.group === "Your sponsor's company")?.note).toContain("Nair Textiles");
+    expect(rows.find((r) => r.label === "GST certificate" && r.group === "Your sponsor's company")?.note).toContain("27AAB1234C1ZQ");
+  });
+
+  it("asks a salaried sponsor for pay slips instead", () => {
+    const a = { ...base, sponsorWork: "employed" };
+    expect(labels(a)).toContain("Sponsor's pay slips — last 3 months");
+    expect(titles(a)).not.toContain("Your sponsor's company");
+  });
+
+  it("asks for the marriage certificate only when the sponsor is the spouse", () => {
+    expect(labels({ ...base, sponsorRelation: "wife" })).toContain("Marriage certificate");
+    expect(labels(base)).not.toContain("Marriage certificate");
+  });
+
+  it("says so when we don't know what the sponsor does or earns", () => {
+    const t = visaFlags(base, trip, NOW).map((f) => f.text).join(" | ");
+    expect(t).toContain("Don't know what Vikram Nair does");
+    expect(t).toContain("what the sponsor earns");
   });
 });

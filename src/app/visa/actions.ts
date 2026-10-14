@@ -80,6 +80,10 @@ export async function submitVisaApplicant(_prev: VisaResult | undefined, formDat
       funding: str(formData.get("funding")) || "self",
       sponsorName: str(formData.get("sponsorName")),
       sponsorRelation: str(formData.get("sponsorRelation")),
+      sponsorWork: str(formData.get("sponsorWork")),
+      sponsorEmployer: str(formData.get("sponsorEmployer")),
+      sponsorGst: str(formData.get("sponsorGst")),
+      sponsorIncome: str(formData.get("sponsorIncome")),
       prevSchengen: str(formData.get("prevSchengen")),
       wantsLongTerm: String(formData.get("wantsLongTerm")) === "yes",
       travellingWith: str(formData.get("travellingWith")),
@@ -107,6 +111,9 @@ export async function submitVisaApplicant(_prev: VisaResult | undefined, formDat
       mostNightsCountry: str(formData.get("mostNightsCountry")),
       entryCountry: str(formData.get("entryCountry")),
       minorParents: str(formData.get("minorParents")),
+      visaRefusals: str(formData.get("visaRefusals")),
+      entryIssues: str(formData.get("entryIssues")),
+      criminalRecord: str(formData.get("criminalRecord")),
   };
 
   // What they did NOT tick. Rebuilding the list here rather than trusting a

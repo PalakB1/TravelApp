@@ -301,6 +301,12 @@ model VisaApplicant {
   funding         String?   @default("self") // self | sponsor
   sponsorName     String?
   sponsorRelation String?
+  // A sponsored file is two files: whether the sponsor is salaried or runs a
+  // company decides which of their documents the embassy wants.
+  sponsorWork     String?
+  sponsorEmployer String?
+  sponsorGst      String?
+  sponsorIncome   String?
   prevSchengen    String? // "no" or details (kept for back-compat)
   wantsLongTerm   Boolean   @default(false) // requesting a long-term multiple-entry visa (only if prior Schengen)
   travellingWith  String? // "alone" or names of companions
@@ -323,6 +329,12 @@ model VisaApplicant {
   travelTo          DateTime?
   residenceCountry  String?
   missingDocs       String? // documents the traveller did NOT tick as "I have this"
+
+  // Background. Checked against the Schengen Information System regardless of
+  // what is declared, so an undeclared one costs far more than a declared one.
+  visaRefusals      String? // refused a visa by any country, ever
+  entryIssues       String? // overstay, deportation, refused entry, an entry ban
+  criminalRecord    String? // convictions or pending cases, anywhere
 
   status          String    @default("collecting") // collecting | ready | appointment | submitted | approved | rejected
   appointmentAt   DateTime? // VFS appointment date/time

@@ -5,15 +5,18 @@ import { submitVisaApplicant, type VisaResult } from "@/app/visa/actions";
 import { SCHENGEN_COUNTRIES, DEFAULT_SCHENGEN, ANY_SCHENGEN, isAnySchengen } from "@/lib/schengen";
 import { OTHER_DESTINATIONS, OTHER_OPTION, isSchengenDestination } from "@/lib/destinations";
 import { visaChecklist } from "@/lib/visa";
+import CountriesVisited from "./CountriesVisited";
 
 // The form only asks what it needs to.
 //
 // Every embassy question hangs off an earlier answer: a salaried applicant is
-// never asked for a GST number, a self-funded one is never asked who their
-// sponsor is, and nobody is asked about parental consent unless the date of
-// birth says they are a minor. Thirty fields shown at once is how a traveller
-// fills six of them wrong; a dozen that follow from each other is how they fill
-// them right.
+// never asked for a GST number, and a self-funded one is never asked who their
+// sponsor is. Thirty fields shown at once is how a traveller fills six of them
+// wrong; a dozen that follow from each other is how they fill them right.
+//
+// It asks for nothing a passport copy can answer — no date of birth, no
+// passport number, no address — because that is two chances to mistype the same
+// fact.
 //
 // It runs in two modes. Against a TRIP, the agency has already chosen the
 // destination and the dates come from the trip. On the agency's own permanent
@@ -39,16 +42,6 @@ function Follow({ why, children }: { why: string; children: React.ReactNode }) {
     </div>
   );
 }
-
-const yearsSince = (iso: string) => {
-  const dob = new Date(iso);
-  if (Number.isNaN(dob.getTime())) return null;
-  const now = new Date();
-  let a = now.getFullYear() - dob.getFullYear();
-  const m = now.getMonth() - dob.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) a--;
-  return a;
-};
 
 export default function VisaForm({
   tripId,
@@ -82,9 +75,11 @@ export default function VisaForm({
   const [purpose, setPurpose] = useState("tourism");
   const [work, setWork] = useState("employed");
   const [funding, setFunding] = useState("self");
-  const [marital, setMarital] = useState("");
-  const [dob, setDob] = useState("");
   const [prevVisa, setPrevVisa] = useState("");
+  const [refused, setRefused] = useState("no");
+  const [entryIssue, setEntryIssue] = useState("no");
+  const [criminal, setCriminal] = useState("no");
+  const [sponsorWork, setSponsorWork] = useState("");
 
   // On a trip link the agency fixed the visa type. On the agency link the
   // destination decides it, which is why the rest of the form can change the
@@ -93,8 +88,6 @@ export default function VisaForm({
   const chosen = country === OTHER_OPTION ? otherCountry.trim() : country;
 
   const hasPrevVisa = prevVisa.trim() !== "" && prevVisa.trim().toLowerCase() !== "no";
-  const age = dob ? yearsSince(dob) : null;
-  const minor = age != null && age < 18;
   const owner = work === "business" || work === "self";
   const salaried = work === "employed" || work === "other";
   const sponsored = funding === "sponsor";
@@ -118,8 +111,7 @@ export default function VisaForm({
     travelPurpose: purpose,
     employmentType: work,
     funding,
-    maritalStatus: marital || null,
-    dob: dob ? new Date(dob) : null,
+    sponsorWork: sponsorWork || null,
     prevSchengen: prevVisa || null,
   };
   const docGroups = visaChecklist(draft, "traveller").filter((g) => g.title !== "We take care of these for you");
@@ -263,53 +255,19 @@ export default function VisaForm({
         )}
       </Section>
 
-      <Section title="You (as in passport)">
+      <Section title="You">
         <div className="row">
-          <label className="field"><span className="lbl">Given name(s) / first name</span><input name="givenName" placeholder="Exactly as in your passport" required /></label>
-          <label className="field"><span className="lbl">Surname / last name</span><input name="surname" placeholder="Exactly as in your passport" /></label>
+          <label className="field"><span className="lbl">Given name(s) / first name</span><input name="givenName" placeholder="As printed on your passport" required /></label>
+          <label className="field"><span className="lbl">Surname / last name</span><input name="surname" placeholder="As printed on your passport" /></label>
         </div>
-        <p className="small muted" style={{ margin: "-4px 0 12px" }}>Copy these two exactly as printed on your passport — the embassy form asks for them separately.</p>
-        <div className="row-3">
-          <label className="field"><span className="lbl">Date of birth</span><input name="dob" type="date" value={dob} onChange={(e) => setDob(e.target.value)} /></label>
-          <label className="field"><span className="lbl">Place of birth</span><input name="placeOfBirth" placeholder="City" /></label>
-          <label className="field"><span className="lbl">Nationality</span><input name="nationality" defaultValue="Indian" /></label>
+        <div className="row">
+          <label className="field"><span className="lbl">Phone (with country code)</span><input name="phone" placeholder="+91 98765 43210" required /></label>
+          <label className="field"><span className="lbl">Email</span><input name="email" type="email" required /></label>
         </div>
-        <label className="field" style={{ maxWidth: 240 }}><span className="lbl">Marital status</span>
-          <select name="maritalStatus" value={marital} onChange={(e) => setMarital(e.target.value)}>
-            <option value="">Select…</option><option>Single</option><option>Married</option><option>Separated</option><option>Divorced</option><option>Widowed</option>
-          </select>
-        </label>
-        {minor && (
-          <Follow why={`You are ${age}, so the embassy needs consent from both parents — notarised, and with copies of their passports. Give us their details and we'll list exactly what each one has to sign.`}>
-            <label className="field"><span className="lbl">Both parents — names &amp; passport numbers</span><input name="minorParents" placeholder="e.g. Anil Shah (Z1234567), Meera Shah (Z7654321)" /></label>
-          </Follow>
-        )}
-        {marital === "Separated" && (
-          <p className="small muted" style={{ margin: "-4px 0 12px" }}>You&apos;ll need to attach your legal separation document — we&apos;ll put it on your checklist.</p>
-        )}
-      </Section>
-
-      <Section title="Passport">
-        <div className="row-3">
-          <label className="field"><span className="lbl">Passport number</span><input name="passportNo" /></label>
-          <label className="field"><span className="lbl">Date of issue</span><input name="passportIssue" type="date" /></label>
-          <label className="field"><span className="lbl">Date of expiry</span><input name="passportExpiry" type="date" /></label>
-        </div>
-        <label className="field" style={{ maxWidth: 240 }}><span className="lbl">Place of issue</span><input name="passportPlace" placeholder="City" /></label>
-        <p className="small muted" style={{ margin: "-4px 0 0" }}>
-          Your passport has to stay valid for 3 months after you come back, and must have been issued within the
-          last 10 years. We check both and tell you if there&apos;s a problem.
+        <p className="small muted" style={{ margin: "-4px 0 12px" }}>
+          That is all we need here. Your date of birth, passport details and address come straight from your
+          passport copy — nothing to type twice, and nothing to get wrong.
         </p>
-      </Section>
-
-      <Section title="Contact">
-        <label className="field"><span className="lbl">Residential address</span><input name="address" placeholder="House / street / area" /></label>
-        <div className="row-3">
-          <label className="field"><span className="lbl">City</span><input name="city" /></label>
-          <label className="field"><span className="lbl">PIN / postcode</span><input name="pin" /></label>
-          <label className="field"><span className="lbl">Phone</span><input name="phone" /></label>
-        </div>
-        <label className="field"><span className="lbl">Email</span><input name="email" type="email" /></label>
       </Section>
 
       <Section title="Work & income">
@@ -381,11 +339,37 @@ export default function VisaForm({
           </select>
         </label>
         {sponsored ? (
-          <Follow why="A sponsored application needs the sponsor's signed letter, their photo ID and their bank statement — and your own bank statement as well, which is asked for either way.">
+          <Follow why="When someone else pays, the embassy looks at them as closely as it looks at you — their letter, their ID, their bank statement and their tax returns. What they do for a living decides the rest of their list, so we ask that too.">
             <div className="row">
               <label className="field"><span className="lbl">Sponsor&apos;s full name</span><input name="sponsorName" /></label>
               <label className="field"><span className="lbl">Their relationship to you</span><input name="sponsorRelation" placeholder="e.g. father, spouse, employer" /></label>
             </div>
+            <div className="row">
+              <label className="field"><span className="lbl">What does your sponsor do?</span>
+                <select name="sponsorWork" value={sponsorWork} onChange={(e) => setSponsorWork(e.target.value)}>
+                  <option value="">Select…</option>
+                  <option value="employed">Employed (salaried)</option>
+                  <option value="business">Owns a business</option>
+                  <option value="self">Self-employed / freelancer</option>
+                  <option value="retired">Retired</option>
+                  <option value="other">Something else</option>
+                </select>
+              </label>
+              <label className="field"><span className="lbl">Their annual income (roughly)</span><input name="sponsorIncome" placeholder="e.g. ₹35,00,000 / year" /></label>
+            </div>
+            {(sponsorWork === "business" || sponsorWork === "self") && (
+              <Follow why="Their company shows its own papers — incorporation, GST certificate, and three years of statements and returns.">
+                <div className="row">
+                  <label className="field"><span className="lbl">Their company&apos;s name</span><input name="sponsorEmployer" /></label>
+                  <label className="field"><span className="lbl">Its GST / registration no.</span><input name="sponsorGst" /></label>
+                </div>
+              </Follow>
+            )}
+            {(sponsorWork === "employed" || sponsorWork === "other") && (
+              <Follow why="We'll need their pay slips and a letter from their employer confirming the salary.">
+                <label className="field"><span className="lbl">Who do they work for?</span><input name="sponsorEmployer" placeholder="Company name" /></label>
+              </Follow>
+            )}
           </Follow>
         ) : (
           <p className="small muted" style={{ margin: "-4px 0 12px" }}>
@@ -401,7 +385,51 @@ export default function VisaForm({
         </p>
         <label className="field"><span className="lbl">Family / dependants staying back home</span><input name="dependents" placeholder="e.g. spouse and 2 children, elderly parents" /></label>
         <label className="field"><span className="lbl">Investments &amp; assets at home</span><input name="investments" placeholder="e.g. 2 flats in Pune, FDs ₹20L, mutual funds ₹15L" /></label>
-        <label className="field"><span className="lbl">Past international travel</span><input name="travelHistory" placeholder="e.g. UK 2019, Singapore 2022, Dubai 2023 — or None" /></label>
+        <CountriesVisited />
+      </Section>
+
+      <Section title="Background">
+        <p className="small muted" style={{ margin: "0 0 12px" }}>
+          Every one of these is checked against the shared European database whatever you write here, so an
+          undeclared one turns a survivable history into a false statement — which is itself a reason to refuse.
+          Declared, with an explanation we write for you, most of them are survivable. Please answer honestly.
+        </p>
+
+        <label className="field" style={{ maxWidth: 420 }}><span className="lbl">Has any country ever refused you a visa?</span>
+          <select value={refused} onChange={(e) => setRefused(e.target.value)}>
+            <option value="no">No, never</option>
+            <option value="yes">Yes</option>
+          </select>
+        </label>
+        {refused === "yes" && (
+          <Follow why="We'll need a copy of the refusal letter and we'll write the explanation of what has changed since. A declared refusal is normal; a hidden one is fatal.">
+            <label className="field"><span className="lbl">Which country, roughly when, and the reason given</span><input name="visaRefusals" placeholder="e.g. UK, 2021 — insufficient funds shown" /></label>
+          </Follow>
+        )}
+
+        <label className="field" style={{ maxWidth: 420 }}><span className="lbl">Have you ever overstayed a visa, been deported, or been refused entry?</span>
+          <select value={entryIssue} onChange={(e) => setEntryIssue(e.target.value)}>
+            <option value="no">No, never</option>
+            <option value="yes">Yes</option>
+          </select>
+        </label>
+        {entryIssue === "yes" && (
+          <Follow why="This one we need to look at properly before anything is submitted — tell us everything you remember, including whether you were given a ban and for how long.">
+            <label className="field"><span className="lbl">What happened, where, and when</span><input name="entryIssues" placeholder="e.g. overstayed 11 days in Dubai, 2019 — fine paid, no ban" /></label>
+          </Follow>
+        )}
+
+        <label className="field" style={{ maxWidth: 420 }}><span className="lbl">Any criminal conviction or pending case, in any country?</span>
+          <select value={criminal} onChange={(e) => setCriminal(e.target.value)}>
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+          </select>
+        </label>
+        {criminal === "yes" && (
+          <Follow why="Most destinations ask this outright, and a spent or minor matter very often makes no difference — but it has to be handled, not hidden. We may ask for the court papers or a police clearance certificate.">
+            <label className="field"><span className="lbl">What it was, where, and when</span><input name="criminalRecord" placeholder="e.g. traffic case, Pune, 2017 — closed" /></label>
+          </Follow>
+        )}
       </Section>
 
       <Section title={schengen ? "Schengen history & companions" : "Travel history & companions"}>
@@ -421,11 +449,6 @@ export default function VisaForm({
           </>
         )}
         <label className="field"><span className="lbl">Travelling alone or with someone?</span><input name="travellingWith" placeholder="e.g. alone — or with spouse & 2 children / with a tour group" /></label>
-        {marital === "Married" && (
-          <p className="small muted" style={{ margin: "-4px 0 12px" }}>
-            If your spouse is travelling with you, carry your marriage certificate — we&apos;ll add it to the checklist.
-          </p>
-        )}
         <label className="field"><span className="lbl">Anything else we should know</span><input name="notes" placeholder="optional" /></label>
       </Section>
 

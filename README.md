@@ -90,6 +90,24 @@ rearranges itself around the answer — a Schengen state brings up the Schengen
 questions, anywhere else uses the general visitor-visa template. There is also a
 per-trip link, where the trip's dates and hotels go into the cover letter.
 
+The form asks the traveller only for what a passport copy cannot give: their
+name, phone and email, where they're going, what they do, who's paying, and
+their background. Date of birth, passport details and address are read off the
+passport copy instead of typed twice — so the paperwork checks that depend on
+them run once those details are in, and say nothing while they're absent.
+
+Background is asked plainly: previous visa refusals, any overstay, deportation
+or refused entry, and any criminal matter. All three are checked against the
+Schengen Information System whatever the applicant writes, so an undeclared one
+turns a survivable history into a false statement. A declared refusal adds the
+refusal letter and a what-has-changed explanation to the document list; a
+declared overstay or ban stops the file for the agency to look at properly.
+
+When someone else is paying, the sponsor is treated as a second applicant: what
+they do for a living, what they earn, and — if they run a company — its
+incorporation and GST certificates and three years of its books, alongside
+three years of their own statements and returns.
+
 While it is being filled, the form shows the traveller the document list their
 own answers have produced and asks them to tick what they already have. What
 they leave unticked is recorded as the agency's actual workload, surfaced on the

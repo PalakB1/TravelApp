@@ -48,6 +48,13 @@ type ApplicantLite = {
   travelTo?: Date | null;
   residenceCountry?: string | null;
   missingDocs?: string | null;
+  visaRefusals?: string | null;
+  entryIssues?: string | null;
+  criminalRecord?: string | null;
+  sponsorWork?: string | null;
+  sponsorEmployer?: string | null;
+  sponsorGst?: string | null;
+  sponsorIncome?: string | null;
 };
 
 /** The documents the traveller said they don't have, as a list. */
@@ -216,16 +223,43 @@ function workSections(a: ApplicantLite): { title: string; items: ChecklistItem[]
   const type = a.employmentType || "employed";
   const out: { title: string; items: ChecklistItem[] }[] = [];
 
-  if (a.funding === "sponsor")
-    out.push({
-      title: "Sponsorship",
-      items: [
-        { label: "Proof of sponsorship + signed letter from the sponsor" },
-        { label: "Copy of the sponsor's photo ID (passport / residence-permit card)" },
-        { label: "Sponsor's bank statement", note: "last 3 months, ALL pages STAMPED & SIGNED by the bank" },
-        { label: "If the sponsor is your spouse — marriage certificate" },
-      ],
-    });
+  if (a.funding === "sponsor") {
+    const who = a.sponsorName ? `${a.sponsorName}${a.sponsorRelation ? ` (your ${a.sponsorRelation})` : ""}` : "your sponsor";
+    const sponsorItems: ChecklistItem[] = [
+      { label: "Signed sponsorship letter", note: `from ${who}, saying they bear the costs of the trip` },
+      { label: "Copy of the sponsor's photo ID", note: "passport or residence-permit card" },
+      { label: "Sponsor's personal bank statement — last 3 years", note: "ALL PAGES STAMPED & SIGNED by the bank" },
+      { label: "Sponsor's Income Tax Returns — last 3 years", note: "barcode-verifiable" },
+    ];
+    const rel = (a.sponsorRelation || "").trim().toLowerCase();
+    if (rel === "spouse" || rel === "husband" || rel === "wife")
+      sponsorItems.push({ label: "Marriage certificate", note: "the sponsor is your spouse" });
+    out.push({ title: "Your sponsor", items: sponsorItems });
+
+    // And, where the sponsor runs a company, the company's own papers — the
+    // same four the applicant would produce if the business were theirs.
+    const sw = (a.sponsorWork || "").toLowerCase();
+    if (sw === "business" || sw === "self")
+      out.push({
+        title: "Your sponsor's company",
+        items: [
+          { label: "Certificate of incorporation", note: a.sponsorEmployer ? `for ${a.sponsorEmployer}` : undefined },
+          { label: "GST certificate", note: a.sponsorGst ? `the certificate itself, for GST no. ${a.sponsorGst}` : "the registration certificate, not just the number" },
+          { label: "Company bank statement — last 3 years", note: "ALL PAGES STAMPED & SIGNED by the bank" },
+          { label: "Company Income Tax Returns — last 3 years", note: "barcode-verifiable" },
+        ],
+      });
+    else if (sw === "employed" || sw === "other")
+      out.push({
+        title: "Your sponsor's employment",
+        items: [
+          { label: "Sponsor's pay slips — last 3 months" },
+          { label: "Letter from the sponsor's employer", note: "confirming their position and salary" },
+        ],
+      });
+    else if (sw === "retired")
+      out.push({ title: "Your sponsor's income", items: [{ label: "Sponsor's pension statements — last 3 months" }] });
+  }
 
   if (type === "business" || type === "self")
     out.push({
@@ -292,6 +326,17 @@ function conditionalItems(a: ApplicantLite): ChecklistItem[] {
     conditional.push({ label: "Photocopies of both parents' passports / photo IDs (or the minor's birth certificate)", note: a.minorParents || undefined });
     conditional.push({ label: "Birth certificate of the applicant", note: "showing both parents' names" });
   }
+  if (has(a.visaRefusals)) {
+    conditional.push({ label: "Copy of the previous refusal letter", note: a.visaRefusals || undefined });
+    conditional.push({ label: "A written explanation of what has changed since the refusal", note: "we draft this — it is the document the decision actually turns on" });
+  }
+  if (has(a.criminalRecord)) {
+    conditional.push({ label: "Court order / case papers, and a police clearance certificate if asked", note: a.criminalRecord || undefined });
+  }
+  if (has(a.entryIssues)) {
+    conditional.push({ label: "Papers showing how the earlier entry matter was closed", note: a.entryIssues || "fine receipt, exit stamp, or the order lifting a ban" });
+  }
+
   const ms = (a.maritalStatus || "").toLowerCase();
   const withSpouse = /\b(spouse|husband|wife|partner)\b/i.test(a.travellingWith || "");
   if (ms === "married" && withSpouse && a.funding !== "sponsor") conditional.push({ label: "Marriage certificate", note: "you're travelling with your spouse" });
@@ -472,10 +517,11 @@ export function visaFlags(a: ApplicantLite, t?: TripLite | null, now = new Date(
   const end = w.to ? new Date(w.to) : null;
 
   // --- the passport itself ---
-  if (!a.passportNo) flags.push({ level: "check", text: "No passport number on the form." });
-  if (!a.passportExpiry) {
-    flags.push({ level: "check", text: "No passport expiry date — can't confirm the passport is valid long enough." });
-  } else if (end) {
+  //
+  // Nothing is flagged for being absent here: the form no longer asks for any of
+  // it, because it is read off the passport copy instead. These fire only once
+  // the details are in and something about them is wrong.
+  if (a.passportExpiry && end) {
     const need = new Date(end);
     need.setMonth(need.getMonth() + MIN_PASSPORT_MONTHS);
     if (new Date(a.passportExpiry) < need)
@@ -510,13 +556,16 @@ export function visaFlags(a: ApplicantLite, t?: TripLite | null, now = new Date(
 
   // --- who they are ---
   const age = ageFromDob(a.dob, now);
-  if (age == null) flags.push({ level: "check", text: "No date of birth." });
   if (age != null && age < 18 && !has(a.minorParents))
     flags.push({ level: "check", text: "Applicant is a minor and no parent details were given — consent documents will be needed from both parents." });
 
   // --- the money ---
   if (a.funding === "sponsor" && !has(a.sponsorName))
     flags.push({ level: "check", text: "Says a sponsor is paying but hasn't named them — the sponsorship letter and bank statement can't be collected yet." });
+  if (a.funding === "sponsor" && has(a.sponsorName) && !has(a.sponsorWork))
+    flags.push({ level: "check", text: `Don't know what ${a.sponsorName} does, so half the sponsor's documents can't be listed — a salaried sponsor and one who owns a company need different papers.` });
+  if (a.funding === "sponsor" && !has(a.sponsorIncome))
+    flags.push({ level: "check", text: "No idea what the sponsor earns. That figure is what the consulate weighs against the cost of the trip." });
   if (!has(a.income)) flags.push({ level: "check", text: "No income stated; funds will rest entirely on the bank statement." });
 
   // --- the second party, when there is one ---
@@ -531,6 +580,14 @@ export function visaFlags(a: ApplicantLite, t?: TripLite | null, now = new Date(
       level: "check",
       text: `Says they don't have ${missing.length} of the documents yet: ${missing.slice(0, 3).join("; ")}${missing.length > 3 ? `, and ${missing.length - 3} more` : ""}.`,
     });
+
+  // --- what they told us about themselves ---
+  if (has(a.visaRefusals))
+    flags.push({ level: "check", text: `Declared a previous visa refusal: ${a.visaRefusals}. Get the refusal letter and write the what-has-changed explanation before anything is submitted.` });
+  if (has(a.entryIssues))
+    flags.push({ level: "stop", text: `Declared an overstay, deportation or refused entry: ${a.entryIssues}. Look at this properly before promising this file — a live ban decides it on its own.` });
+  if (has(a.criminalRecord))
+    flags.push({ level: "check", text: `Declared a criminal matter: ${a.criminalRecord}. Often makes no difference once declared, but it has to be handled rather than left out.` });
 
   // --- the record ---
   if (schengen && !has(a.prevSchengen) && !has(a.travelHistory))

@@ -199,10 +199,20 @@ export default async function VisaDetailPage({ params }: { params: Promise<{ id:
             <Field label="Employer / business address" value={a.employerAddress} />
             <Field label="Income" value={a.income} />
             <Field label="Who is paying" value={a.funding === "sponsor" ? `Sponsor: ${a.sponsorName || "—"}${a.sponsorRelation ? ` (${a.sponsorRelation})` : ""}` : "Self"} />
+            {a.funding === "sponsor" ? (
+              <>
+                <Field label="Sponsor does" value={[a.sponsorWork, a.sponsorEmployer].filter(Boolean).join(" · ")} />
+                <Field label="Sponsor's GST / registration" value={a.sponsorGst} />
+                <Field label="Sponsor's income" value={a.sponsorIncome} />
+              </>
+            ) : null}
             <Field label="Travelling with" value={a.travellingWith} />
             <Field label="Previous Schengen visas" value={a.prevSchengen} />
             <Field label="Wants long-term (multi-entry)" value={a.wantsLongTerm ? "Yes — insurance for 1 year" : "No"} />
-            <Field label="Past international travel" value={a.travelHistory} />
+            <Field label="Countries travelled to" value={a.travelHistory} />
+            <Field label="Previous visa refusals" value={a.visaRefusals || "none declared"} />
+            <Field label="Overstay / deportation / refused entry" value={a.entryIssues || "none declared"} />
+            <Field label="Criminal record" value={a.criminalRecord || "none declared"} />
             <Field label="Dependants staying in India" value={a.dependents} />
             <Field label="Investments & assets" value={a.investments} />
             <Field label="Notes" value={a.notes} />
