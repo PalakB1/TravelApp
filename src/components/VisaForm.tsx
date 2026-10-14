@@ -2,8 +2,9 @@
 
 import { useActionState, useState } from "react";
 import { submitVisaApplicant, type VisaResult } from "@/app/visa/actions";
-import { SCHENGEN_COUNTRIES, DEFAULT_SCHENGEN } from "@/lib/schengen";
+import { SCHENGEN_COUNTRIES, DEFAULT_SCHENGEN, ANY_SCHENGEN, isAnySchengen } from "@/lib/schengen";
 import { OTHER_DESTINATIONS, OTHER_OPTION, isSchengenDestination } from "@/lib/destinations";
+import { visaChecklist } from "@/lib/visa";
 
 // The form only asks what it needs to.
 //
@@ -67,8 +68,14 @@ export default function VisaForm({
 
   // The answers other questions depend on.
   const preset = SCHENGEN_COUNTRIES.find((c) => c.name.toLowerCase() === visaCountry.trim().toLowerCase());
+  // A link may carry ?country=…; anything the dropdown doesn't offer would leave
+  // the select showing nothing at all, so it falls back to the default.
+  const presetIntake =
+    isAnySchengen(visaCountry) ? ANY_SCHENGEN
+    : preset ? preset.name
+    : OTHER_DESTINATIONS.find((c) => c.toLowerCase() === visaCountry.trim().toLowerCase()) ?? ANY_SCHENGEN;
   const [country, setCountry] = useState(
-    intake ? (visaCountry.trim() || "") : (preset ?? DEFAULT_SCHENGEN).name,
+    intake ? presetIntake : (preset ?? DEFAULT_SCHENGEN).name,
   );
   const [otherCountry, setOtherCountry] = useState("");
   const [mostNights, setMostNights] = useState("");
@@ -93,7 +100,29 @@ export default function VisaForm({
   const sponsored = funding === "sponsor";
   // The application belongs to the country you sleep in most. Saying so here
   // saves a rejected file later.
-  const wrongCountry = schengen && mostNights !== "" && mostNights !== country;
+  // Only someone who named a country can have named the wrong one — if they left
+  // it open, the nights decide and there is nothing to warn about.
+  const anySchengen = isAnySchengen(country);
+  const wrongCountry = schengen && !anySchengen && mostNights !== "" && mostNights !== country;
+
+  // The document list, built from the answers already on screen and rebuilt on
+  // every change — the same function the agency's desk uses, so what the
+  // traveller ticks here is exactly what will be asked of them. The agency's own
+  // items are left out: there is nothing for the traveller to confirm about work
+  // somebody else is doing.
+  const draft = {
+    fullName: "",
+    visaType: schengen ? "schengen" : "generic",
+    visaCountry: country === OTHER_OPTION ? otherCountry : country,
+    mostNightsCountry: mostNights || null,
+    travelPurpose: purpose,
+    employmentType: work,
+    funding,
+    maritalStatus: marital || null,
+    dob: dob ? new Date(dob) : null,
+    prevSchengen: prevVisa || null,
+  };
+  const docGroups = visaChecklist(draft, "traveller").filter((g) => g.title !== "We take care of these for you");
 
   if (state?.ok) {
     return (
@@ -117,8 +146,10 @@ export default function VisaForm({
           <div className="row">
             <label className="field"><span className="lbl">Which country are you travelling to?</span>
               <select name="visaCountry" value={country} onChange={(e) => setCountry(e.target.value)} required>
-                <option value="">Select a country…</option>
-                <optgroup label="Schengen (Europe)">
+                <optgroup label="Europe">
+                  <option value={ANY_SCHENGEN}>Any Schengen country (Europe)</option>
+                </optgroup>
+                <optgroup label="A specific Schengen country">
                   {SCHENGEN_COUNTRIES.map((c) => <option key={c.code} value={c.name}>{c.name}</option>)}
                 </optgroup>
                 <optgroup label="Everywhere else">
@@ -145,7 +176,9 @@ export default function VisaForm({
           </p>
 
           {schengen && (
-            <Follow why={`${chosen} is in the Schengen area. A Schengen visa lets you travel the whole area, but the application must go to the country where you spend the most nights — so we need to know that too.`}>
+            <Follow why={anySchengen
+              ? "A Schengen visa covers all 29 countries, but the application itself has to go to one of them — the one where you'll spend the most nights. Tell us that and we'll handle the rest."
+              : `${chosen} is in the Schengen area. A Schengen visa lets you travel the whole area, but the application must go to the country where you spend the most nights — so we need to know that too.`}>
               <label className="field" style={{ maxWidth: 320 }}><span className="lbl">Which country will you spend the most nights in?</span>
                 <select name="mostNightsCountry" value={mostNights} onChange={(e) => setMostNights(e.target.value)}>
                   <option value="">Select…</option>
@@ -394,6 +427,30 @@ export default function VisaForm({
           </p>
         )}
         <label className="field"><span className="lbl">Anything else we should know</span><input name="notes" placeholder="optional" /></label>
+      </Section>
+
+      <Section title="Can you provide these?">
+        <p className="small muted" style={{ margin: "0 0 12px" }}>
+          This is your list, built from what you&apos;ve answered above — it changes as you change your answers.
+          Tick everything you already have or can get. Leave the rest: we&apos;ll work through those with you, and
+          knowing early is what stops a file stalling later.
+        </p>
+        {docGroups.map((g) => (
+          <div key={g.title} style={{ marginBottom: 14 }}>
+            <div className="small" style={{ fontWeight: 600, marginBottom: 6 }}>{g.title}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {g.items.map((it) => (
+                <label key={it.label} className="flex" style={{ alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                  <input type="checkbox" name="have" value={it.label} style={{ width: 16, height: 16, marginTop: 3, flexShrink: 0 }} />
+                  <span>
+                    <span style={{ fontSize: 14 }}>{it.label}</span>
+                    {it.note ? <span className="small muted" style={{ display: "block" }}>{it.note}</span> : null}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        ))}
       </Section>
 
       {state && !state.ok && <p className="small" style={{ color: "var(--danger)", margin: "12px 0 0" }}>{state.message}</p>}

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireScope } from "@/lib/scope";
-import { visaCoverLetter, visaChecklist, visaLabel, visaFlags, visaRequirementRows, ageFromDob } from "@/lib/visa";
+import { visaCoverLetter, visaChecklist, visaLabel, visaFlags, visaRequirementRows, ageFromDob, missingDocList } from "@/lib/visa";
 import { updateVisaApplicant, deleteVisaApplicant } from "../../data-actions";
 import PrintButton from "@/components/PrintButton";
 
@@ -28,8 +28,11 @@ function Field({ label, value }: { label: string; value?: string | null }) {
 export default async function VisaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const scope = await requireScope();
+  // Scoped by ORG, because an application that came through the agency's own
+  // link has no trip to scope it through. A member limited to certain trips
+  // still only sees those trips' forms.
   const a = await prisma.visaApplicant.findFirst({
-    where: { id, ...scope.viaTrip },
+    where: scope.tripIds ? { id, ...scope.viaTrip } : { id, orgId: scope.orgId },
     include: { trip: { include: { itinerary: { orderBy: { order: "asc" }, include: { hotels: true } } } } },
   });
   if (!a) notFound();
@@ -41,6 +44,7 @@ export default async function VisaDetailPage({ params }: { params: Promise<{ id:
   const stops = flags.filter((f) => f.level === "stop");
   const checks = flags.filter((f) => f.level === "check");
   const age = ageFromDob(a.dob);
+  const missing = missingDocList(a);
 
   return (
     <>
@@ -90,6 +94,22 @@ export default async function VisaDetailPage({ params }: { params: Promise<{ id:
           </div>
         )}
       </div>
+
+      {/* WHAT THEY SAID THEY HAVEN'T GOT */}
+      {missing.length > 0 && (
+        <div className="card no-print" style={{ borderColor: "var(--warning)" }}>
+          <div className="card-title">
+            Still to collect
+            <span className="small muted">{missing.length} the traveller didn&apos;t tick on the form</span>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {missing.map((m) => <span key={m} className="badge amber">{m}</span>)}
+          </div>
+          <p className="small muted" style={{ margin: "12px 0 0" }}>
+            Everything else on the list below, they said they already have.
+          </p>
+        </div>
+      )}
 
       {/* REQUIREMENTS — the checklist as a table, built from this applicant's answers */}
       <div className="card no-print" style={{ padding: 0 }}>

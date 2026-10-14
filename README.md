@@ -90,6 +90,19 @@ rearranges itself around the answer — a Schengen state brings up the Schengen
 questions, anywhere else uses the general visitor-visa template. There is also a
 per-trip link, where the trip's dates and hotels go into the cover letter.
 
+While it is being filled, the form shows the traveller the document list their
+own answers have produced and asks them to tick what they already have. What
+they leave unticked is recorded as the agency's actual workload, surfaced on the
+desk as "still to collect" before a file is ever promised.
+
+The traveller's copy of that list deliberately holds things back: which
+consulate the file belongs to and why, the daily-funds figure and where to check
+it, and the documents the agency produces itself — insurance, flight
+reservation, accommodation proof, the cover letter — which move to a short "we
+take care of these" block with no instructions attached. That handling is the
+work the traveller is paying for; printed on a checklist it reads as a
+do-it-yourself guide.
+
 Either way the form adapts as it is answered: a business owner is asked
 for a GST number and a salaried traveller is not, a sponsor's details appear
 only once someone says a sponsor is paying, and a date of birth under 18 brings

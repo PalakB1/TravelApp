@@ -1290,7 +1290,7 @@ export async function updateVisaApplicant(formData: FormData) {
   const orgId = await guard();
   const id = String(formData.get("id"));
   await prisma.visaApplicant.updateMany({
-    where: { id, trip: { orgId } },
+    where: { id, OR: [{ orgId }, { trip: { orgId } }] },
     data: {
       status: String(formData.get("status") || "collecting"),
       appointmentAt: toDate(formData.get("appointmentAt")),
@@ -1302,7 +1302,7 @@ export async function updateVisaApplicant(formData: FormData) {
 export async function deleteVisaApplicant(formData: FormData) {
   const orgId = await guard();
   const id = String(formData.get("id"));
-  const v = await prisma.visaApplicant.findFirst({ where: { id, trip: { orgId } }, select: { fullName: true } });
+  const v = await prisma.visaApplicant.findFirst({ where: { id, OR: [{ orgId }, { trip: { orgId } }] }, select: { fullName: true } });
   if (!v) return;
   await prisma.visaApplicant.delete({ where: { id } });
   if (v) await logActivity(orgId, "trip", "deleted", `Deleted visa form — ${v.fullName}`);

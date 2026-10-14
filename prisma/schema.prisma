@@ -322,6 +322,7 @@ model VisaApplicant {
   travelFrom        DateTime?
   travelTo          DateTime?
   residenceCountry  String?
+  missingDocs       String? // documents the traveller did NOT tick as "I have this"
 
   status          String    @default("collecting") // collecting | ready | appointment | submitted | approved | rejected
   appointmentAt   DateTime? // VFS appointment date/time

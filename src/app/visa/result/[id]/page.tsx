@@ -17,7 +17,7 @@ export default async function VisaResultPage({ params }: { params: Promise<{ id:
   if (!a) notFound();
 
   const letter = visaCoverLetter(a, a.trip);
-  const checklist = visaChecklist(a);
+  const checklist = visaChecklist(a, "traveller");
 
   return (
     <div style={{ minHeight: "100vh", padding: "24px 16px", display: "grid", placeItems: "start center" }}>

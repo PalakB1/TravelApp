@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SCHENGEN_COUNTRIES } from "@/lib/schengen";
+import { SCHENGEN_COUNTRIES, ANY_SCHENGEN } from "@/lib/schengen";
 import { OTHER_DESTINATIONS } from "@/lib/destinations";
 
 // The agency's one permanent visa link.
@@ -51,8 +51,9 @@ export default function AgencyVisaLink({ orgId, agencyName, origin }: { orgId: s
         <label className="field" style={{ maxWidth: 260, marginBottom: 0 }}>
           <span className="lbl">Pre-fill the destination (optional)</span>
           <select value={country} onChange={(e) => setCountry(e.target.value)}>
-            <option value="">Let the traveller choose</option>
-            <optgroup label="Schengen (Europe)">
+            <option value="">Any Schengen country — the form&apos;s default</option>
+            <option value={ANY_SCHENGEN}>Any Schengen country (explicitly)</option>
+            <optgroup label="A specific Schengen country">
               {SCHENGEN_COUNTRIES.map((c) => <option key={c.code} value={c.name}>{c.name}</option>)}
             </optgroup>
             <optgroup label="Everywhere else">

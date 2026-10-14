@@ -5,7 +5,7 @@
 // The visa type is chosen when the operator shares the link; the Schengen country
 // is chosen by the applicant on the form. Both are stored on the applicant.
 
-import { schengenCountry } from "./schengen";
+import { fileCountry, isAnySchengen, schengenCountry } from "./schengen";
 
 type ApplicantLite = {
   fullName: string;
@@ -47,7 +47,13 @@ type ApplicantLite = {
   travelFrom?: Date | null;
   travelTo?: Date | null;
   residenceCountry?: string | null;
+  missingDocs?: string | null;
 };
+
+/** The documents the traveller said they don't have, as a list. */
+export function missingDocList(a: Pick<ApplicantLite, "missingDocs">): string[] {
+  return (a.missingDocs ?? "").split("|").map((s) => s.trim()).filter(Boolean);
+}
 
 type TripLite = {
   name: string;
@@ -98,11 +104,21 @@ export function travelWindow(a: ApplicantLite, t?: TripLite | null): Window {
 export function isSchengen(a: Pick<ApplicantLite, "visaType">) {
   return (a.visaType || "schengen") === "schengen";
 }
-export function visaLabel(a: Pick<ApplicantLite, "visaType" | "visaCountry">) {
+export function visaLabel(a: Pick<ApplicantLite, "visaType" | "visaCountry" | "mostNightsCountry">) {
   if (!isSchengen(a)) return a.visaCountry?.trim() || "Visitor";
   // Which member state the file goes to matters more than the word "Schengen":
   // it decides the consulate, the appointment centre and half the checklist.
-  return `Schengen · ${schengenCountry(a.visaCountry).name}`;
+  const c = fileCountry(a);
+  if (c) return `Schengen · ${c.name}${isAnySchengen(a.visaCountry) ? " (by nights)" : ""}`;
+  return "Schengen · country not set";
+}
+
+// What the traveller's own documents call their visa. The desk's label carries
+// working detail — which member state, and whether it was chosen or inferred
+// from the nights — that means nothing to the applicant and only invites
+// questions we'd rather answer ourselves.
+export function travellerVisaLabel(a: Pick<ApplicantLite, "visaType" | "visaCountry">) {
+  return isSchengen(a) ? "Schengen" : (a.visaCountry?.trim() || "visitor");
 }
 
 // ---- shared building blocks (country-agnostic) ----
@@ -145,38 +161,94 @@ function companion(a: ApplicantLite): string {
     : `I am travelling together with ${a.travellingWith}.`;
 }
 
-export type ChecklistItem = { label: string; note?: string };
+export type ChecklistItem = {
+  label: string;
+  note?: string;
+  /** The agency produces this one — the traveller never goes and gets it. */
+  by?: "agency";
+  /** A note for the traveller's copy, where the agent's note says too much. */
+  travellerNote?: string;
+};
 
-// The employment / sponsorship section — shared across all visa types.
-function workSection(a: ApplicantLite): { title: string; items: ChecklistItem[] } {
+// Who is reading the list.
+//
+// The agency sees everything: which consulate the file belongs to, why, what the
+// daily-funds figure is and where to check it. The traveller sees what they have
+// to go and fetch — their documents — and not the handling that sits on top of
+// it. That part is the agency's work and the reason the traveller came to them;
+// printed on a checklist it reads like a do-it-yourself guide.
+export type Audience = "agent" | "traveller";
+
+// The traveller's copy of the list.
+//
+// Three things come off it. The "which country, and why" section, because that
+// is the judgement the agency is being paid for and on a printed sheet it reads
+// as instructions for doing this alone. The documents the agency itself
+// produces, which move to a short closing block so the traveller can see the
+// work is covered without seeing how. And the notes that send them to a
+// consulate page to look a figure up — replaced by "we'll tell you".
+function travellerView(groups: { title: string; items: ChecklistItem[] }[]) {
+  const out: { title: string; items: ChecklistItem[] }[] = [];
+  const ours: ChecklistItem[] = [];
+
+  for (const g of groups) {
+    if (g.title.startsWith("Applying to") || g.title.startsWith("Which country")) continue;
+    const theirs: ChecklistItem[] = [];
+    for (const it of g.items) {
+      if (it.by === "agency") { ours.push({ label: it.label }); continue; }
+      theirs.push({ label: it.label, note: it.travellerNote ?? it.note });
+    }
+    if (theirs.length) out.push({ title: g.title, items: theirs });
+  }
+
+  if (ours.length) out.push({ title: "We take care of these for you", items: ours });
+  return out;
+}
+
+// The employment / sponsorship sections — shared across all visa types.
+//
+// These stack rather than replace each other. A business owner whose trip is
+// being paid for still has to show the company: the sponsor's papers explain
+// where the money comes from, the company's explain why the applicant goes home.
+// Swapping one for the other, as this used to, quietly dropped the certificate
+// of incorporation from every sponsored director's file.
+function workSections(a: ApplicantLite): { title: string; items: ChecklistItem[] }[] {
   const type = a.employmentType || "employed";
+  const out: { title: string; items: ChecklistItem[] }[] = [];
+
   if (a.funding === "sponsor")
-    return {
+    out.push({
       title: "Sponsorship",
       items: [
         { label: "Proof of sponsorship + signed letter from the sponsor" },
         { label: "Copy of the sponsor's photo ID (passport / residence-permit card)" },
         { label: "Sponsor's bank statement", note: "last 3 months, ALL pages STAMPED & SIGNED by the bank" },
         { label: "If the sponsor is your spouse — marriage certificate" },
-        { label: "Your own employment / business proof (as applicable)" },
       ],
-    };
+    });
+
   if (type === "business" || type === "self")
-    return {
-      title: "Business (self-employed)",
+    out.push({
+      title: "Your company",
       items: [
-        { label: "Certificate of registration of the company", note: a.gstNo ? `including GST no. ${a.gstNo}` : "including the GST registration number (for India-based companies)" },
-        { label: "Business bank account statement", note: "STAMPED & SIGNED by the bank" },
-        { label: "Income Tax Return, last 2 assessment years", note: "barcode-verifiable" },
+        { label: "Certificate of incorporation", note: a.employer ? `for ${a.employer}` : undefined },
+        { label: "GST certificate", note: a.gstNo ? `the certificate itself, for GST no. ${a.gstNo}` : "the registration certificate, not just the number" },
+        { label: "Company bank statement — last 3 years", note: "ALL PAGES STAMPED & SIGNED by the bank" },
+        { label: "Company Income Tax Returns — last 3 years", note: "barcode-verifiable" },
       ],
-    };
-  if (type === "student")
-    return { title: "Student", items: [{ label: "Certificate from the institution where you are enrolled" }, { label: "Sponsor's (parent) documents — sponsorship letter, photo-ID copy, and bank-stamped statement" }] };
-  if (type === "retired")
-    return { title: "Retired", items: [{ label: "Pension statements for the last 3 months" }, { label: "Proof of regular income from property or business ownership" }] };
-  if (type === "homemaker")
-    return { title: "Homemaker", items: [{ label: "Spouse's sponsorship — signed letter + photo-ID copy + bank-stamped statement" }, { label: "Marriage certificate" }] };
-  return { title: "Employment", items: [{ label: "Pay slips for the last 3 months" }, { label: "Employment contract" }, { label: "Leave-approval / NOC letter from your employer" }] };
+    });
+  else if (type === "student")
+    out.push({ title: "Student", items: [{ label: "Certificate from the institution where you are enrolled" }] });
+  else if (type === "retired")
+    out.push({ title: "Retired", items: [{ label: "Pension statements for the last 3 months" }, { label: "Proof of regular income from property or business ownership" }] });
+  else if (type === "homemaker")
+    out.push({ title: "Homemaker", items: [{ label: "Marriage certificate" }] });
+  else if (a.funding !== "sponsor")
+    out.push({ title: "Employment", items: [{ label: "Pay slips for the last 3 months" }, { label: "Employment contract" }, { label: "Leave-approval / NOC letter from your employer" }] });
+  else
+    out.push({ title: "Employment", items: [{ label: "Leave-approval / NOC letter from your employer" }] });
+
+  return out;
 }
 
 function tiesItems(a: ApplicantLite): ChecklistItem[] {
@@ -231,14 +303,16 @@ function conditionalItems(a: ApplicantLite): ChecklistItem[] {
 export function visaCoverLetter(a: ApplicantLite, t?: TripLite | null) {
   return isSchengen(a) ? schengenCoverLetter(a, t) : genericCoverLetter(a, t);
 }
-export function visaChecklist(a: ApplicantLite): { title: string; items: ChecklistItem[] }[] {
-  return isSchengen(a) ? schengenChecklist(a) : genericChecklist(a);
+export function visaChecklist(a: ApplicantLite, audience: Audience = "agent"): { title: string; items: ChecklistItem[] }[] {
+  return isSchengen(a) ? schengenChecklist(a, audience) : genericChecklist(a, audience);
 }
 
 // ======================= Schengen =======================
 function schengenCoverLetter(a: ApplicantLite, t?: TripLite | null) {
-  const country = schengenCountry(a.visaCountry);
-  const dest = country.name;
+  // Undecided is a real state, not an error: the letter leaves the consulate and
+  // the destination blank to be filled rather than naming a country nobody chose.
+  const country = fileCountry(a);
+  const dest = country?.name ?? "the Schengen area";
   const nights = (t?.itinerary || []).filter((n) => !n.extra);
   const w = travelWindow(a, t);
   const longTerm = !!a.wantsLongTerm && has(a.prevSchengen);
@@ -256,7 +330,7 @@ function schengenCoverLetter(a: ApplicantLite, t?: TripLite | null) {
   ];
   return {
     subject: `Application for Schengen (Tourist) Visa — ${a.fullName}`,
-    salutation: `To the Visa Officer, ${country.consulate}`,
+    salutation: country ? `To the Visa Officer, ${country.consulate}` : "To the Visa Officer, ____________________",
     paragraphs,
     itinerary: nights.map((n, i) => ({ day: i + 1, date: dShort(n.date), location: n.location, hotel: (n.hotels || []).map((h) => h.hotelName).join(", ") || "—" })),
     sign: { name: a.fullName, contact: [a.phone, a.email].filter(Boolean).join(" · ") },
@@ -272,39 +346,51 @@ function schengenCoverLetter(a: ApplicantLite, t?: TripLite | null) {
 // Consulates revise their lists without notice, so this is a working list to
 // collect against, not the authority. Check it off against the current VFS /
 // consulate checklist for the country and city before the appointment.
-function schengenChecklist(a: ApplicantLite): { title: string; items: ChecklistItem[] }[] {
-  const country = schengenCountry(a.visaCountry);
+function schengenChecklist(a: ApplicantLite, audience: Audience = "agent"): { title: string; items: ChecklistItem[] }[] {
+  const chosen = fileCountry(a);
+  // Everything below the "which country" question is common to all 29 states, so
+  // an undecided file still has a complete, useful list — it is only the
+  // consulate, the form's home and the daily figure that wait on the answer.
+  const country = chosen ?? { code: "", name: "the country you apply to", consulate: "", dailyFunds: undefined, portal: undefined };
   const travelled = has(a.travelHistory) || has(a.prevSchengen);
   const longTerm = !!a.wantsLongTerm && has(a.prevSchengen);
   const core: ChecklistItem[] = [
     { label: "Passport", note: "valid ≥ 3 months beyond departure from Schengen, issued within the last 10 years, min 2 blank pages" },
     { label: "Copies of previous Schengen visas & entry/exit stamps", note: travelled ? "you indicated prior travel — include copies of those visas/stamps from current & old passports" : "from current & old passports, if you have ever travelled to the Schengen area" },
-    { label: "Schengen visa application form — printed & signed", note: country.portal ? `plus the confirmation of the online form submitted at ${country.portal}` : `the form for ${country.name}, downloaded from its consulate or the VFS page for your city` },
+    { label: "Schengen visa application form — printed & signed", note: country.portal ? `plus the confirmation of the online form submitted at ${country.portal}` : `the form for ${country.name}, downloaded from its consulate or the VFS page for your city`, travellerNote: "we prepare it — you sign it" },
     { label: "Passport photograph", note: "3.5 × 4.5 cm, white background, taken within the last 6 months (one is asked for — carry 2)" },
-    { label: "Travel medical insurance", note: longTerm ? "for the LONG-TERM multiple-entry visa, the policy must cover ≥ €30,000 and be VALID FOR 1 YEAR (all Schengen countries, all risks)" : "the POLICY (an insurance card is not enough) covering ≥ €30,000 for all risks, valid across all Schengen countries for the whole trip incl. arrival & departure dates" },
-    { label: "Round-trip flight reservation", note: "with PNR and the traveller's name" },
-    { label: "Proof of accommodation — hotel bookings / itinerary", note: "we provide this from your trip" },
-    { label: "Cover letter", note: "purpose, duration, accompanying persons, transport & accommodation — we generate this" },
-    { label: "Original personal bank statement", note: "last 3 months showing movements — ALL PAGES must be STAMPED & SIGNED by the bank (required of every applicant, even if sponsored)" },
-    { label: "Indian Income Tax Return (ITR) acknowledgment", note: "last 2 assessment years, barcode-verifiable" },
+    { label: "Travel medical insurance", by: "agency", note: longTerm ? "for the LONG-TERM multiple-entry visa, the policy must cover ≥ €30,000 and be VALID FOR 1 YEAR (all Schengen countries, all risks)" : "the POLICY (an insurance card is not enough) covering ≥ €30,000 for all risks, valid across all Schengen countries for the whole trip incl. arrival & departure dates" },
+    { label: "Round-trip flight reservation", by: "agency", note: "with PNR and the traveller's name" },
+    { label: "Proof of accommodation — hotel bookings / itinerary", by: "agency", note: "we provide this from your trip" },
+    { label: "Cover letter", by: "agency", note: "purpose, duration, accompanying persons, transport & accommodation — we generate this" },
+    { label: "Personal bank statement — last 3 years", note: "showing movements — ALL PAGES must be STAMPED & SIGNED by the bank (required of every applicant, even if sponsored)" },
+    { label: "Income Tax Return (ITR) acknowledgment — last 3 years", note: "barcode-verifiable" },
     {
       label: "Proof of sufficient funds",
       note: country.dailyFunds
         ? `the statement must show ${country.dailyFunds} for the stay`
         : `enough to cover the whole stay — ${country.name} publishes a figure per day; confirm the current one on its consulate or VFS page before the appointment`,
+      travellerNote: "enough to cover the whole stay — we'll tell you the figure to hold",
     },
   ];
   const groups = [
     {
-      title: `Applying to ${country.name}`,
-      items: [
-        { label: `The file is addressed to the ${country.consulate}`, note: "we address the cover letter accordingly" },
-        { label: `${country.name} must be the right country to apply to`, note: `apply where you spend the most nights; if the nights are equal, apply where you first enter the Schengen area. Applying to the wrong member state gets the file returned.` },
+      title: chosen ? `Applying to ${chosen.name}` : "Which country to apply to — still open",
+      items: (chosen
+        ? [
+            { label: `The file is addressed to the ${chosen.consulate}`, note: "we address the cover letter accordingly" },
+            { label: `${chosen.name} must be the right country to apply to`, note: `apply where you spend the most nights; if the nights are equal, apply where you first enter the Schengen area. Applying to the wrong member state gets the file returned.` },
+          ]
+        : [
+            { label: "Tell us which country you'll spend the most nights in", note: "that is the one the application must go to — we can't address the letter or name the right visa centre until we know" },
+            { label: "If the nights are equal, tell us where you land first", note: "that becomes the deciding country instead" },
+          ]
+      ).concat([
         { label: "Appointment at the visa centre, in person", note: "biometrics (fingerprints and photo) are taken there and can't be sent in" },
-      ] as ChecklistItem[],
+      ]) as ChecklistItem[],
     },
     { title: "Core documents (every applicant)", items: core },
-    workSection(a),
+    ...workSections(a),
   ];
   const purpose = purposeSection(a);
   if (purpose) groups.push(purpose);
@@ -312,7 +398,7 @@ function schengenChecklist(a: ApplicantLite): { title: string; items: ChecklistI
   const conditional = conditionalItems(a);
   if (ties.length) groups.push({ title: "Ties to home (strengthens your case)", items: ties });
   if (conditional.length) groups.push({ title: "Because of your details", items: conditional });
-  return groups;
+  return audience === "traveller" ? travellerView(groups) : groups;
 }
 
 // ======================= Generic (any country) =======================
@@ -342,31 +428,31 @@ function genericCoverLetter(a: ApplicantLite, t?: TripLite | null) {
 // A universal visitor-visa checklist that fits most countries. Country-specific
 // rules (photo size, exact fund thresholds, medicals) should be verified against
 // that country's official immigration site — noted on the document.
-function genericChecklist(a: ApplicantLite): { title: string; items: ChecklistItem[] }[] {
+function genericChecklist(a: ApplicantLite, audience: Audience = "agent"): { title: string; items: ChecklistItem[] }[] {
   const country = a.visaCountry?.trim() || "the destination country";
   const travelled = has(a.travelHistory);
   const core: ChecklistItem[] = [
     { label: "Passport", note: "valid for at least 6 months beyond your return, with min 2 blank pages" },
-    { label: `${country} visa application form — completed & signed`, note: `filled online/paper on ${country}'s official immigration portal, with the submission confirmation` },
+    { label: `${country} visa application form — completed & signed`, note: `filled online/paper on ${country}'s official immigration portal, with the submission confirmation`, travellerNote: "we prepare it — you sign it" },
     { label: "Recent passport photographs", note: `as per ${country}'s photo specification (carry 2)` },
-    { label: "Confirmed return / round-trip flight itinerary", note: "with PNR and the traveller's name" },
-    { label: "Proof of accommodation — hotel bookings / itinerary", note: "we provide this from your trip" },
-    { label: "Cover letter", note: "purpose, duration, who you travel with, transport & accommodation — we generate this" },
-    { label: "Personal bank statement", note: "last 3–6 months showing sufficient balance and regular activity — get it STAMPED & SIGNED by the bank" },
-    { label: "Income Tax Returns (ITR)", note: "last 2 assessment years" },
-    { label: "Proof of sufficient funds for the trip", note: "salary slips / savings; some countries require a minimum daily amount — verify the current figure" },
-    { label: "Travel insurance", note: "recommended for all trips; required by some countries — confirm the minimum cover" },
+    { label: "Confirmed return / round-trip flight itinerary", by: "agency", note: "with PNR and the traveller's name" },
+    { label: "Proof of accommodation — hotel bookings / itinerary", by: "agency", note: "we provide this from your trip" },
+    { label: "Cover letter", by: "agency", note: "purpose, duration, who you travel with, transport & accommodation — we generate this" },
+    { label: "Personal bank statement — last 3 years", note: "showing sufficient balance and regular activity — get it STAMPED & SIGNED by the bank" },
+    { label: "Income Tax Returns (ITR) — last 3 years", note: "barcode-verifiable" },
+    { label: "Proof of sufficient funds for the trip", note: "salary slips / savings; some countries require a minimum daily amount — verify the current figure", travellerNote: "salary slips / savings — we'll tell you the figure to hold" },
+    { label: "Travel insurance", by: "agency", note: "recommended for all trips; required by some countries — confirm the minimum cover" },
   ];
   if (travelled) core.push({ label: "Copies of previous visas & entry/exit stamps", note: `from current & old passports (you indicated prior travel: ${a.travelHistory})` });
 
-  const groups = [{ title: `Core documents for ${country} (every applicant)`, items: core }, workSection(a)];
+  const groups = [{ title: `Core documents for ${country} (every applicant)`, items: core }, ...workSections(a)];
   const purpose = purposeSection(a);
   if (purpose) groups.push(purpose);
   const ties = tiesItems(a);
   const conditional = conditionalItems(a);
   if (ties.length) groups.push({ title: "Ties to home (strengthens your case)", items: ties });
   if (conditional.length) groups.push({ title: "Because of your details", items: conditional });
-  return groups;
+  return audience === "traveller" ? travellerView(groups) : groups;
 }
 
 // ======================= due diligence =======================
@@ -380,7 +466,8 @@ const MIN_PASSPORT_MONTHS = 3; // Schengen wants validity 3 months past departur
 export function visaFlags(a: ApplicantLite, t?: TripLite | null, now = new Date()): VisaFlag[] {
   const flags: VisaFlag[] = [];
   const schengen = isSchengen(a);
-  const country = schengenCountry(a.visaCountry);
+  const country = fileCountry(a);
+  const undecided = schengen && isAnySchengen(a.visaCountry);
   const w = travelWindow(a, t);
   const end = w.to ? new Date(w.to) : null;
 
@@ -403,15 +490,22 @@ export function visaFlags(a: ApplicantLite, t?: TripLite | null, now = new Date(
     flags.push({ level: "check", text: "Passport issue and expiry dates look swapped." });
 
   // --- is this even the right consulate? ---
-  if (schengen && has(a.mostNightsCountry)) {
+  if (schengen && !has(a.mostNightsCountry)) {
+    flags.push({
+      level: undecided ? "stop" : "check",
+      text: undecided
+        ? "No country chosen and no idea where the most nights are — until one of those is known there is no consulate to send this to."
+        : "Not told which country has the most nights, so we can't confirm the file is going to the right consulate.",
+    });
+  } else if (schengen && !undecided && country) {
+    // Only a traveller who NAMED a country can have named the wrong one. Where
+    // they left it open, the nights simply decide and there is nothing to query.
     const most = schengenCountry(a.mostNightsCountry);
     if (most.name.toLowerCase() !== country.name.toLowerCase())
       flags.push({
         level: "stop",
         text: `Applying to ${country.name}, but the most nights are in ${a.mostNightsCountry}. The application belongs to ${most.name} — ${country.name} would return it.`,
       });
-  } else if (schengen) {
-    flags.push({ level: "check", text: "Not told which country has the most nights, so we can't confirm the file is going to the right consulate." });
   }
 
   // --- who they are ---
@@ -429,6 +523,14 @@ export function visaFlags(a: ApplicantLite, t?: TripLite | null, now = new Date(
   const purpose = (a.travelPurpose || "tourism").toLowerCase();
   if (purpose !== "tourism" && !has(a.hostInvite))
     flags.push({ level: "check", text: `Travelling for ${purpose === "business" ? "business" : "family or friends"} but no host named — the invitation letter is the document this file turns on.` });
+
+  // --- what they told us they can't produce ---
+  const missing = missingDocList(a);
+  if (missing.length)
+    flags.push({
+      level: "check",
+      text: `Says they don't have ${missing.length} of the documents yet: ${missing.slice(0, 3).join("; ")}${missing.length > 3 ? `, and ${missing.length - 3} more` : ""}.`,
+    });
 
   // --- the record ---
   if (schengen && !has(a.prevSchengen) && !has(a.travelHistory))

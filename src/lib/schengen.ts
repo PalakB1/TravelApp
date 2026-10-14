@@ -59,6 +59,27 @@ export const SCHENGEN_COUNTRIES: SchengenCountry[] = [
 
 export const DEFAULT_SCHENGEN = SCHENGEN_COUNTRIES[0]; // Malta
 
+// "I need a Schengen visa, I don't know which country yet."
+//
+// A common and perfectly reasonable answer — most travellers have no idea that
+// a Schengen application belongs to one particular member state, and plenty of
+// corporate groups genuinely haven't fixed the route yet. Rather than make them
+// guess, the form takes this and then asks where they'll spend the most nights,
+// which is what decides the consulate anyway. Until that is answered the file
+// has no country, and says so instead of quietly defaulting to one.
+export const ANY_SCHENGEN = "__any_schengen__";
+
+export const isAnySchengen = (name: string | null | undefined) => (name ?? "").trim() === ANY_SCHENGEN;
+
+/** The member state a file goes to, or null while that is genuinely undecided. */
+export function fileCountry(a: { visaCountry?: string | null; mostNightsCountry?: string | null }): SchengenCountry | null {
+  if (isAnySchengen(a.visaCountry)) {
+    const nights = (a.mostNightsCountry ?? "").trim();
+    return nights ? schengenCountry(nights) : null;
+  }
+  return schengenCountry(a.visaCountry);
+}
+
 export function schengenCountry(name: string | null | undefined): SchengenCountry {
   const n = (name ?? "").trim().toLowerCase();
   return SCHENGEN_COUNTRIES.find((c) => c.name.toLowerCase() === n) ?? DEFAULT_SCHENGEN;

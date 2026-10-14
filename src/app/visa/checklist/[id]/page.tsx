@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { visaChecklist, visaLabel } from "@/lib/visa";
+import { visaChecklist, travellerVisaLabel } from "@/lib/visa";
 import PrintButton from "@/components/PrintButton";
 import Logo from "@/components/Logo";
 
@@ -13,7 +13,7 @@ export default async function VisaChecklistPage({ params }: { params: Promise<{ 
     include: { trip: { select: { name: true } } },
   });
   if (!a) notFound();
-  const checklist = visaChecklist(a);
+  const checklist = visaChecklist(a, "traveller");
 
   return (
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "start center", padding: "24px 16px" }}>
@@ -26,12 +26,12 @@ export default async function VisaChecklistPage({ params }: { params: Promise<{ 
         <div className="empty-cta no-print" style={{ borderColor: "var(--success)", marginBottom: 16 }}>
           <span className="emoji">✅</span>
           <div className="t">Thank you, {a.fullName.split(" ")[0]}!</div>
-          <div className="d">Your details are submitted to our team. Below is the list of documents you’ll need for your {visaLabel(a)} visa{a.trip ? ` (${a.trip.name})` : ""} — please start gathering these. Print or save this page.</div>
+          <div className="d">Your details are submitted to our team. Below is the list of documents you’ll need for your {travellerVisaLabel(a)} visa{a.trip ? ` (${a.trip.name})` : ""} — please start gathering these. Print or save this page.</div>
         </div>
 
         <div className="card sheet">
           <h2 style={{ fontSize: 18, marginBottom: 4 }}>Documents to prepare — {a.fullName}</h2>
-          <p className="small muted" style={{ marginBottom: 16 }}>Bring the originals + one photocopy of each to your VFS appointment. Biometrics (fingerprints + photo) are given in person at the centre. We’ll share your cover letter separately.</p>
+          <p className="small muted" style={{ marginBottom: 16 }}>Please collect the originals, plus one photocopy of each. We’ll check everything over, prepare the rest of the file and tell you where and when to submit it — nothing else for you to work out.</p>
           {checklist.map((g) => (
             <div key={g.title} style={{ marginBottom: 18 }}>
               <div style={{ fontWeight: 600, marginBottom: 8 }}>{g.title}</div>

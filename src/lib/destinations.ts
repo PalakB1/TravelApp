@@ -1,4 +1,4 @@
-import { SCHENGEN_COUNTRIES } from "./schengen";
+import { SCHENGEN_COUNTRIES, isAnySchengen } from "./schengen";
 
 // Where a traveller can say they want to go, on the agency's own visa link.
 //
@@ -68,6 +68,7 @@ export const OTHER_DESTINATIONS: string[] = [
 export const OTHER_OPTION = "__other__";
 
 export function isSchengenDestination(name: string | null | undefined): boolean {
+  if (isAnySchengen(name)) return true; // "somewhere in Europe, not decided yet"
   const n = (name ?? "").trim().toLowerCase();
   return SCHENGEN_COUNTRIES.some((c) => c.name.toLowerCase() === n);
 }

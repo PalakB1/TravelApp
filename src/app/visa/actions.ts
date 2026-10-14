@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { DEFAULT_SCHENGEN, schengenCountry } from "@/lib/schengen";
+import { ANY_SCHENGEN, DEFAULT_SCHENGEN, isAnySchengen, schengenCountry } from "@/lib/schengen";
+import { visaChecklist } from "@/lib/visa";
 import { OTHER_OPTION, visaTypeForDestination } from "@/lib/destinations";
 
 export type VisaResult = { ok: boolean; message: string };
@@ -51,8 +52,7 @@ export async function submitVisaApplicant(_prev: VisaResult | undefined, formDat
     if (!org) return { ok: false, message: "This visa link is invalid." };
   }
 
-  const a = await prisma.visaApplicant.create({
-    data: {
+  const data = {
       tripId,
       orgId,
       fullName,
@@ -91,9 +91,14 @@ export async function submitVisaApplicant(_prev: VisaResult | undefined, formDat
       // A Schengen file always belongs to one member state. The applicant picks
       // it on the form; if an old link posted nothing, it falls back to Malta
       // rather than being left blank for the operator to guess at.
-      visaCountry: visaType === "schengen"
-        ? schengenCountry(destination || DEFAULT_SCHENGEN.name).name
-        : destination,
+      // "Any Schengen" is stored as itself. Resolving it to a country here would
+      // be inventing a decision the traveller explicitly didn't make; the desk
+      // shows it as open until the nights answer it.
+      visaCountry: visaType !== "schengen"
+        ? destination
+        : isAnySchengen(destination)
+          ? ANY_SCHENGEN
+          : schengenCountry(destination || DEFAULT_SCHENGEN.name).name,
       travelFrom: toDate(formData.get("travelFrom")),
       travelTo: toDate(formData.get("travelTo")),
       residenceCountry: str(formData.get("residenceCountry")),
@@ -102,7 +107,19 @@ export async function submitVisaApplicant(_prev: VisaResult | undefined, formDat
       mostNightsCountry: str(formData.get("mostNightsCountry")),
       entryCountry: str(formData.get("entryCountry")),
       minorParents: str(formData.get("minorParents")),
-    },
+  };
+
+  // What they did NOT tick. Rebuilding the list here rather than trusting a
+  // posted one means the record matches the documents the desk will actually
+  // ask for, even if the form were tampered with or an answer changed late.
+  const ticked = new Set(formData.getAll("have").map((v) => String(v)));
+  const required = visaChecklist(data, "traveller")
+    .filter((g) => g.title !== "We take care of these for you")
+    .flatMap((g) => g.items.map((i) => i.label));
+  const missing = required.filter((l) => !ticked.has(l));
+
+  const a = await prisma.visaApplicant.create({
+    data: { ...data, missingDocs: missing.length ? missing.join(" | ") : null },
   });
   revalidatePath("/", "layout");
   redirect(`/visa/checklist/${a.id}`);

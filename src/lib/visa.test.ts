@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { schengenCountry, DEFAULT_SCHENGEN } from "./schengen";
+import { schengenCountry, DEFAULT_SCHENGEN, ANY_SCHENGEN } from "./schengen";
 import { ageFromDob, travelWindow, visaChecklist, visaCoverLetter, visaFlags, visaLabel, visaRequirementRows } from "./visa";
 import { isSchengenDestination, visaTypeForDestination } from "./destinations";
 
@@ -93,7 +93,7 @@ describe("the checklist adapts to the answers", () => {
 
   it("swaps pay slips for company papers when the applicant owns the business", () => {
     expect(titles({ ...clean, employmentType: "employed" })).toContain("Employment");
-    expect(titles({ ...clean, employmentType: "business" })).toContain("Business (self-employed)");
+    expect(titles({ ...clean, employmentType: "business" })).toContain("Your company");
   });
 
   it("asks for the sponsor's documents only when someone else is paying", () => {
@@ -246,5 +246,128 @@ describe("the destination decides the template", () => {
     for (const c of ["Bulgaria", "Romania", "Croatia", "Liechtenstein"]) {
       expect(isSchengenDestination(c)).toBe(true);
     }
+  });
+});
+
+describe("any Schengen, and who sees what", () => {
+  const open = { ...clean, visaCountry: ANY_SCHENGEN, mostNightsCountry: "" };
+
+  it("leaves the country open rather than quietly picking one", () => {
+    expect(visaLabel(open)).toBe("Schengen · country not set");
+    expect(visaCoverLetter(open, trip).salutation).not.toMatch(/Malta|Iceland|Embassy of [A-Z]/);
+    expect(visaChecklist(open).some((g) => g.title === "Which country to apply to — still open")).toBe(true);
+  });
+
+  it("lets the nights decide, which is what the rule says anyway", () => {
+    const withNights = { ...open, mostNightsCountry: "Italy" };
+    expect(visaLabel(withNights)).toBe("Schengen · Italy (by nights)");
+    expect(visaCoverLetter(withNights, trip).salutation).toContain("Italy");
+    expect(visaChecklist(withNights).some((g) => g.title === "Applying to Italy")).toBe(true);
+  });
+
+  it("does not accuse an undecided traveller of picking the wrong country", () => {
+    const withNights = { ...open, mostNightsCountry: "Italy" };
+    expect(visaFlags(withNights, trip, NOW)).toEqual([]);
+  });
+
+  it("stops a file that has neither a country nor any nights", () => {
+    expect(visaFlags(open, trip, NOW).some((f) => f.level === "stop" && f.text.includes("no consulate"))).toBe(true);
+  });
+
+  it("still builds the full document list while the country is open", () => {
+    expect(visaRequirementRows(open).length).toBeGreaterThan(15);
+  });
+});
+
+describe("the traveller's copy holds back the agency's work", () => {
+  const titles = (aud: "agent" | "traveller") => visaChecklist(clean, aud).map((g) => g.title);
+  const labels = (aud: "agent" | "traveller") =>
+    visaChecklist(clean, aud).flatMap((g) => g.items.map((i) => i.label));
+
+  it("drops the which-country-and-why section", () => {
+    expect(titles("agent")).toContain("Applying to Malta");
+    expect(titles("traveller")).not.toContain("Applying to Malta");
+    expect(titles("traveller").some((t) => t.startsWith("Which country"))).toBe(false);
+  });
+
+  it("moves what the agency produces into its own closing block", () => {
+    const agency = ["Travel medical insurance", "Round-trip flight reservation", "Cover letter"];
+    for (const l of agency) {
+      expect(labels("agent")).toContain(l);
+      expect(labels("traveller")).toContain(l); // still visible…
+    }
+    const closing = visaChecklist(clean, "traveller").at(-1)!;
+    expect(closing.title).toBe("We take care of these for you");
+    for (const l of agency) expect(closing.items.map((i) => i.label)).toContain(l);
+    // …and with no instructions attached
+    expect(closing.items.every((i) => !i.note)).toBe(true);
+  });
+
+  it("still asks the traveller for their own documents", () => {
+    for (const l of ["Passport", "Personal bank statement — last 3 years"]) {
+      expect(labels("traveller")).toContain(l);
+    }
+  });
+
+  it("does not send the traveller off to a consulate page to look things up", () => {
+    const notes = visaChecklist(clean, "traveller").flatMap((g) => g.items.map((i) => i.note ?? "")).join(" ");
+    expect(notes).not.toMatch(/VFS|consulate|portal|visa\.government\.is/i);
+    expect(notes).toContain("we'll tell you the figure");
+  });
+
+  it("leaves the agency's own view untouched", () => {
+    const notes = visaChecklist(clean, "agent").flatMap((g) => g.items.map((i) => i.note ?? "")).join(" ");
+    expect(notes).toMatch(/VFS|consulate/i);
+  });
+});
+
+describe("the agency's own document standard", () => {
+  const labels = (a: Parameters<typeof visaChecklist>[0]) =>
+    visaChecklist(a).flatMap((g) => g.items.map((i) => i.label));
+
+  it("asks three years of personal financials, not three months", () => {
+    const ls = labels(clean);
+    expect(ls).toContain("Personal bank statement — last 3 years");
+    expect(ls).toContain("Income Tax Return (ITR) acknowledgment — last 3 years");
+    expect(ls.join(" ")).not.toContain("last 2 assessment years");
+  });
+
+  it("asks a company for its incorporation and GST certificates and three years of books", () => {
+    const ls = labels({ ...clean, employmentType: "business", gstNo: "08AACCR1234K1Z2" });
+    for (const l of [
+      "Certificate of incorporation",
+      "GST certificate",
+      "Company bank statement — last 3 years",
+      "Company Income Tax Returns — last 3 years",
+    ]) expect(ls).toContain(l);
+  });
+
+  it("puts the GST number on the certificate line when it was given", () => {
+    const rows = visaRequirementRows({ ...clean, employmentType: "business", gstNo: "08AACCR1234K1Z2" });
+    expect(rows.find((r) => r.label === "GST certificate")?.note).toContain("08AACCR1234K1Z2");
+  });
+
+  it("asks a salaried applicant for none of the company papers", () => {
+    expect(labels(clean)).not.toContain("Certificate of incorporation");
+  });
+});
+
+describe("a sponsored business owner", () => {
+  // The case that used to lose documents: the sponsor section replaced the
+  // company section outright, so a director whose company paid was never asked
+  // for the certificate of incorporation.
+  const director = { ...clean, employmentType: "business", funding: "sponsor", sponsorName: "Mediterranean Yield Partners Ltd" };
+  const titles = visaChecklist(director).map((g) => g.title);
+  const labels = visaChecklist(director).flatMap((g) => g.items.map((i) => i.label));
+
+  it("is asked for both the sponsor's papers and the company's", () => {
+    expect(titles).toContain("Sponsorship");
+    expect(titles).toContain("Your company");
+    expect(labels).toContain("Certificate of incorporation");
+    expect(labels).toContain("Sponsor's bank statement");
+  });
+
+  it("is not also asked for pay slips", () => {
+    expect(labels).not.toContain("Pay slips for the last 3 months");
   });
 });
