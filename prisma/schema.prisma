@@ -280,6 +280,7 @@ model VisaApplicant {
   surname         String? // family / last name, exactly as in the passport
   givenName       String? // given / first name(s), exactly as in the passport
   dob             DateTime?
+  age             Int? // asked on the form; the date of birth comes off the passport copy
   placeOfBirth    String?
   nationality     String?   @default("Indian")
   maritalStatus   String?

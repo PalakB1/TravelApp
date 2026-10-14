@@ -78,8 +78,8 @@ export default function VisaForm({
   const [prevVisa, setPrevVisa] = useState("");
   const [refused, setRefused] = useState("no");
   const [entryIssue, setEntryIssue] = useState("no");
-  const [criminal, setCriminal] = useState("no");
   const [sponsorWork, setSponsorWork] = useState("");
+  const [age, setAge] = useState("");
 
   // On a trip link the agency fixed the visa type. On the agency link the
   // destination decides it, which is why the rest of the form can change the
@@ -96,6 +96,8 @@ export default function VisaForm({
   // Only someone who named a country can have named the wrong one — if they left
   // it open, the nights decide and there is nothing to warn about.
   const anySchengen = isAnySchengen(country);
+  const ageNum = age === "" ? null : Number(age);
+  const minor = ageNum != null && Number.isFinite(ageNum) && ageNum > 0 && ageNum < 18;
   const wrongCountry = schengen && !anySchengen && mostNights !== "" && mostNights !== country;
 
   // The document list, built from the answers already on screen and rebuilt on
@@ -112,6 +114,7 @@ export default function VisaForm({
     employmentType: work,
     funding,
     sponsorWork: sponsorWork || null,
+    age: ageNum,
     prevSchengen: prevVisa || null,
   };
   const docGroups = visaChecklist(draft, "traveller").filter((g) => g.title !== "We take care of these for you");
@@ -260,10 +263,18 @@ export default function VisaForm({
           <label className="field"><span className="lbl">Given name(s) / first name</span><input name="givenName" placeholder="As printed on your passport" required /></label>
           <label className="field"><span className="lbl">Surname / last name</span><input name="surname" placeholder="As printed on your passport" /></label>
         </div>
-        <div className="row">
+        <div className="row-3">
+          <label className="field"><span className="lbl">Your age</span>
+            <input name="age" type="number" min={0} max={120} value={age} onChange={(e) => setAge(e.target.value)} placeholder="years" required />
+          </label>
           <label className="field"><span className="lbl">Phone (with country code)</span><input name="phone" placeholder="+91 98765 43210" required /></label>
           <label className="field"><span className="lbl">Email</span><input name="email" type="email" required /></label>
         </div>
+        {minor && (
+          <Follow why={`At ${age}, the embassy needs consent from both parents — notarised, with copies of their passports. It takes the longest of anything on the list, so it is worth starting now.`}>
+            <label className="field"><span className="lbl">Both parents — names &amp; passport numbers</span><input name="minorParents" placeholder="e.g. Anil Shah (Z1234567), Meera Shah (Z7654321)" /></label>
+          </Follow>
+        )}
         <p className="small muted" style={{ margin: "-4px 0 12px" }}>
           That is all we need here. Your date of birth, passport details and address come straight from your
           passport copy — nothing to type twice, and nothing to get wrong.
@@ -380,56 +391,12 @@ export default function VisaForm({
 
       <Section title="Ties to home country (make your case stronger)">
         <p className="small muted" style={{ margin: "0 0 10px" }}>
-          This is the part applications are refused on. The embassy wants to see reasons you will come back — fill it
-          properly even though none of it is compulsory.
+          None of this is compulsory, but it is the part that does the most work for you — it is where the
+          application shows you have a life to come back to. Worth two extra minutes.
         </p>
         <label className="field"><span className="lbl">Family / dependants staying back home</span><input name="dependents" placeholder="e.g. spouse and 2 children, elderly parents" /></label>
         <label className="field"><span className="lbl">Investments &amp; assets at home</span><input name="investments" placeholder="e.g. 2 flats in Pune, FDs ₹20L, mutual funds ₹15L" /></label>
         <CountriesVisited />
-      </Section>
-
-      <Section title="Background">
-        <p className="small muted" style={{ margin: "0 0 12px" }}>
-          Every one of these is checked against the shared European database whatever you write here, so an
-          undeclared one turns a survivable history into a false statement — which is itself a reason to refuse.
-          Declared, with an explanation we write for you, most of them are survivable. Please answer honestly.
-        </p>
-
-        <label className="field" style={{ maxWidth: 420 }}><span className="lbl">Has any country ever refused you a visa?</span>
-          <select value={refused} onChange={(e) => setRefused(e.target.value)}>
-            <option value="no">No, never</option>
-            <option value="yes">Yes</option>
-          </select>
-        </label>
-        {refused === "yes" && (
-          <Follow why="We'll need a copy of the refusal letter and we'll write the explanation of what has changed since. A declared refusal is normal; a hidden one is fatal.">
-            <label className="field"><span className="lbl">Which country, roughly when, and the reason given</span><input name="visaRefusals" placeholder="e.g. UK, 2021 — insufficient funds shown" /></label>
-          </Follow>
-        )}
-
-        <label className="field" style={{ maxWidth: 420 }}><span className="lbl">Have you ever overstayed a visa, been deported, or been refused entry?</span>
-          <select value={entryIssue} onChange={(e) => setEntryIssue(e.target.value)}>
-            <option value="no">No, never</option>
-            <option value="yes">Yes</option>
-          </select>
-        </label>
-        {entryIssue === "yes" && (
-          <Follow why="This one we need to look at properly before anything is submitted — tell us everything you remember, including whether you were given a ban and for how long.">
-            <label className="field"><span className="lbl">What happened, where, and when</span><input name="entryIssues" placeholder="e.g. overstayed 11 days in Dubai, 2019 — fine paid, no ban" /></label>
-          </Follow>
-        )}
-
-        <label className="field" style={{ maxWidth: 420 }}><span className="lbl">Any criminal conviction or pending case, in any country?</span>
-          <select value={criminal} onChange={(e) => setCriminal(e.target.value)}>
-            <option value="no">No</option>
-            <option value="yes">Yes</option>
-          </select>
-        </label>
-        {criminal === "yes" && (
-          <Follow why="Most destinations ask this outright, and a spent or minor matter very often makes no difference — but it has to be handled, not hidden. We may ask for the court papers or a police clearance certificate.">
-            <label className="field"><span className="lbl">What it was, where, and when</span><input name="criminalRecord" placeholder="e.g. traffic case, Pune, 2017 — closed" /></label>
-          </Follow>
-        )}
       </Section>
 
       <Section title={schengen ? "Schengen history & companions" : "Travel history & companions"}>
@@ -450,6 +417,37 @@ export default function VisaForm({
         )}
         <label className="field"><span className="lbl">Travelling alone or with someone?</span><input name="travellingWith" placeholder="e.g. alone — or with spouse & 2 children / with a tour group" /></label>
         <label className="field"><span className="lbl">Anything else we should know</span><input name="notes" placeholder="optional" /></label>
+      </Section>
+
+      <Section title="Two questions the embassy form asks">
+        <p className="small muted" style={{ margin: "0 0 12px" }}>
+          Both of these appear on the application itself, so we have to carry an answer across for you. Almost
+          everyone answers no to both, and if that&apos;s you this takes two seconds.
+        </p>
+
+        <label className="field" style={{ maxWidth: 420 }}><span className="lbl">Has an earlier visa application of yours ever been turned down?</span>
+          <select value={refused} onChange={(e) => setRefused(e.target.value)}>
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+          </select>
+        </label>
+        {refused === "yes" && (
+          <Follow why="That happens to plenty of people and it is worked around rather than worked against — usually with the earlier letter and a short note on what has changed since. Send us the letter whenever you can find it.">
+            <label className="field"><span className="lbl">Which country, and roughly when</span><input name="visaRefusals" placeholder="e.g. UK, 2021" /></label>
+          </Follow>
+        )}
+
+        <label className="field" style={{ maxWidth: 420 }}><span className="lbl">Has anything ever gone wrong at a border — an overstay, or being turned away?</span>
+          <select value={entryIssue} onChange={(e) => setEntryIssue(e.target.value)}>
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+          </select>
+        </label>
+        {entryIssue === "yes" && (
+          <Follow why="Tell us what you remember, including whether you were given a ban and for how long.">
+            <label className="field"><span className="lbl">What happened, where, and when</span><input name="entryIssues" placeholder="e.g. overstayed 11 days in Dubai, 2019 — fine paid, no ban" /></label>
+          </Follow>
+        )}
       </Section>
 
       <Section title="Can you provide these?">

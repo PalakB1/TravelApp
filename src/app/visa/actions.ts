@@ -59,6 +59,7 @@ export async function submitVisaApplicant(_prev: VisaResult | undefined, formDat
       surname,
       givenName,
       dob: toDate(formData.get("dob")),
+      age: formData.get("age") ? Number(formData.get("age")) || null : null,
       placeOfBirth: str(formData.get("placeOfBirth")),
       nationality: str(formData.get("nationality")) || "Indian",
       maritalStatus: str(formData.get("maritalStatus")),

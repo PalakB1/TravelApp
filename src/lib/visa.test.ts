@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { schengenCountry, DEFAULT_SCHENGEN, ANY_SCHENGEN } from "./schengen";
-import { ageFromDob, travelWindow, visaChecklist, visaCoverLetter, visaFlags, visaLabel, visaRequirementRows } from "./visa";
+import { ageFromDob, applicantAge, travelWindow, visaChecklist, visaCoverLetter, visaFlags, visaLabel, visaRequirementRows } from "./visa";
 import { isSchengenDestination, visaTypeForDestination } from "./destinations";
 
 const trip = {
@@ -450,5 +450,33 @@ describe("the sponsor's own file", () => {
     const t = visaFlags(base, trip, NOW).map((f) => f.text).join(" | ");
     expect(t).toContain("Don't know what Vikram Nair does");
     expect(t).toContain("what the sponsor earns");
+  });
+});
+
+describe("age, asked outright", () => {
+  it("uses the number the traveller typed when there is no date of birth", () => {
+    expect(applicantAge({ dob: null, age: 15 })).toBe(15);
+    expect(applicantAge({ dob: null, age: null })).toBe(null);
+  });
+
+  it("prefers a date of birth once the passport copy supplies one", () => {
+    expect(applicantAge({ dob: new Date("1979-08-22T00:00:00Z"), age: 15 }, NOW)).toBe(47);
+  });
+
+  it("ignores a nonsense age rather than treating it as a minor", () => {
+    expect(applicantAge({ dob: null, age: 0 })).toBe(null);
+    expect(applicantAge({ dob: null, age: -3 })).toBe(null);
+  });
+
+  it("brings back the parental-consent documents from the age alone", () => {
+    const labels = visaChecklist({ ...clean, dob: null, age: 15 }).flatMap((g) => g.items.map((i) => i.label));
+    expect(labels).toContain("Notarised parental consent");
+    expect(visaChecklist({ ...clean, dob: null, age: 34 }).flatMap((g) => g.items.map((i) => i.label)))
+      .not.toContain("Notarised parental consent");
+  });
+
+  it("asks for the parents when a minor hasn't given them", () => {
+    const t = visaFlags({ ...clean, dob: null, age: 15 }, trip, NOW).map((f) => f.text).join(" ");
+    expect(t).toContain("minor");
   });
 });

@@ -172,6 +172,7 @@ export default async function VisaDetailPage({ params }: { params: Promise<{ id:
             ) : (
               <Field label="Full name (passport)" value={a.fullName} />
             )}
+            <Field label="Age" value={a.age != null ? `${a.age}` : null} />
             <Field label="Date of birth" value={fmt(a.dob)} />
             <Field label="Place of birth" value={a.placeOfBirth} />
             <Field label="Nationality" value={a.nationality} />
@@ -212,7 +213,6 @@ export default async function VisaDetailPage({ params }: { params: Promise<{ id:
             <Field label="Countries travelled to" value={a.travelHistory} />
             <Field label="Previous visa refusals" value={a.visaRefusals || "none declared"} />
             <Field label="Overstay / deportation / refused entry" value={a.entryIssues || "none declared"} />
-            <Field label="Criminal record" value={a.criminalRecord || "none declared"} />
             <Field label="Dependants staying in India" value={a.dependents} />
             <Field label="Investments & assets" value={a.investments} />
             <Field label="Notes" value={a.notes} />

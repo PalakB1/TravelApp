@@ -10,6 +10,7 @@ import { fileCountry, isAnySchengen, schengenCountry } from "./schengen";
 type ApplicantLite = {
   fullName: string;
   dob?: Date | null;
+  age?: number | null;
   placeOfBirth?: string | null;
   nationality?: string | null;
   maritalStatus?: string | null;
@@ -76,6 +77,14 @@ const has = (s?: string | null) => !!(s && s.trim() && s.trim().toLowerCase() !=
 // "a Indian national" in a letter to an embassy is the kind of detail that
 // makes the whole file look careless.
 const nat = (n?: string | null) => { const v = (n || "Indian").trim(); return `${/^[aeiou]/i.test(v) ? "an" : "a"} ${v} national`; };
+
+// How old the applicant is, however we know it: the form asks outright, and a
+// date of birth read off the passport copy later overrides it.
+export function applicantAge(a: Pick<ApplicantLite, "dob" | "age">, now = new Date()): number | null {
+  const fromDob = ageFromDob(a.dob, now);
+  if (fromDob != null) return fromDob;
+  return a.age != null && Number.isFinite(a.age) && a.age > 0 ? a.age : null;
+}
 
 // `now` is a parameter rather than a constant because this decides whether the
 // minor-consent documents appear — a date frozen in the source would quietly
@@ -320,7 +329,7 @@ function purposeSection(a: ApplicantLite): { title: string; items: ChecklistItem
 
 function conditionalItems(a: ApplicantLite): ChecklistItem[] {
   const conditional: ChecklistItem[] = [];
-  const age = ageFromDob(a.dob);
+  const age = applicantAge(a);
   if (age != null && age < 18) {
     conditional.push({ label: "Notarised parental consent", note: "from the non-travelling parent if travelling with one parent; from BOTH parents if travelling alone (or court order if one parent has sole custody)" });
     conditional.push({ label: "Photocopies of both parents' passports / photo IDs (or the minor's birth certificate)", note: a.minorParents || undefined });
@@ -555,7 +564,7 @@ export function visaFlags(a: ApplicantLite, t?: TripLite | null, now = new Date(
   }
 
   // --- who they are ---
-  const age = ageFromDob(a.dob, now);
+  const age = applicantAge(a, now);
   if (age != null && age < 18 && !has(a.minorParents))
     flags.push({ level: "check", text: "Applicant is a minor and no parent details were given — consent documents will be needed from both parents." });
 
