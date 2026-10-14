@@ -39,7 +39,7 @@ export default async function AgencyVisaFormPage({
         <div className="brand" style={{ paddingLeft: 0, marginBottom: 4 }}><Logo /></div>
         <h1 style={{ fontSize: 20, marginTop: 6 }}>Visa application — {org.name}</h1>
         <p className="muted small" style={{ marginTop: 4 }}>
-          Fill this once and you&apos;ll get the exact list of documents <i>you</i> need, and nothing you don&apos;t.
+          Fill this once and you&apos;ll get the exact list of documents <i>you</i>{" "}need, and nothing you don&apos;t.
           Start with where you&apos;re going — the questions change to match the country, your work and who&apos;s
           paying, so you&apos;re only asked what applies to you. Please copy your name and passport details exactly
           as they are printed.
