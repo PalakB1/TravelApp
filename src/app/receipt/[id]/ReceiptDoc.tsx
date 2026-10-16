@@ -13,6 +13,8 @@ export type ReceiptProps = {
   tripName: string;
   mode: string;
   note?: string | null;
+  /** Money that went back to the customer, not money that came in. */
+  refund?: boolean;
   amount: string;
   amountWords: string;
   total: string;
@@ -47,22 +49,22 @@ const Row = ({ l, v, bold }: { l: string; v: string; bold?: boolean }) => (
 
 export default function ReceiptDoc(p: ReceiptProps) {
   return (
-    <Document title={`Receipt ${p.receiptNo}`} author={p.agency}>
+    <Document title={`${p.refund ? "Refund voucher" : "Receipt"} ${p.receiptNo}`} author={p.agency}>
       <Page size="A4" style={s.page}>
         {p.logo ? <Image src={p.logo} style={s.logo} /> : null}
         <Text style={s.agency}>{p.agency}</Text>
         {p.gstAddress ? <Text style={s.sub}>{p.gstAddress}</Text> : null}
         {p.gstin ? <Text style={s.sub}>GSTIN: {p.gstin}</Text> : null}
-        <Text style={s.title}>PAYMENT RECEIPT</Text>
+        <Text style={s.title}>{p.refund ? "REFUND VOUCHER" : "PAYMENT RECEIPT"}</Text>
         <View style={s.rule} />
 
-        <Row l="Receipt no." v={p.receiptNo} />
-        <Row l="Receipt date" v={p.date} />
-        <Row l="Received from" v={p.customerName} />
+        <Row l={p.refund ? "Voucher no." : "Receipt no."} v={p.receiptNo} />
+        <Row l={p.refund ? "Voucher date" : "Receipt date"} v={p.date} />
+        <Row l={p.refund ? "Refunded to" : "Received from"} v={p.customerName} />
         <Row l="Towards" v={p.tripName} />
-        <Row l="Payment mode" v={p.mode} />
-        {p.note ? <Row l="Reference / note" v={p.note} /> : null}
-        <Row l="Amount received" v={p.amount} bold />
+        <Row l={p.refund ? "Refunded by" : "Payment mode"} v={p.mode} />
+        {p.note ? <Row l={p.refund ? "Reason" : "Reference / note"} v={p.note} /> : null}
+        <Row l={p.refund ? "Amount refunded" : "Amount received"} v={p.amount} bold />
 
         <Text style={s.words}>Rupees {p.amountWords} only.</Text>
 
@@ -72,7 +74,11 @@ export default function ReceiptDoc(p: ReceiptProps) {
           <View style={[s.boxRow, { marginBottom: 0 }]}><Text style={s.bold}>Balance as on {p.asOf}</Text><Text style={s.bold}>{p.balance}</Text></View>
         </View>
 
-        <Text style={s.footer}>Thank you for your payment. This is a computer-generated receipt and does not require a signature.</Text>
+        <Text style={s.footer}>
+          {p.refund
+            ? "This refund has been adjusted against your booking. This is a computer-generated voucher and does not require a signature."
+            : "Thank you for your payment. This is a computer-generated receipt and does not require a signature."}
+        </Text>
         {p.poweredBy ? <Text style={s.poweredBy}>Powered by TripZei - tripzei.com</Text> : null}
       </Page>
     </Document>

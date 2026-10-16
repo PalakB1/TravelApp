@@ -17,6 +17,7 @@ import InlineStay from "@/components/InlineStay";
 import SubmitButton from "@/components/SubmitButton";
 import DeleteBooking from "@/components/DeleteBooking";
 import ClosePayments from "@/components/ClosePayments";
+import ReverseOnBooking from "@/components/ReverseOnBooking";
 import { orgMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
@@ -540,8 +541,14 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                   {b.payments.map((p) => (
                     <tr key={p.id}>
                       <td className="muted small">{fmtDate(p.date)}</td>
-                      <td><span className="badge gray">{p.mode}</span>{p.note ? <div className="small muted">{p.note}</div> : null}</td>
-                      <td className="num" style={{ fontWeight: 500 }}>{$.fmt(p.amount)}</td>
+                      <td>
+                        <span className="badge gray">{p.mode}</span>
+                        {p.amount < 0 ? <span className="badge red" style={{ marginLeft: 6 }}>reversed</span> : null}
+                        {p.note ? <div className="small muted">{p.note}</div> : null}
+                      </td>
+                      <td className="num" style={{ fontWeight: 500, color: p.amount < 0 ? "var(--danger)" : undefined }}>
+                        {p.amount < 0 ? `− ${$.fmt(-p.amount)}` : $.fmt(p.amount)}
+                      </td>
                       <td className="num"><form action={deletePayment}><input type="hidden" name="id" value={p.id} /><button className="sm" type="submit" aria-label="Delete">✕</button></form></td>
                     </tr>
                   ))}
@@ -565,6 +572,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                 </form>
               </div>
             </details>
+            {paid > 0 ? <ReverseOnBooking bookingId={b.id} paid={$.fmt(paid)} /> : null}
           </div>
         </div>
         <div className="stack-col">

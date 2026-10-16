@@ -64,19 +64,21 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
             <div style={{ fontSize: 17, fontWeight: 700 }}>{agency}</div>
             {org?.gstAddress && <div className="small muted">{org.gstAddress}</div>}
             {org?.gstin && <div className="small muted">GSTIN: {org.gstin}</div>}
-            <div style={{ marginTop: 10, fontWeight: 700, letterSpacing: "0.08em", fontSize: 13 }}>PAYMENT RECEIPT</div>
+            <div style={{ marginTop: 10, fontWeight: 700, letterSpacing: "0.08em", fontSize: 13 }}>
+              {p.amount < 0 ? "REFUND VOUCHER" : "PAYMENT RECEIPT"}
+            </div>
           </div>
 
-          <Row l="Receipt no." v={receiptNo(p.id)} />
-          <Row l="Receipt date" v={fmt(p.date)} />
-          <Row l="Received from" v={b.customerName} />
+          <Row l={p.amount < 0 ? "Voucher no." : "Receipt no."} v={receiptNo(p.id)} />
+          <Row l={p.amount < 0 ? "Voucher date" : "Receipt date"} v={fmt(p.date)} />
+          <Row l={p.amount < 0 ? "Refunded to" : "Received from"} v={b.customerName} />
           <Row l="Towards" v={b.trip.name} />
-          <Row l="Payment mode" v={p.mode.toUpperCase()} />
-          {p.note && <Row l="Reference / note" v={p.note} />}
-          <Row l="Amount received" v={$.fmt(p.amount)} strong />
+          <Row l={p.amount < 0 ? "Refunded by" : "Payment mode"} v={p.mode.toUpperCase()} />
+          {p.note && <Row l={p.amount < 0 ? "Reason" : "Reference / note"} v={p.note} />}
+          <Row l={p.amount < 0 ? "Amount refunded" : "Amount received"} v={$.fmt(Math.abs(p.amount))} strong />
 
           <p className="small" style={{ margin: "12px 0 16px", fontStyle: "italic" }}>
-            Rupees {amountInWords(p.amount).replace(/ Rupees Only$/, "")} only.
+            Rupees {amountInWords(Math.abs(p.amount)).replace(/ Rupees Only$/, "")} only.
           </p>
 
           <div style={{ background: "var(--surface-2)", borderRadius: 10, padding: 12 }}>
@@ -86,7 +88,9 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
           </div>
 
           <p className="small muted" style={{ marginTop: 16, textAlign: "center" }}>
-            Thank you for your payment. This is a computer-generated receipt and does not require a signature.
+            {p.amount < 0
+              ? "This refund has been adjusted against your booking. This is a computer-generated voucher and does not require a signature."
+              : "Thank you for your payment. This is a computer-generated receipt and does not require a signature."}
           </p>
           <PoweredBy hide={org?.hideBranding} />
         </div>

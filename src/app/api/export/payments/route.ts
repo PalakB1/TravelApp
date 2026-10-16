@@ -21,10 +21,14 @@ export async function GET() {
     orderBy: { date: "desc" },
   });
 
-  const header = ["Date", "Customer", "Trip", "Mode", "Amount (₹)", "Note"];
+  // The amount stays signed, so the column still sums to what was actually
+  // collected; the Type column is there so a human reading the sheet doesn't
+  // have to work that out from a minus sign.
+  const header = ["Date", "Customer", "Trip", "Type", "Mode", "Amount (₹)", "Note"];
   const lines = [row(header)];
   for (const p of payments) {
-    lines.push(row([d(p.date), p.booking.customerName, p.booking.trip.name, p.mode, p.amount, p.note ?? ""]));
+    const type = p.amount < 0 ? "Reversal" : "Payment";
+    lines.push(row([d(p.date), p.booking.customerName, p.booking.trip.name, type, p.mode, p.amount, p.note ?? ""]));
   }
   const csv = "﻿" + lines.join("\r\n");
 

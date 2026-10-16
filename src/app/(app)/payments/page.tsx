@@ -13,6 +13,7 @@ import RemindCancelWindow from "@/components/RemindCancelWindow";
 import { scheduleStatus, isDueWithin } from "@/lib/schedule";
 import { addPayment, approvePendingPayment, rejectPendingPayment } from "../data-actions";
 import SubmitButton from "@/components/SubmitButton";
+import ReversePayment from "@/components/ReversePayment";
 import { visaMeta } from "@/lib/visaStatus";
 import { orgMoney } from "@/lib/orgMoney";
 
@@ -353,6 +354,17 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         )}
       </div>
 
+      <ReversePayment
+        bookings={bookings
+          .filter((b) => !b.deletedAt && bookingPaid(b) > 0)
+          .sort((a, c) => a.customerName.localeCompare(c.customerName))
+          .map((b) => ({
+            id: b.id,
+            label: b.customerName,
+            sub: `${b.trip.name} · ${$.short(bookingPaid(b))} paid so far`,
+          }))}
+      />
+
       <div className="card" style={{ background: "var(--accent-bg)", borderColor: "transparent" }}>
         <div className="card-title">🔗 Universal payment link <span className="small muted">one link for everyone — they pick their trip &amp; name</span></div>
         <CopyLink path={`/pay/o/${orgId}`} label="Copy link" waText="Please confirm your payment here:" defaultCc={$.dial} />
@@ -374,7 +386,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         {recent.length === 0 ? (
           <div className="empty">No payments recorded yet.</div>
         ) : (
-          <TableSearch placeholder="Search customer, trip or mode…" tags={["upi", "cash", "card", "bank"]}>
+          <TableSearch placeholder="Search customer, trip or mode…" tags={["upi", "cash", "card", "bank", "reversed"]}>
           <table className="t">
             <thead><tr><th>Date</th><th>Customer</th><th>Trip</th><th>Mode</th><th className="num">Amount</th><th className="num">Receipt</th></tr></thead>
             <tbody>
@@ -383,9 +395,18 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                   <td className="muted small">{fmtDate(p.date)}</td>
                   <td><Link className="row-link" href={`/bookings/${p.bookingId}`}>{p.booking.customerName}</Link></td>
                   <td className="muted">{p.booking.trip.name}</td>
-                  <td><span className="badge gray">{p.mode}</span></td>
-                  <td className="num" style={{ fontWeight: 500 }}>{$.fmt(p.amount)}</td>
-                  <td className="num"><ShareReceipt paymentId={p.id} customerName={p.booking.customerName} amount={$.fmt(p.amount)} phone={p.booking.customerPhone} defaultCc={$.dial} /></td>
+                  <td>
+                    <span className="badge gray">{p.mode}</span>
+                    {p.amount < 0 ? <span className="badge red" style={{ marginLeft: 6 }}>reversed</span> : null}
+                  </td>
+                  <td className="num" style={{ fontWeight: 500, color: p.amount < 0 ? "var(--danger)" : undefined }}>
+                    {p.amount < 0 ? `− ${$.fmt(-p.amount)}` : $.fmt(p.amount)}
+                  </td>
+                  <td className="num">
+                    {p.amount < 0
+                      ? <span className="small muted" title={p.note ?? undefined}>{p.note ? p.note : "reversal"}</span>
+                      : <ShareReceipt paymentId={p.id} customerName={p.booking.customerName} amount={$.fmt(p.amount)} phone={p.booking.customerPhone} defaultCc={$.dial} />}
+                  </td>
                 </tr>
               ))}
             </tbody>

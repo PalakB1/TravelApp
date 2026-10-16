@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { bookingCoversNight, paxOnNight, roomsNeededOnNight, bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTotal, bookingRevenue, bookingTax, bookingBalance, reconcileTrip, isBookedStatus, isNightGap, nightBookedRooms, isChasing, effectiveStatus } from "./calc";
+import { bookingCoversNight, paxOnNight, roomsNeededOnNight, bookingBase, bookingTaxable, bookingGst, bookingTcs, bookingTotal, bookingRevenue, bookingTax, bookingBalance, bookingPaid, reconcileTrip, isBookedStatus, isNightGap, nightBookedRooms, isChasing, effectiveStatus } from "./calc";
 
 const base = { pax: 1, discount: 0, status: "confirmed" as const };
 
@@ -45,6 +45,24 @@ describe("booking GST/TCS math", () => {
   it("balance = total − payments", () => {
     const b = { ...base, landAmount: 100000, gstRate: 5, tcsRate: 2, payments: [{ amount: 50000 }, { amount: 7100 }] };
     expect(bookingBalance(b)).toBe(50000); // 107100 − 57100
+  });
+
+  // A reversal — an inclusion dropped, or a price renegotiated after payment —
+  // is stored as a payment with a negative amount, so every sum that already
+  // existed does the right thing without being taught anything new.
+  it("a reversal puts the money back on the balance", () => {
+    const paid = { ...base, landAmount: 100000, gstRate: 5, tcsRate: 2, payments: [{ amount: 107100 }] };
+    expect(bookingBalance(paid)).toBe(0);
+
+    const reversed = { ...paid, payments: [{ amount: 107100 }, { amount: -18000 }] };
+    expect(bookingPaid(reversed)).toBe(89100);
+    expect(bookingBalance(reversed)).toBe(18000);
+  });
+
+  it("reversing everything leaves the booking owing its full total again", () => {
+    const b = { ...base, landAmount: 100000, gstRate: 5, tcsRate: 2, payments: [{ amount: 50000 }, { amount: -50000 }] };
+    expect(bookingPaid(b)).toBe(0);
+    expect(bookingBalance(b)).toBe(bookingTotal(b));
   });
 });
 

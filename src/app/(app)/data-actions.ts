@@ -7,7 +7,7 @@ import { getOrgContext } from "@/lib/org";
 import { getScope } from "@/lib/scope";
 import { parseAmount, parseRate } from "@/lib/money";
 import { financialYear } from "@/lib/invoice";
-import { bookingTotal, tripIsOver } from "@/lib/calc";
+import { bookingPaid, bookingTotal, tripIsOver } from "@/lib/calc";
 import { orgMoney } from "@/lib/orgMoney";
 import { getSession } from "@/lib/auth";
 import { toDay, todayDay } from "@/lib/dates";
@@ -1020,6 +1020,64 @@ export async function addPayment(formData: FormData) {
   });
   await logActivity(orgId, "payment", "added", `${payment.booking.customerName} paid ${(await orgMoney()).fmt(amount)} (${mode})`, `/bookings/${payment.booking.id}`);
   refresh();
+}
+
+// ---- Reversals ----
+//
+// Money going back the other way: an inclusion that turned out to be
+// unavailable, or a price renegotiated after the customer had already paid.
+//
+// A reversal is stored as a payment with a negative amount rather than as its
+// own kind of record. Every balance in the app is the sum of a booking's
+// payments, so a negative one lands in the right place everywhere at once — the
+// balance, the payment plan, the receipts list, the collected total — without a
+// single one of those sums having to learn a new concept. It also keeps the
+// history honest: the original payment stays exactly as it was, with the
+// reversal sitting next to it, which is what the customer's own records will
+// show too.
+export type ReverseResult = { ok: boolean; message: string };
+
+export async function reversePayment(_prev: ReverseResult | undefined, formData: FormData): Promise<ReverseResult> {
+  const orgId = await guard();
+  const bookingId = String(formData.get("bookingId"));
+  const amount = parseAmount(String(formData.get("amount")));
+  const reason = String(formData.get("note") || "").trim();
+
+  if (!bookingId) return { ok: false, message: "Pick the customer this is going back to." };
+  if (amount <= 0) return { ok: false, message: "Enter how much is going back." };
+  if (!reason) return { ok: false, message: "Say why — it goes on the customer's receipt and on your books." };
+  if (!(await ownBooking(orgId, bookingId))) return { ok: false, message: "That booking isn't yours to change." };
+
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    select: { id: true, customerName: true, payments: { select: { amount: true } } },
+  });
+  if (!booking) return { ok: false, message: "That booking no longer exists." };
+
+  // You cannot give back more than came in. Without this a mistyped amount
+  // turns a paid-up booking into one that looks owed money by the agency.
+  const paid = bookingPaid(booking as never);
+  const $ = await orgMoney();
+  if (amount > paid)
+    return {
+      ok: false,
+      message: paid > 0
+        ? `${booking.customerName} has paid ${$.fmt(paid)} in total, so you can reverse at most that.`
+        : `${booking.customerName} hasn't paid anything yet, so there is nothing to reverse.`,
+    };
+
+  await prisma.payment.create({
+    data: {
+      bookingId,
+      amount: -amount,
+      mode: String(formData.get("mode") || "bank"),
+      note: reason,
+      date: toDay(String(formData.get("date") || "")) ?? todayDay(),
+    },
+  });
+  await logActivity(orgId, "payment", "deleted", `Reversed ${$.fmt(amount)} to ${booking.customerName} — ${reason}`, `/bookings/${bookingId}`);
+  refresh();
+  return { ok: true, message: `${$.fmt(amount)} reversed to ${booking.customerName}.` };
 }
 
 export async function deletePayment(formData: FormData) {

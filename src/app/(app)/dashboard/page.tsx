@@ -455,9 +455,14 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 <tr key={p.id}>
                   <td>{p.booking.customerName}</td>
                   <td className="muted">{p.booking.trip.name}</td>
-                  <td><span className="badge gray">{p.mode}</span></td>
+                  <td>
+                    <span className="badge gray">{p.mode}</span>
+                    {p.amount < 0 ? <span className="badge red" style={{ marginLeft: 6 }}>reversed</span> : null}
+                  </td>
                   <td className="muted small">{fmtDate(p.date)}</td>
-                  <td className="num" style={{ fontWeight: 500 }}>{$.fmt(p.amount)}</td>
+                  <td className="num" style={{ fontWeight: 500, color: p.amount < 0 ? "var(--danger)" : undefined }}>
+                    {p.amount < 0 ? `− ${$.fmt(-p.amount)}` : $.fmt(p.amount)}
+                  </td>
                 </tr>
               ))}
             </tbody>
