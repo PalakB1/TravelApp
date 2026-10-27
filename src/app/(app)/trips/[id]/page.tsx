@@ -7,6 +7,7 @@ import { tripFinancials, reconcileTrip, bookingTotal, bookingPaid, bookingBalanc
 import BookingsTable from "@/components/BookingsTable";
 
 import { addVariant, deleteVariant, addVendorBooking, updateVendorBooking, deleteVendorBooking, addBooking, deleteTrip, addNight, updateNight, deleteNight, addHotelBooking, updateHotelBooking, deleteHotelBooking, addCar, updateCar, deleteCar, addInclusion, updateInclusion, deleteInclusion, deleteVisaApplicant, duplicateTrip, updateTripRooms, renameTrip, setTripGroupLink, setTripCustom } from "../../data-actions";
+import { createQuotation } from "../../quotes/actions";
 import InlineTitle from "@/components/InlineTitle";
 import ImportItinerary from "@/components/ImportItinerary";
 import CloseDetails from "@/components/CloseDetails";
@@ -180,6 +181,26 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
             {trip.destination || "—"} · {dateRange} · {coreNightCount} nights · {f.pax} travellers{f.hiredDrivers > 0 ? ` + ${f.hiredDrivers} driver${f.hiredDrivers > 1 ? "s" : ""} = ${f.totalPeople} total` : ""} · {trip.cars.length} cars</p>
         </div>
         <div className="flex" style={{ gap: 8, alignItems: "flex-start" }}>
+          <details className="menu-pop" style={{ position: "relative" }}>
+            <summary className="btn sm" style={{ listStyle: "none", cursor: "pointer" }}>Quote this trip</summary>
+            <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", width: 340, maxWidth: "80vw", zIndex: 30, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, boxShadow: "0 12px 32px rgba(27,28,43,0.16)", padding: 16 }}>
+              <div style={{ fontWeight: 500, marginBottom: 10 }}>New quotation for this trip</div>
+              <form action={createQuotation}>
+                <input type="hidden" name="tripId" value={trip.id} />
+                <input type="hidden" name="title" value={trip.name} />
+                <label className="field"><span className="lbl">Client name</span><input name="clientName" placeholder="Who you&apos;re quoting" required /></label>
+                <div className="row">
+                  <label className="field"><span className="lbl">Travellers</span><input name="pax" type="number" min="0" placeholder="6" /></label>
+                  <label className="field"><span className="lbl">Valid until</span><input name="validUntil" type="date" /></label>
+                </div>
+                <button className="primary sm" type="submit">Create quotation</button>
+                <p className="small muted" style={{ margin: "10px 0 0" }}>
+                  Opens an empty quotation titled after this trip. Nothing is booked and no seat is held — you add
+                  the prices, then send a link and a PDF.
+                </p>
+              </form>
+            </div>
+          </details>
           <form action={setTripCustom}>
             <input type="hidden" name="id" value={trip.id} />
             <input type="hidden" name="isCustom" value={trip.isCustom ? "no" : "yes"} />

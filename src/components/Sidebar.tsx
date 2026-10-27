@@ -17,6 +17,7 @@ const links = [
   { href: "/payments", label: "Payments", icon: "wallet" },
   { href: "/expenses", label: "Costing", icon: "coins" },
   { href: "/visas", label: "Visa desk", icon: "passport" },
+  { href: "/quotes", label: "Quotations", icon: "receipt" },
   { href: "/tax", label: "GST / Tax", icon: "receipt" },
   // Team, Recycle bin and the theme toggle deliberately live outside this list —
   // they're setup/global controls, not daily destinations, and every extra row
