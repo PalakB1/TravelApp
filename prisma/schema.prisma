@@ -58,6 +58,7 @@ model Organization {
   defaultRefundPolicy String?
   paymentPlanTemplates PaymentPlanTemplate[]
   visaApplicants       VisaApplicant[]
+  quotations           Quotation[]
   // Customer-facing documents carry a small "Powered by TripZei" line — free,
   // targeted distribution to travellers and the agencies they work with.
   // Turning it off is a paid-tier lever.
@@ -224,6 +225,71 @@ model CustomPayment {
 }
 
 // Gapless invoice serial counter, one row per org per financial year.
+// What you send before anybody has agreed to anything.
+//
+// A quotation is deliberately not a booking: nothing is held, nothing is owed,
+// and it expires. It carries its own line items rather than reading them off a
+// booking, because at quoting time the shape of the trip is still being argued
+// about — two room options, a helicopter the client may or may not want — and
+// the thing you send has to be able to say that.
+//
+// Tax rates are copied onto the quote when it is made rather than read live, so
+// a quote you sent in March still adds up in June after a rate change.
+model Quotation {
+  id          String   @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  tripId      String?
+  trip        Trip?    @relation(fields: [tripId], references: [id], onDelete: SetNull)
+
+  quoteNo     String? // assigned when it is first sent, not while it is a draft
+  title       String   @default("Trip quotation")
+  clientName  String
+  clientPhone String?
+  clientEmail String?
+  pax         Int      @default(1)
+
+  validUntil  DateTime?
+  notes       String? // what's included, terms, anything the client should read
+  status      String   @default("draft") // draft | sent | accepted | declined
+
+  // Snapshot of the org's tax at the moment of quoting.
+  taxLabel    String   @default("GST")
+  taxRate     Int      @default(5)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  items       QuotationItem[]
+
+  @@index([orgId])
+  @@index([tripId])
+}
+
+model QuotationItem {
+  id          String    @id @default(cuid())
+  quotationId String
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  label       String
+  detail      String? // the small print under the line
+  qty         Int       @default(1)
+  unitPrice   Int       @default(0)
+  taxable     Boolean   @default(true) // visa fees and the like are usually not
+  order       Int       @default(0)
+
+  @@index([quotationId])
+}
+
+model QuoteSeq {
+  id     String @id @default(cuid())
+  orgId  String
+  fy     String // "2026-27"
+  lastNo Int    @default(0)
+
+  @@unique([orgId, fy])
+}
+
 model InvoiceSeq {
   id     String @id @default(cuid())
   orgId  String
@@ -411,6 +477,12 @@ model Trip {
   maxPerRoom    Int             @default(2) // guests per room (double sharing), for the rooms-coverage check
   notes         String?
 
+  // A private trip built for one group rather than a departure sold to the
+  // public. It is an ordinary trip in every way — the separate "Custom trips"
+  // module turned out to be the wrong shape — this just labels it so the two
+  // kinds can be told apart at a glance and filtered.
+  isCustom      Boolean         @default(false)
+
   // The trip's WhatsApp group. The link is pasted in by hand after the group is
   // made on a phone — WhatsApp's business API has no group functions at all, so
   // there is nothing to automate about the creation itself. What IS worth
@@ -432,6 +504,7 @@ model Trip {
   access        TripAccess[]
   pendingPayments PendingPayment[]
   expenses      Expense[]
+  quotations    Quotation[]
   deletedAt     DateTime? // soft-delete: hidden everywhere, restorable from the recycle bin
 
   @@index([orgId])

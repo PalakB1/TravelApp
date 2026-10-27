@@ -22,6 +22,15 @@ export default function NewTripPage() {
             <span className="lbl">Destination</span>
             <input name="destination" placeholder="Bali, Indonesia" />
           </label>
+          <label className="field" style={{ background: "var(--surface-2)", borderRadius: 10, padding: "10px 12px" }}>
+            <span className="flex" style={{ gap: 8, cursor: "pointer", alignItems: "flex-start" }}>
+              <input type="checkbox" name="isCustom" value="yes" style={{ width: 16, height: 16, marginTop: 2 }} />
+              <span className="small">
+                This is a <b>custom trip</b> — built for one group rather than a departure sold to the public.
+                It works exactly like any other trip; the label just keeps the two kinds apart in your list.
+              </span>
+            </span>
+          </label>
           <div className="row-3">
             <label className="field">
               <span className="lbl">Nights</span>

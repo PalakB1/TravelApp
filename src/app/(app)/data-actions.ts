@@ -212,11 +212,26 @@ export async function createTrip(formData: FormData) {
       departureDate: toDay(dateStr),
       endDate: endStr ? new Date(endStr) : null,
       notes: String(formData.get("notes") || "") || null,
+      isCustom: String(formData.get("isCustom") || "") === "yes",
     },
   });
-  await logActivity(orgId, "trip", "added", `Created trip “${trip.name}”`, `/trips/${trip.id}`);
+  await logActivity(orgId, "trip", "added", `Created ${trip.isCustom ? "custom " : ""}trip “${trip.name}”`, `/trips/${trip.id}`);
   refresh();
   redirect(`/trips/${trip.id}`);
+}
+
+// A private trip for one group, versus a departure sold to the public. Nothing
+// behaves differently — it is a label, so the two kinds can be told apart in a
+// list that holds both.
+export async function setTripCustom(formData: FormData) {
+  const orgId = await guard();
+  const id = String(formData.get("id"));
+  const isCustom = String(formData.get("isCustom") || "") === "yes";
+  const trip = await prisma.trip.findFirst({ where: { id, orgId }, select: { name: true } });
+  if (!trip) return;
+  await prisma.trip.updateMany({ where: { id, orgId }, data: { isCustom } });
+  await logActivity(orgId, "trip", "status", `${trip.name} marked as ${isCustom ? "a custom trip" : "a regular departure"}`, `/trips/${id}`);
+  refresh();
 }
 
 export async function deleteTrip(formData: FormData) {

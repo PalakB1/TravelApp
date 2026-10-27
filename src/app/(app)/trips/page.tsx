@@ -66,6 +66,7 @@ export default async function TripsPage() {
                     <td style={{ paddingLeft: 20 }}>
                       <div className="flex" style={{ gap: 8 }}>
                         <Link className="row-link" href={`/trips/${t.id}`}>{t.name}</Link>
+                        {t.isCustom ? <span className="badge violet" style={{ marginLeft: 6 }}>custom</span> : null}
                         <form action={duplicateTrip}>
                           <input type="hidden" name="id" value={t.id} />
                           <button className="sm" type="submit" title="Duplicate this itinerary" style={{ padding: "2px 8px", fontSize: 12 }}>Copy</button>

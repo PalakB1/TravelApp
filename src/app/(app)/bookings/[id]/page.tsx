@@ -18,6 +18,7 @@ import SubmitButton from "@/components/SubmitButton";
 import DeleteBooking from "@/components/DeleteBooking";
 import ClosePayments from "@/components/ClosePayments";
 import ReverseOnBooking from "@/components/ReverseOnBooking";
+import CashSplit from "@/components/CashSplit";
 import { orgMoney } from "@/lib/orgMoney";
 
 export const dynamic = "force-dynamic";
@@ -470,6 +471,13 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                       <select name="packageType" defaultValue={b.packageType}><option value="land">Land only</option><option value="lva">Land + visa (LVA)</option><option value="full">Full (incl. flights)</option></select>
                     </label>
                   </div>
+                  <CashSplit
+                    taxLabel={$.taxLabel}
+                    taxLabel2={$.taxLabel2}
+                    gstRate={b.gstRate}
+                    tcsRate={b.tcsRate}
+                    money={$.cfg}
+                  />
                   <div className="row-3">
                     <label className="field"><span className="lbl">Land cost</span><input name="landAmount" defaultValue={b.landAmount || ""} /></label>
                     <label className="field"><span className="lbl">Visa assistance</span><input name="visaAmount" defaultValue={b.visaAmount || ""} /></label>

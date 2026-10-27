@@ -6,7 +6,7 @@ import { requireScope } from "@/lib/scope";
 import { tripFinancials, reconcileTrip, bookingTotal, bookingPaid, bookingBalance, isNightGap, holdExpiringSoon, carCost, pricePerRoom, nightCost, nightBookedRooms, carPassengerSeats, tripIsOver, roomsNeededOnNight, paxOnNight, isShortStay, tripEndLabel, isActive } from "@/lib/calc";
 import BookingsTable from "@/components/BookingsTable";
 
-import { addVariant, deleteVariant, addVendorBooking, updateVendorBooking, deleteVendorBooking, addBooking, deleteTrip, addNight, updateNight, deleteNight, addHotelBooking, updateHotelBooking, deleteHotelBooking, addCar, updateCar, deleteCar, addInclusion, updateInclusion, deleteInclusion, deleteVisaApplicant, duplicateTrip, updateTripRooms, renameTrip, setTripGroupLink } from "../../data-actions";
+import { addVariant, deleteVariant, addVendorBooking, updateVendorBooking, deleteVendorBooking, addBooking, deleteTrip, addNight, updateNight, deleteNight, addHotelBooking, updateHotelBooking, deleteHotelBooking, addCar, updateCar, deleteCar, addInclusion, updateInclusion, deleteInclusion, deleteVisaApplicant, duplicateTrip, updateTripRooms, renameTrip, setTripGroupLink, setTripCustom } from "../../data-actions";
 import InlineTitle from "@/components/InlineTitle";
 import ImportItinerary from "@/components/ImportItinerary";
 import CloseDetails from "@/components/CloseDetails";
@@ -175,9 +175,18 @@ export default async function TripDetail({ params }: { params: Promise<{ id: str
         <div>
           <div className="small muted"><Link href="/trips" style={{ color: "var(--text-2)" }}>← Trips</Link></div>
           <h1 style={{ marginTop: 6 }}><InlineTitle action={renameTrip} id={trip.id} value={trip.name} /></h1>
-          <p className="sub">{trip.destination || "—"} · {dateRange} · {coreNightCount} nights · {f.pax} travellers{f.hiredDrivers > 0 ? ` + ${f.hiredDrivers} driver${f.hiredDrivers > 1 ? "s" : ""} = ${f.totalPeople} total` : ""} · {trip.cars.length} cars</p>
+          <p className="sub">
+            {trip.isCustom ? <span className="badge violet" style={{ marginRight: 6 }}>custom trip</span> : null}
+            {trip.destination || "—"} · {dateRange} · {coreNightCount} nights · {f.pax} travellers{f.hiredDrivers > 0 ? ` + ${f.hiredDrivers} driver${f.hiredDrivers > 1 ? "s" : ""} = ${f.totalPeople} total` : ""} · {trip.cars.length} cars</p>
         </div>
         <div className="flex" style={{ gap: 8, alignItems: "flex-start" }}>
+          <form action={setTripCustom}>
+            <input type="hidden" name="id" value={trip.id} />
+            <input type="hidden" name="isCustom" value={trip.isCustom ? "no" : "yes"} />
+            <button className="sm" type="submit" title={trip.isCustom ? "Treat this as a regular departure again" : "Mark this as a trip built for one group"}>
+              {trip.isCustom ? "Unmark custom" : "Mark as custom"}
+            </button>
+          </form>
           <details className="menu-pop" style={{ position: "relative" }}>
             <summary className="btn sm" style={{ listStyle: "none", cursor: "pointer" }}>Copy for new dates</summary>
             <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", width: 360, maxWidth: "80vw", zIndex: 30, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, boxShadow: "0 12px 32px rgba(27,28,43,0.16)", padding: 16 }}>
